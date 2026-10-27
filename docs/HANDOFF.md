@@ -56,6 +56,8 @@ Explain 2048 in one sentence. Show a real recorded move, inspect its tool output
 
 ## Publication status
 
+Source is uploaded to the private GitHub repository https://github.com/KrishayR/consequencelab. The repository includes automated test/build checks. The final ZIP includes the production build; GitHub stores source and build instructions.
+
 A private Sites project was registered as `appgprj_6ae122fb32308191aacaac56c91eb100`; the exact ID is persisted in `.openai/hosting.json`. Source upload was blocked by automatic approval review before credentials were passed to the workflow, so no hosted version or deployment was completed. Reuse this project ID if publishing later; do not create a duplicate. The local production build is ready. No source credential is stored in this handoff.
 
 ## Final handoff additions
