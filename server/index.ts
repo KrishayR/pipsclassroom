@@ -1,0 +1,179 @@
+import { createServer } from "node:http";
+import { DatabaseSync } from "node:sqlite";
+import { mkdirSync, readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { Classroom } from "../src/core/classroom";
+import { simulationPolicy } from "../src/core/policy";
+import { modelPolicy } from "./model";
+import type { Arm, LabState } from "../src/core/types";
+if (existsSync(".env"))
+  for (const line of readFileSync(".env", "utf8").split("\n")) {
+    const match = line.match(/^([A-Z_]+)=(.*)$/);
+    if (match && !process.env[match[1]])
+      process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, "");
+  }
+mkdirSync("data", { recursive: true });
+const db = new DatabaseSync(resolve("data/classroom.sqlite"));
+db.exec(
+  "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS sessions (mode TEXT PRIMARY KEY, state TEXT NOT NULL, updated_at TEXT NOT NULL); CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, mode TEXT NOT NULL, phase TEXT NOT NULL, time TEXT NOT NULL, detail TEXT NOT NULL)",
+);
+const key = process.env.MODEL_API_KEY;
+const real = key
+  ? modelPolicy({
+      key,
+      baseUrl: process.env.MODEL_BASE_URL ?? "https://api.meta.ai/v1",
+      model: process.env.MODEL_ID ?? "muse-spark-1.3",
+      tokenBudget: Number(process.env.MODEL_TOKEN_BUDGET ?? 100000),
+    })
+  : null;
+const usageOffsets = new Map<string, { tokens: number; calls: number }>();
+const classes = new Map<string, Classroom>();
+const clients = new Map<string, Set<import("node:http").ServerResponse>>();
+for (const policy of [simulationPolicy(), ...(real ? [real] : [])]) {
+  const stored = db
+    .prepare("SELECT state FROM sessions WHERE mode=?")
+    .get(policy.mode) as { state: string } | undefined;
+  const lab = new Classroom(
+    policy,
+    stored ? (JSON.parse(stored.state) as LabState) : undefined,
+  );
+  usageOffsets.set(policy.mode, {
+    tokens: lab.state.tokens,
+    calls: lab.state.calls,
+  });
+  classes.set(policy.mode, lab);
+  clients.set(policy.mode, new Set());
+  lab.subscribe((state) => {
+    const safe = publicState(state);
+    db.prepare("INSERT OR REPLACE INTO sessions VALUES (?,?,?)").run(
+      policy.mode,
+      JSON.stringify({ ...state, tokens: safe.tokens, calls: safe.calls }),
+      new Date().toISOString(),
+    );
+    for (const res of clients.get(policy.mode)!)
+      res.write(`data: ${JSON.stringify(safe)}\n\n`);
+  });
+}
+function publicState(state: LabState) {
+  const safe = structuredClone(state);
+  safe.students.forEach((s) => {
+    s.game.rng = 0;
+    s.game.seed = 0;
+  });
+  if (state.mode === "model" && real) {
+    const usage = real.usage();
+    safe.tokens = (usageOffsets.get("model")?.tokens ?? 0) + usage.tokens;
+    safe.calls = (usageOffsets.get("model")?.calls ?? 0) + usage.calls;
+  }
+  return safe;
+}
+const server = createServer(async (req, res) => {
+  const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
+  const send = (status: number, data: unknown) => {
+    res.writeHead(status, {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    });
+    res.end(JSON.stringify(data));
+  };
+  if (!url.pathname.startsWith("/api/"))
+    return send(404, { error: "Use the Vite frontend on port 5173." });
+  if (
+    req.headers.origin &&
+    !/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(req.headers.origin)
+  )
+    return send(403, { error: "Cross-origin access denied." });
+  if (url.pathname === "/api/health")
+    return send(200, {
+      ok: true,
+      modelAvailable: !!real,
+      modelId: real?.modelId ?? null,
+      storage: "SQLite",
+      tokenBudget: Number(process.env.MODEL_TOKEN_BUDGET ?? 100000),
+    });
+  const mode = url.searchParams.get("mode") ?? "simulation";
+  const lab = classes.get(mode);
+  if (!lab)
+    return send(409, {
+      error: "Model mode needs MODEL_API_KEY in the server .env file.",
+    });
+  if (req.method === "GET" && url.pathname === "/api/state")
+    return send(200, publicState(lab.state));
+  if (req.method === "GET" && url.pathname === "/api/export")
+    return send(200, {
+      ...lab.export(),
+      state: {
+        ...lab.export().state,
+        tokens: publicState(lab.state).tokens,
+        calls: publicState(lab.state).calls,
+      },
+    });
+  if (req.method === "GET" && url.pathname === "/api/events") {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+    res.write(`data: ${JSON.stringify(publicState(lab.state))}\n\n`);
+    clients.get(mode)!.add(res);
+    const timer = setInterval(() => res.write(": heartbeat\n\n"), 15000);
+    req.on("close", () => {
+      clearInterval(timer);
+      clients.get(mode)!.delete(res);
+    });
+    return;
+  }
+  if (req.method !== "POST" || url.pathname !== "/api/action")
+    return send(404, { error: "Not found" });
+  try {
+    let body = "";
+    for await (const chunk of req) {
+      body += chunk;
+      if (body.length > 4096) throw new Error("Request too large.");
+    }
+    const input = JSON.parse(body || "{}");
+    const { action } = input;
+    if (action === "stop") {
+      lab.stop();
+      return send(200, { ok: true });
+    }
+    if (lab.state.busy)
+      return send(409, { error: "An operation is already running." });
+    let operation: Promise<void> | undefined;
+    if (action === "practice") operation = lab.practice(input.steps ?? 12);
+    else if (action === "review") operation = lab.review(input.studentId);
+    else if (action === "verify") operation = lab.verify();
+    else if (action === "exam")
+      operation = lab.exam(input.seedCount ?? 3, input.cap ?? 1500);
+    else if (action === "compare") operation = lab.compare(input.cap ?? 1500);
+    else if (action === "reset") lab.reset();
+    else if (action === "rollback") lab.rollback(input.studentId);
+    else if (action === "arm") {
+      if (!["solo", "teacher", "classroom"].includes(input.arm))
+        throw new Error("Unknown condition.");
+      lab.setArm(input.arm as Arm);
+    } else throw new Error("Unknown action.");
+    db.prepare(
+      "INSERT INTO events (mode,phase,time,detail) VALUES (?,?,?,?)",
+    ).run(mode, action, new Date().toISOString(), JSON.stringify(input));
+    operation?.catch((error) =>
+      console.error("Classroom operation:", error.message),
+    );
+    send(202, { ok: true });
+  } catch (e) {
+    send(400, { error: e instanceof Error ? e.message : "Invalid request" });
+  }
+});
+const port = Number(process.env.PORT ?? 8787);
+server.listen(port, "127.0.0.1", () =>
+  console.log(
+    `ConsequenceLab API: http://127.0.0.1:${port} · model ${real ? "configured" : "not configured"} · SQLite ready`,
+  ),
+);
+process.on("SIGINT", () => {
+  for (const lab of classes.values()) lab.stop();
+  server.close();
+  db.close();
+  process.exit(0);
+});

@@ -1,0 +1,1499 @@
+{
+  "id": "a93cff98-9d9a-4fab-b66d-9a1027d86035",
+  "mode": "simulation",
+  "status": "complete",
+  "cap": 1500,
+  "startedAt": "2026-10-27T22:39:12.603Z",
+  "activeArm": null,
+  "runs": [
+    {
+      "arm": "solo",
+      "status": "complete",
+      "rows": [
+        {
+          "studentId": "student-1",
+          "name": "Ada",
+          "arm": "solo",
+          "seed": 301546601,
+          "score": 7352,
+          "highest": 512,
+          "moves": 511,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 49056,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-2",
+          "name": "Lin",
+          "arm": "solo",
+          "seed": 301546601,
+          "score": 3956,
+          "highest": 256,
+          "moves": 327,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 30816,
+          "workspaceVersion": 2
+        },
+        {
+          "studentId": "student-3",
+          "name": "Sam",
+          "arm": "solo",
+          "seed": 301546601,
+          "score": 3956,
+          "highest": 256,
+          "moves": 327,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 30816,
+          "workspaceVersion": 2
+        }
+      ],
+      "accepted": 2,
+      "rejected": 1,
+      "trainingTokens": 0,
+      "trainingCalls": 0,
+      "trainingSimulations": 44448,
+      "lessons": [
+        {
+          "title": "Compare the next few moves",
+          "rule": "When space is limited, compare candidate moves using sampled continuations. Prefer room and future legal options over immediate score when the evidence supports it.",
+          "trigger": "crowded boards",
+          "exception": "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
+          "source": "Self-review",
+          "evidence": [
+            "f26892f1-622e-493a-9198-5363c3af1a1d"
+          ],
+          "skill": {
+            "id": "compare_escape_moves",
+            "name": "Compare possible moves",
+            "version": 2,
+            "depth": 3,
+            "spaceWeight": 14,
+            "structureWeight": 1.5,
+            "mergeWeight": 1,
+            "riskWeight": 100
+          },
+          "id": "4165cc0e-091a-4e2b-ba2c-cda95b986f7c",
+          "status": "rejected",
+          "createdAt": "2026-10-27T22:39:13.249Z",
+          "verification": {
+            "rows": [
+              {
+                "snapshot": "practice-0-0",
+                "split": "practice",
+                "seed": 4017786581,
+                "baseline": 28,
+                "candidate": 31.5,
+                "delta": 3.5
+              },
+              {
+                "snapshot": "practice-0-1",
+                "split": "practice",
+                "seed": 2834789097,
+                "baseline": 38.5,
+                "candidate": 33,
+                "delta": -5.5
+              },
+              {
+                "snapshot": "practice-0-2",
+                "split": "practice",
+                "seed": 2384461598,
+                "baseline": 26,
+                "candidate": 28.5,
+                "delta": 2.5
+              },
+              {
+                "snapshot": "practice-0-3",
+                "split": "practice",
+                "seed": 24055875,
+                "baseline": 35,
+                "candidate": 44,
+                "delta": 9
+              },
+              {
+                "snapshot": "practice-0-4",
+                "split": "practice",
+                "seed": 2617797824,
+                "baseline": 39,
+                "candidate": 39,
+                "delta": 0
+              },
+              {
+                "snapshot": "practice-0-5",
+                "split": "practice",
+                "seed": 3080792975,
+                "baseline": 31.5,
+                "candidate": 23,
+                "delta": -8.5
+              },
+              {
+                "snapshot": "regression-0-0",
+                "split": "regression",
+                "seed": 1243910528,
+                "baseline": 31,
+                "candidate": 25.5,
+                "delta": -5.5
+              },
+              {
+                "snapshot": "regression-0-1",
+                "split": "regression",
+                "seed": 1315281900,
+                "baseline": 39,
+                "candidate": 39,
+                "delta": 0
+              },
+              {
+                "snapshot": "regression-0-2",
+                "split": "regression",
+                "seed": 2927114106,
+                "baseline": 33.5,
+                "candidate": 36.5,
+                "delta": 3
+              }
+            ],
+            "meanDelta": 0.16666666666666666,
+            "regressionDelta": -0.8333333333333334,
+            "accepted": false,
+            "rule": "Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. Six practice and three regression snapshots; 8 moves each.",
+            "mode": "simulation"
+          }
+        },
+        {
+          "title": "Compare the next few moves",
+          "rule": "When space is limited, compare candidate moves using sampled continuations. Prefer room and future legal options over immediate score when the evidence supports it.",
+          "trigger": "crowded boards",
+          "exception": "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
+          "source": "Self-review",
+          "evidence": [
+            "95ab1801-16f5-4aa9-a171-2eae7db9156f"
+          ],
+          "skill": {
+            "id": "compare_escape_moves",
+            "name": "Compare possible moves",
+            "version": 2,
+            "depth": 3,
+            "spaceWeight": 14,
+            "structureWeight": 1.5,
+            "mergeWeight": 1,
+            "riskWeight": 100
+          },
+          "id": "af69b4a1-360a-40bd-a730-3b1c561fe56e",
+          "status": "verified",
+          "createdAt": "2026-10-27T22:39:13.572Z",
+          "verification": {
+            "rows": [
+              {
+                "snapshot": "practice-1-0",
+                "split": "practice",
+                "seed": 1619669793,
+                "baseline": 32,
+                "candidate": 27.5,
+                "delta": -4.5
+              },
+              {
+                "snapshot": "practice-1-1",
+                "split": "practice",
+                "seed": 1896068976,
+                "baseline": 40.5,
+                "candidate": 40.5,
+                "delta": 0
+              },
+              {
+                "snapshot": "practice-1-2",
+                "split": "practice",
+                "seed": 3918366782,
+                "baseline": 23,
+                "candidate": 56.5,
+                "delta": 33.5
+              },
+              {
+                "snapshot": "practice-1-3",
+                "split": "practice",
+                "seed": 3799209257,
+                "baseline": 35,
+                "candidate": 54.5,
+                "delta": 19.5
+              },
+              {
+                "snapshot": "practice-1-4",
+                "split": "practice",
+                "seed": 897059334,
+                "baseline": 59,
+                "candidate": 63,
+                "delta": 4
+              },
+              {
+                "snapshot": "practice-1-5",
+                "split": "practice",
+                "seed": 2604418421,
+                "baseline": 39,
+                "candidate": 39,
+                "delta": 0
+              },
+              {
+                "snapshot": "regression-1-0",
+                "split": "regression",
+                "seed": 2153456959,
+                "baseline": 52.5,
+                "candidate": 52.5,
+                "delta": 0
+              },
+              {
+                "snapshot": "regression-1-1",
+                "split": "regression",
+                "seed": 1088299437,
+                "baseline": 56,
+                "candidate": 61.5,
+                "delta": 5.5
+              },
+              {
+                "snapshot": "regression-1-2",
+                "split": "regression",
+                "seed": 1960699238,
+                "baseline": 34.5,
+                "candidate": 34.5,
+                "delta": 0
+              }
+            ],
+            "meanDelta": 8.75,
+            "regressionDelta": 1.8333333333333333,
+            "accepted": true,
+            "rule": "Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. Six practice and three regression snapshots; 8 moves each.",
+            "mode": "simulation"
+          }
+        },
+        {
+          "title": "Compare the next few moves",
+          "rule": "When space is limited, compare candidate moves using sampled continuations. Prefer room and future legal options over immediate score when the evidence supports it.",
+          "trigger": "crowded boards",
+          "exception": "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
+          "source": "Self-review",
+          "evidence": [
+            "e6350fd7-ba8c-4e10-8fcd-bcee1bcf1b1a"
+          ],
+          "skill": {
+            "id": "compare_escape_moves",
+            "name": "Compare possible moves",
+            "version": 2,
+            "depth": 3,
+            "spaceWeight": 14,
+            "structureWeight": 1.5,
+            "mergeWeight": 1,
+            "riskWeight": 100
+          },
+          "id": "d231a4a6-8522-4e5d-89bd-4ded852b90e1",
+          "status": "verified",
+          "createdAt": "2026-10-27T22:39:13.850Z",
+          "verification": {
+            "rows": [
+              {
+                "snapshot": "practice-2-0",
+                "split": "practice",
+                "seed": 1574369552,
+                "baseline": 54.5,
+                "candidate": 57.5,
+                "delta": 3
+              },
+              {
+                "snapshot": "practice-2-1",
+                "split": "practice",
+                "seed": 1042027253,
+                "baseline": 39,
+                "candidate": 32,
+                "delta": -7
+              },
+              {
+                "snapshot": "practice-2-2",
+                "split": "practice",
+                "seed": 490263163,
+                "baseline": 23.5,
+                "candidate": 33,
+                "delta": 9.5
+              },
+              {
+                "snapshot": "practice-2-3",
+                "split": "practice",
+                "seed": 2050557828,
+                "baseline": 42.5,
+                "candidate": 32.5,
+                "delta": -10
+              },
+              {
+                "snapshot": "practice-2-4",
+                "split": "practice",
+                "seed": 192552613,
+                "baseline": 59,
+                "candidate": 59,
+                "delta": 0
+              },
+              {
+                "snapshot": "practice-2-5",
+                "split": "practice",
+                "seed": 2015078526,
+                "baseline": 25,
+                "candidate": 41.5,
+                "delta": 16.5
+              },
+              {
+                "snapshot": "regression-2-0",
+                "split": "regression",
+                "seed": 4082201352,
+                "baseline": 20,
+                "candidate": 24.5,
+                "delta": 4.5
+              },
+              {
+                "snapshot": "regression-2-1",
+                "split": "regression",
+                "seed": 4249487549,
+                "baseline": 60,
+                "candidate": 50.5,
+                "delta": -9.5
+              },
+              {
+                "snapshot": "regression-2-2",
+                "split": "regression",
+                "seed": 3225145385,
+                "baseline": 19.5,
+                "candidate": 19.5,
+                "delta": 0
+              }
+            ],
+            "meanDelta": 2,
+            "regressionDelta": -1.6666666666666667,
+            "accepted": true,
+            "rule": "Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. Six practice and three regression snapshots; 8 moves each.",
+            "mode": "simulation"
+          }
+        }
+      ],
+      "messages": [
+        {
+          "id": "a76bc422-8404-4f86-82b7-3667ac305910",
+          "role": "system",
+          "title": "Practice finished",
+          "text": "We saved every move, the tools each student used, and what happened next. Pick a student to talk through an attempt.",
+          "time": "2026-10-27T22:39:13.248Z"
+        },
+        {
+          "id": "27981c6f-04e1-433c-9c54-3e58c45dc002",
+          "role": "student",
+          "title": "Ada reviews their attempt",
+          "text": "That down move took you from 14 open spaces to 13. Let’s try looking a little further ahead and checking how much room each move leaves. It’s an idea to test, not a sure fix.",
+          "evidence": [
+            "f26892f1-622e-493a-9198-5363c3af1a1d"
+          ],
+          "time": "2026-10-27T22:39:13.249Z"
+        },
+        {
+          "id": "09b4abc1-062d-4106-a5f4-e5560fe24564",
+          "role": "student",
+          "title": "Ada makes a plan",
+          "text": "I’ll try this on different boards before I keep it. A good explanation still needs a fair test.",
+          "evidence": [
+            "f26892f1-622e-493a-9198-5363c3af1a1d"
+          ],
+          "time": "2026-10-27T22:39:13.249Z"
+        },
+        {
+          "id": "41aa77dc-e2b4-454d-acd6-71f2e96ab5d3",
+          "role": "system",
+          "title": "Lesson rejected",
+          "text": "The idea changed the practice score by 0.2 and the check-up score by -0.8. It didn’t pass both checks. Let’s keep the old notes and try another idea.",
+          "evidence": [
+            "f26892f1-622e-493a-9198-5363c3af1a1d"
+          ],
+          "time": "2026-10-27T22:39:13.570Z"
+        },
+        {
+          "id": "03842003-4adf-424d-9732-db36f8003a5e",
+          "role": "student",
+          "title": "Lin reviews their attempt",
+          "text": "That up move took you from 14 open spaces to 13. Let’s try looking a little further ahead and checking how much room each move leaves. It’s an idea to test, not a sure fix.",
+          "evidence": [
+            "95ab1801-16f5-4aa9-a171-2eae7db9156f"
+          ],
+          "time": "2026-10-27T22:39:13.572Z"
+        },
+        {
+          "id": "6d77a4de-328b-4774-a0ac-54a800d602dc",
+          "role": "student",
+          "title": "Lin makes a plan",
+          "text": "I’ll try this on different boards before I keep it. A good explanation still needs a fair test.",
+          "evidence": [
+            "95ab1801-16f5-4aa9-a171-2eae7db9156f"
+          ],
+          "time": "2026-10-27T22:39:13.572Z"
+        },
+        {
+          "id": "0c17f939-1eb5-462f-aae7-ab29f5b23529",
+          "role": "system",
+          "title": "Lesson accepted",
+          "text": "The idea changed the practice score by 8.8 and the check-up score by 1.8. It passed both checks, so we’ll keep it and try it in the next test.",
+          "evidence": [
+            "95ab1801-16f5-4aa9-a171-2eae7db9156f"
+          ],
+          "time": "2026-10-27T22:39:13.849Z"
+        },
+        {
+          "id": "90fae5e4-6b18-4aec-aba6-995f1d48aee9",
+          "role": "student",
+          "title": "Sam reviews their attempt",
+          "text": "That up move took you from 14 open spaces to 13. Let’s try looking a little further ahead and checking how much room each move leaves. It’s an idea to test, not a sure fix.",
+          "evidence": [
+            "e6350fd7-ba8c-4e10-8fcd-bcee1bcf1b1a"
+          ],
+          "time": "2026-10-27T22:39:13.850Z"
+        },
+        {
+          "id": "a4cd315d-923e-4998-b9c3-cea6ea2f0aef",
+          "role": "student",
+          "title": "Sam makes a plan",
+          "text": "I’ll try this on different boards before I keep it. A good explanation still needs a fair test.",
+          "evidence": [
+            "e6350fd7-ba8c-4e10-8fcd-bcee1bcf1b1a"
+          ],
+          "time": "2026-10-27T22:39:13.850Z"
+        },
+        {
+          "id": "ea6c045f-143f-4a9b-b8b9-a0c566a57d52",
+          "role": "system",
+          "title": "Lesson accepted",
+          "text": "The idea changed the practice score by 2.0 and the check-up score by -1.7. It passed both checks, so we’ll keep it and try it in the next test.",
+          "evidence": [
+            "e6350fd7-ba8c-4e10-8fcd-bcee1bcf1b1a"
+          ],
+          "time": "2026-10-27T22:39:14.119Z"
+        },
+        {
+          "id": "367a81b8-21b8-4ee2-a9c0-4b1c216536fb",
+          "role": "system",
+          "title": "Independent exam",
+          "text": "Teacher and peers are disabled. Workspaces are frozen; every game starts with fresh context.",
+          "time": "2026-10-27T22:39:14.120Z"
+        },
+        {
+          "id": "42f78d90-017f-4a97-b766-33ee836f49c9",
+          "role": "system",
+          "title": "Exam complete",
+          "text": "3 game outcomes recorded. Results are local heuristic simulation, not LLM learning evidence.",
+          "time": "2026-10-27T22:39:16.298Z"
+        }
+      ]
+    },
+    {
+      "arm": "teacher",
+      "status": "complete",
+      "rows": [
+        {
+          "studentId": "student-1",
+          "name": "Ada",
+          "arm": "teacher",
+          "seed": 301546601,
+          "score": 7352,
+          "highest": 512,
+          "moves": 511,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 49056,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-2",
+          "name": "Lin",
+          "arm": "teacher",
+          "seed": 301546601,
+          "score": 3956,
+          "highest": 256,
+          "moves": 327,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 30816,
+          "workspaceVersion": 2
+        },
+        {
+          "studentId": "student-3",
+          "name": "Sam",
+          "arm": "teacher",
+          "seed": 301546601,
+          "score": 3956,
+          "highest": 256,
+          "moves": 327,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 30816,
+          "workspaceVersion": 2
+        }
+      ],
+      "accepted": 2,
+      "rejected": 1,
+      "trainingTokens": 0,
+      "trainingCalls": 0,
+      "trainingSimulations": 44448,
+      "lessons": [
+        {
+          "title": "Compare the next few moves",
+          "rule": "When space is limited, compare candidate moves using sampled continuations. Prefer room and future legal options over immediate score when the evidence supports it.",
+          "trigger": "crowded boards",
+          "exception": "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
+          "source": "Teacher",
+          "evidence": [
+            "eeac04ef-2fc7-48ed-ae83-16d209dfc3d1"
+          ],
+          "skill": {
+            "id": "compare_escape_moves",
+            "name": "Compare possible moves",
+            "version": 2,
+            "depth": 3,
+            "spaceWeight": 14,
+            "structureWeight": 1.5,
+            "mergeWeight": 1,
+            "riskWeight": 100
+          },
+          "id": "f98783f4-06fb-45f0-a448-bad5d0d9b724",
+          "status": "rejected",
+          "createdAt": "2026-10-27T22:39:16.857Z",
+          "verification": {
+            "rows": [
+              {
+                "snapshot": "practice-0-0",
+                "split": "practice",
+                "seed": 4017786581,
+                "baseline": 28,
+                "candidate": 31.5,
+                "delta": 3.5
+              },
+              {
+                "snapshot": "practice-0-1",
+                "split": "practice",
+                "seed": 2834789097,
+                "baseline": 38.5,
+                "candidate": 33,
+                "delta": -5.5
+              },
+              {
+                "snapshot": "practice-0-2",
+                "split": "practice",
+                "seed": 2384461598,
+                "baseline": 26,
+                "candidate": 28.5,
+                "delta": 2.5
+              },
+              {
+                "snapshot": "practice-0-3",
+                "split": "practice",
+                "seed": 24055875,
+                "baseline": 35,
+                "candidate": 44,
+                "delta": 9
+              },
+              {
+                "snapshot": "practice-0-4",
+                "split": "practice",
+                "seed": 2617797824,
+                "baseline": 39,
+                "candidate": 39,
+                "delta": 0
+              },
+              {
+                "snapshot": "practice-0-5",
+                "split": "practice",
+                "seed": 3080792975,
+                "baseline": 31.5,
+                "candidate": 23,
+                "delta": -8.5
+              },
+              {
+                "snapshot": "regression-0-0",
+                "split": "regression",
+                "seed": 1243910528,
+                "baseline": 31,
+                "candidate": 25.5,
+                "delta": -5.5
+              },
+              {
+                "snapshot": "regression-0-1",
+                "split": "regression",
+                "seed": 1315281900,
+                "baseline": 39,
+                "candidate": 39,
+                "delta": 0
+              },
+              {
+                "snapshot": "regression-0-2",
+                "split": "regression",
+                "seed": 2927114106,
+                "baseline": 33.5,
+                "candidate": 36.5,
+                "delta": 3
+              }
+            ],
+            "meanDelta": 0.16666666666666666,
+            "regressionDelta": -0.8333333333333334,
+            "accepted": false,
+            "rule": "Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. Six practice and three regression snapshots; 8 moves each.",
+            "mode": "simulation"
+          }
+        },
+        {
+          "title": "Compare the next few moves",
+          "rule": "When space is limited, compare candidate moves using sampled continuations. Prefer room and future legal options over immediate score when the evidence supports it.",
+          "trigger": "crowded boards",
+          "exception": "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
+          "source": "Teacher",
+          "evidence": [
+            "ec1ba731-5a95-4008-82f6-4fff8eb6b04d"
+          ],
+          "skill": {
+            "id": "compare_escape_moves",
+            "name": "Compare possible moves",
+            "version": 2,
+            "depth": 3,
+            "spaceWeight": 14,
+            "structureWeight": 1.5,
+            "mergeWeight": 1,
+            "riskWeight": 100
+          },
+          "id": "af994c95-21f0-4b3a-b495-6a8e6e3b4f0b",
+          "status": "verified",
+          "createdAt": "2026-10-27T22:39:17.136Z",
+          "verification": {
+            "rows": [
+              {
+                "snapshot": "practice-1-0",
+                "split": "practice",
+                "seed": 1619669793,
+                "baseline": 32,
+                "candidate": 27.5,
+                "delta": -4.5
+              },
+              {
+                "snapshot": "practice-1-1",
+                "split": "practice",
+                "seed": 1896068976,
+                "baseline": 40.5,
+                "candidate": 40.5,
+                "delta": 0
+              },
+              {
+                "snapshot": "practice-1-2",
+                "split": "practice",
+                "seed": 3918366782,
+                "baseline": 23,
+                "candidate": 56.5,
+                "delta": 33.5
+              },
+              {
+                "snapshot": "practice-1-3",
+                "split": "practice",
+                "seed": 3799209257,
+                "baseline": 35,
+                "candidate": 54.5,
+                "delta": 19.5
+              },
+              {
+                "snapshot": "practice-1-4",
+                "split": "practice",
+                "seed": 897059334,
+                "baseline": 59,
+                "candidate": 63,
+                "delta": 4
+              },
+              {
+                "snapshot": "practice-1-5",
+                "split": "practice",
+                "seed": 2604418421,
+                "baseline": 39,
+                "candidate": 39,
+                "delta": 0
+              },
+              {
+                "snapshot": "regression-1-0",
+                "split": "regression",
+                "seed": 2153456959,
+                "baseline": 52.5,
+                "candidate": 52.5,
+                "delta": 0
+              },
+              {
+                "snapshot": "regression-1-1",
+                "split": "regression",
+                "seed": 1088299437,
+                "baseline": 56,
+                "candidate": 61.5,
+                "delta": 5.5
+              },
+              {
+                "snapshot": "regression-1-2",
+                "split": "regression",
+                "seed": 1960699238,
+                "baseline": 34.5,
+                "candidate": 34.5,
+                "delta": 0
+              }
+            ],
+            "meanDelta": 8.75,
+            "regressionDelta": 1.8333333333333333,
+            "accepted": true,
+            "rule": "Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. Six practice and three regression snapshots; 8 moves each.",
+            "mode": "simulation"
+          }
+        },
+        {
+          "title": "Compare the next few moves",
+          "rule": "When space is limited, compare candidate moves using sampled continuations. Prefer room and future legal options over immediate score when the evidence supports it.",
+          "trigger": "crowded boards",
+          "exception": "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
+          "source": "Teacher",
+          "evidence": [
+            "48127c67-8d5a-4724-9ec5-e7b3034f054b"
+          ],
+          "skill": {
+            "id": "compare_escape_moves",
+            "name": "Compare possible moves",
+            "version": 2,
+            "depth": 3,
+            "spaceWeight": 14,
+            "structureWeight": 1.5,
+            "mergeWeight": 1,
+            "riskWeight": 100
+          },
+          "id": "3b5661db-c4bf-48d5-96a4-cb6b5acd0bfe",
+          "status": "verified",
+          "createdAt": "2026-10-27T22:39:17.417Z",
+          "verification": {
+            "rows": [
+              {
+                "snapshot": "practice-2-0",
+                "split": "practice",
+                "seed": 1574369552,
+                "baseline": 54.5,
+                "candidate": 57.5,
+                "delta": 3
+              },
+              {
+                "snapshot": "practice-2-1",
+                "split": "practice",
+                "seed": 1042027253,
+                "baseline": 39,
+                "candidate": 32,
+                "delta": -7
+              },
+              {
+                "snapshot": "practice-2-2",
+                "split": "practice",
+                "seed": 490263163,
+                "baseline": 23.5,
+                "candidate": 33,
+                "delta": 9.5
+              },
+              {
+                "snapshot": "practice-2-3",
+                "split": "practice",
+                "seed": 2050557828,
+                "baseline": 42.5,
+                "candidate": 32.5,
+                "delta": -10
+              },
+              {
+                "snapshot": "practice-2-4",
+                "split": "practice",
+                "seed": 192552613,
+                "baseline": 59,
+                "candidate": 59,
+                "delta": 0
+              },
+              {
+                "snapshot": "practice-2-5",
+                "split": "practice",
+                "seed": 2015078526,
+                "baseline": 25,
+                "candidate": 41.5,
+                "delta": 16.5
+              },
+              {
+                "snapshot": "regression-2-0",
+                "split": "regression",
+                "seed": 4082201352,
+                "baseline": 20,
+                "candidate": 24.5,
+                "delta": 4.5
+              },
+              {
+                "snapshot": "regression-2-1",
+                "split": "regression",
+                "seed": 4249487549,
+                "baseline": 60,
+                "candidate": 50.5,
+                "delta": -9.5
+              },
+              {
+                "snapshot": "regression-2-2",
+                "split": "regression",
+                "seed": 3225145385,
+                "baseline": 19.5,
+                "candidate": 19.5,
+                "delta": 0
+              }
+            ],
+            "meanDelta": 2,
+            "regressionDelta": -1.6666666666666667,
+            "accepted": true,
+            "rule": "Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. Six practice and three regression snapshots; 8 moves each.",
+            "mode": "simulation"
+          }
+        }
+      ],
+      "messages": [
+        {
+          "id": "72804128-51db-4a82-9713-6d4ccb411ce9",
+          "role": "system",
+          "title": "Practice finished",
+          "text": "We saved every move, the tools each student used, and what happened next. Pick a student to talk through an attempt.",
+          "time": "2026-10-27T22:39:16.855Z"
+        },
+        {
+          "id": "b10ea7d8-6dd5-4ca1-a78b-33183285e8d5",
+          "role": "teacher",
+          "title": "Teacher → Ada",
+          "text": "That down move took you from 14 open spaces to 13. Let’s try looking a little further ahead and checking how much room each move leaves. It’s an idea to test, not a sure fix.",
+          "evidence": [
+            "eeac04ef-2fc7-48ed-ae83-16d209dfc3d1"
+          ],
+          "time": "2026-10-27T22:39:16.857Z"
+        },
+        {
+          "id": "9d849662-8060-4a31-8ec9-eccd2e0ffd86",
+          "role": "student",
+          "title": "Ada makes a plan",
+          "text": "I’ll try this on different boards before I keep it. A good explanation still needs a fair test.",
+          "evidence": [
+            "eeac04ef-2fc7-48ed-ae83-16d209dfc3d1"
+          ],
+          "time": "2026-10-27T22:39:16.857Z"
+        },
+        {
+          "id": "25fd403b-62a3-4e88-afc7-6c5f045278a9",
+          "role": "system",
+          "title": "Lesson rejected",
+          "text": "The idea changed the practice score by 0.2 and the check-up score by -0.8. It didn’t pass both checks. Let’s keep the old notes and try another idea.",
+          "evidence": [
+            "eeac04ef-2fc7-48ed-ae83-16d209dfc3d1"
+          ],
+          "time": "2026-10-27T22:39:17.135Z"
+        },
+        {
+          "id": "99e754b7-936f-46d5-a303-a8b363675c34",
+          "role": "teacher",
+          "title": "Teacher → Lin",
+          "text": "That up move took you from 14 open spaces to 13. Let’s try looking a little further ahead and checking how much room each move leaves. It’s an idea to test, not a sure fix.",
+          "evidence": [
+            "ec1ba731-5a95-4008-82f6-4fff8eb6b04d"
+          ],
+          "time": "2026-10-27T22:39:17.136Z"
+        },
+        {
+          "id": "84b7d777-04f2-47ce-b670-b2bd41e0f368",
+          "role": "student",
+          "title": "Lin makes a plan",
+          "text": "I’ll try this on different boards before I keep it. A good explanation still needs a fair test.",
+          "evidence": [
+            "ec1ba731-5a95-4008-82f6-4fff8eb6b04d"
+          ],
+          "time": "2026-10-27T22:39:17.136Z"
+        },
+        {
+          "id": "085731d3-c74e-4cae-b36f-8d017a814af4",
+          "role": "system",
+          "title": "Lesson accepted",
+          "text": "The idea changed the practice score by 8.8 and the check-up score by 1.8. It passed both checks, so we’ll keep it and try it in the next test.",
+          "evidence": [
+            "ec1ba731-5a95-4008-82f6-4fff8eb6b04d"
+          ],
+          "time": "2026-10-27T22:39:17.416Z"
+        },
+        {
+          "id": "c7a3be28-ebdc-4c8e-b93d-92aebb59bbb5",
+          "role": "teacher",
+          "title": "Teacher → Sam",
+          "text": "That up move took you from 14 open spaces to 13. Let’s try looking a little further ahead and checking how much room each move leaves. It’s an idea to test, not a sure fix.",
+          "evidence": [
+            "48127c67-8d5a-4724-9ec5-e7b3034f054b"
+          ],
+          "time": "2026-10-27T22:39:17.417Z"
+        },
+        {
+          "id": "eb0ff0dc-ff11-42dd-a78b-e05e090810e5",
+          "role": "student",
+          "title": "Sam makes a plan",
+          "text": "I’ll try this on different boards before I keep it. A good explanation still needs a fair test.",
+          "evidence": [
+            "48127c67-8d5a-4724-9ec5-e7b3034f054b"
+          ],
+          "time": "2026-10-27T22:39:17.417Z"
+        },
+        {
+          "id": "f2df6b3d-0088-41d6-bc7f-ac0a0cd3f8c5",
+          "role": "system",
+          "title": "Lesson accepted",
+          "text": "The idea changed the practice score by 2.0 and the check-up score by -1.7. It passed both checks, so we’ll keep it and try it in the next test.",
+          "evidence": [
+            "48127c67-8d5a-4724-9ec5-e7b3034f054b"
+          ],
+          "time": "2026-10-27T22:39:17.680Z"
+        },
+        {
+          "id": "8bc121f5-1093-4768-909d-f35d689f757e",
+          "role": "system",
+          "title": "Independent exam",
+          "text": "Teacher and peers are disabled. Workspaces are frozen; every game starts with fresh context.",
+          "time": "2026-10-27T22:39:17.681Z"
+        },
+        {
+          "id": "1c541e38-2e43-4d6d-8852-6c6b9c830b57",
+          "role": "system",
+          "title": "Exam complete",
+          "text": "3 game outcomes recorded. Results are local heuristic simulation, not LLM learning evidence.",
+          "time": "2026-10-27T22:39:20.038Z"
+        }
+      ]
+    },
+    {
+      "arm": "classroom",
+      "status": "complete",
+      "rows": [
+        {
+          "studentId": "student-1",
+          "name": "Ada",
+          "arm": "classroom",
+          "seed": 301546601,
+          "score": 7352,
+          "highest": 512,
+          "moves": 511,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 49056,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-2",
+          "name": "Lin",
+          "arm": "classroom",
+          "seed": 301546601,
+          "score": 6768,
+          "highest": 512,
+          "moves": 472,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 44418,
+          "workspaceVersion": 2
+        },
+        {
+          "studentId": "student-3",
+          "name": "Sam",
+          "arm": "classroom",
+          "seed": 301546601,
+          "score": 6768,
+          "highest": 512,
+          "moves": 472,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 44418,
+          "workspaceVersion": 2
+        }
+      ],
+      "accepted": 2,
+      "rejected": 1,
+      "trainingTokens": 0,
+      "trainingCalls": 0,
+      "trainingSimulations": 44454,
+      "lessons": [
+        {
+          "title": "Compare the next few moves",
+          "rule": "When space is limited, compare candidate moves using sampled continuations. Prefer room and future legal options over immediate score when the evidence supports it.",
+          "trigger": "crowded boards",
+          "exception": "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
+          "source": "Teacher + Lin",
+          "evidence": [
+            "fb0e6a4a-1d19-413e-9244-13a38b9c8e32",
+            "530e1355-c956-4f44-8808-2f5a45ded7d0"
+          ],
+          "skill": {
+            "id": "compare_escape_moves",
+            "name": "Compare possible moves",
+            "version": 2,
+            "depth": 3,
+            "spaceWeight": 16,
+            "structureWeight": 1.5,
+            "mergeWeight": 1,
+            "riskWeight": 100
+          },
+          "id": "14b2246b-28f1-4efb-9360-f03cbdb4cf22",
+          "status": "rejected",
+          "createdAt": "2026-10-27T22:39:20.578Z",
+          "verification": {
+            "rows": [
+              {
+                "snapshot": "practice-0-0",
+                "split": "practice",
+                "seed": 4017786581,
+                "baseline": 28,
+                "candidate": 31.5,
+                "delta": 3.5
+              },
+              {
+                "snapshot": "practice-0-1",
+                "split": "practice",
+                "seed": 2834789097,
+                "baseline": 38.5,
+                "candidate": 33,
+                "delta": -5.5
+              },
+              {
+                "snapshot": "practice-0-2",
+                "split": "practice",
+                "seed": 2384461598,
+                "baseline": 26,
+                "candidate": 28.5,
+                "delta": 2.5
+              },
+              {
+                "snapshot": "practice-0-3",
+                "split": "practice",
+                "seed": 24055875,
+                "baseline": 35,
+                "candidate": 44,
+                "delta": 9
+              },
+              {
+                "snapshot": "practice-0-4",
+                "split": "practice",
+                "seed": 2617797824,
+                "baseline": 39,
+                "candidate": 39,
+                "delta": 0
+              },
+              {
+                "snapshot": "practice-0-5",
+                "split": "practice",
+                "seed": 3080792975,
+                "baseline": 31.5,
+                "candidate": 23,
+                "delta": -8.5
+              },
+              {
+                "snapshot": "regression-0-0",
+                "split": "regression",
+                "seed": 1243910528,
+                "baseline": 31,
+                "candidate": 28,
+                "delta": -3
+              },
+              {
+                "snapshot": "regression-0-1",
+                "split": "regression",
+                "seed": 1315281900,
+                "baseline": 39,
+                "candidate": 39,
+                "delta": 0
+              },
+              {
+                "snapshot": "regression-0-2",
+                "split": "regression",
+                "seed": 2927114106,
+                "baseline": 33.5,
+                "candidate": 36.5,
+                "delta": 3
+              }
+            ],
+            "meanDelta": 0.16666666666666666,
+            "regressionDelta": 0,
+            "accepted": false,
+            "rule": "Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. Six practice and three regression snapshots; 8 moves each.",
+            "mode": "simulation"
+          }
+        },
+        {
+          "title": "Compare the next few moves",
+          "rule": "When space is limited, compare candidate moves using sampled continuations. Prefer room and future legal options over immediate score when the evidence supports it.",
+          "trigger": "crowded boards",
+          "exception": "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
+          "source": "Teacher + Ada",
+          "evidence": [
+            "b7893540-d632-4e69-ba99-e7751132f60b",
+            "f99f6260-034c-4721-bbde-40990e357464"
+          ],
+          "skill": {
+            "id": "compare_escape_moves",
+            "name": "Compare possible moves",
+            "version": 2,
+            "depth": 3,
+            "spaceWeight": 16,
+            "structureWeight": 1.5,
+            "mergeWeight": 1,
+            "riskWeight": 100
+          },
+          "id": "9070ce9a-fc85-4546-95ec-d9d5713a3450",
+          "status": "verified",
+          "createdAt": "2026-10-27T22:39:20.876Z",
+          "verification": {
+            "rows": [
+              {
+                "snapshot": "practice-1-0",
+                "split": "practice",
+                "seed": 1619669793,
+                "baseline": 32,
+                "candidate": 27.5,
+                "delta": -4.5
+              },
+              {
+                "snapshot": "practice-1-1",
+                "split": "practice",
+                "seed": 1896068976,
+                "baseline": 40.5,
+                "candidate": 40.5,
+                "delta": 0
+              },
+              {
+                "snapshot": "practice-1-2",
+                "split": "practice",
+                "seed": 3918366782,
+                "baseline": 23,
+                "candidate": 56.5,
+                "delta": 33.5
+              },
+              {
+                "snapshot": "practice-1-3",
+                "split": "practice",
+                "seed": 3799209257,
+                "baseline": 35,
+                "candidate": 54.5,
+                "delta": 19.5
+              },
+              {
+                "snapshot": "practice-1-4",
+                "split": "practice",
+                "seed": 897059334,
+                "baseline": 59,
+                "candidate": 63,
+                "delta": 4
+              },
+              {
+                "snapshot": "practice-1-5",
+                "split": "practice",
+                "seed": 2604418421,
+                "baseline": 39,
+                "candidate": 39,
+                "delta": 0
+              },
+              {
+                "snapshot": "regression-1-0",
+                "split": "regression",
+                "seed": 2153456959,
+                "baseline": 52.5,
+                "candidate": 52.5,
+                "delta": 0
+              },
+              {
+                "snapshot": "regression-1-1",
+                "split": "regression",
+                "seed": 1088299437,
+                "baseline": 56,
+                "candidate": 61.5,
+                "delta": 5.5
+              },
+              {
+                "snapshot": "regression-1-2",
+                "split": "regression",
+                "seed": 1960699238,
+                "baseline": 34.5,
+                "candidate": 34.5,
+                "delta": 0
+              }
+            ],
+            "meanDelta": 8.75,
+            "regressionDelta": 1.8333333333333333,
+            "accepted": true,
+            "rule": "Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. Six practice and three regression snapshots; 8 moves each.",
+            "mode": "simulation"
+          }
+        },
+        {
+          "title": "Compare the next few moves",
+          "rule": "When space is limited, compare candidate moves using sampled continuations. Prefer room and future legal options over immediate score when the evidence supports it.",
+          "trigger": "crowded boards",
+          "exception": "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
+          "source": "Teacher + Ada",
+          "evidence": [
+            "3ce2912e-3376-49cf-b566-af03cd0aeb45",
+            "f99f6260-034c-4721-bbde-40990e357464"
+          ],
+          "skill": {
+            "id": "compare_escape_moves",
+            "name": "Compare possible moves",
+            "version": 2,
+            "depth": 3,
+            "spaceWeight": 16,
+            "structureWeight": 1.5,
+            "mergeWeight": 1,
+            "riskWeight": 100
+          },
+          "id": "ec59b2b8-d790-40ff-897a-4ad6e865b5d6",
+          "status": "verified",
+          "createdAt": "2026-10-27T22:39:21.138Z",
+          "verification": {
+            "rows": [
+              {
+                "snapshot": "practice-2-0",
+                "split": "practice",
+                "seed": 1574369552,
+                "baseline": 54.5,
+                "candidate": 57.5,
+                "delta": 3
+              },
+              {
+                "snapshot": "practice-2-1",
+                "split": "practice",
+                "seed": 1042027253,
+                "baseline": 39,
+                "candidate": 32,
+                "delta": -7
+              },
+              {
+                "snapshot": "practice-2-2",
+                "split": "practice",
+                "seed": 490263163,
+                "baseline": 23.5,
+                "candidate": 33,
+                "delta": 9.5
+              },
+              {
+                "snapshot": "practice-2-3",
+                "split": "practice",
+                "seed": 2050557828,
+                "baseline": 42.5,
+                "candidate": 32.5,
+                "delta": -10
+              },
+              {
+                "snapshot": "practice-2-4",
+                "split": "practice",
+                "seed": 192552613,
+                "baseline": 59,
+                "candidate": 59,
+                "delta": 0
+              },
+              {
+                "snapshot": "practice-2-5",
+                "split": "practice",
+                "seed": 2015078526,
+                "baseline": 25,
+                "candidate": 41.5,
+                "delta": 16.5
+              },
+              {
+                "snapshot": "regression-2-0",
+                "split": "regression",
+                "seed": 4082201352,
+                "baseline": 20,
+                "candidate": 24.5,
+                "delta": 4.5
+              },
+              {
+                "snapshot": "regression-2-1",
+                "split": "regression",
+                "seed": 4249487549,
+                "baseline": 60,
+                "candidate": 50.5,
+                "delta": -9.5
+              },
+              {
+                "snapshot": "regression-2-2",
+                "split": "regression",
+                "seed": 3225145385,
+                "baseline": 19.5,
+                "candidate": 19.5,
+                "delta": 0
+              }
+            ],
+            "meanDelta": 2,
+            "regressionDelta": -1.6666666666666667,
+            "accepted": true,
+            "rule": "Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. Six practice and three regression snapshots; 8 moves each.",
+            "mode": "simulation"
+          }
+        }
+      ],
+      "messages": [
+        {
+          "id": "ed8fc9ce-860e-4ace-bb46-2c2d2ceb6259",
+          "role": "system",
+          "title": "Practice finished",
+          "text": "We saved every move, the tools each student used, and what happened next. Pick a student to talk through an attempt.",
+          "time": "2026-10-27T22:39:20.575Z"
+        },
+        {
+          "id": "1dcff928-6278-42bc-a0b0-c38d1996738e",
+          "role": "teacher",
+          "title": "Teacher → Ada",
+          "text": "That down move took you from 14 open spaces to 13. Let’s try looking a little further ahead and checking how much room each move leaves. It’s an idea to test, not a sure fix.",
+          "evidence": [
+            "fb0e6a4a-1d19-413e-9244-13a38b9c8e32"
+          ],
+          "time": "2026-10-27T22:39:20.578Z"
+        },
+        {
+          "id": "d4960428-7760-4571-8447-2ace3f40ddd2",
+          "role": "peer",
+          "title": "Lin → Ada",
+          "text": "My left move opened up 1 more spaces. Maybe checking for room before a big merge would help you too. I’ve shared that move so you can check it yourself.",
+          "evidence": [
+            "530e1355-c956-4f44-8808-2f5a45ded7d0"
+          ],
+          "time": "2026-10-27T22:39:20.578Z"
+        },
+        {
+          "id": "dffc1752-a1e5-4346-ae0b-523882f2c6b9",
+          "role": "student",
+          "title": "Ada makes a plan",
+          "text": "I’ll try Lin’s idea on different boards. If it helps without hurting my other attempts, I’ll keep it in my notes.",
+          "evidence": [
+            "fb0e6a4a-1d19-413e-9244-13a38b9c8e32",
+            "530e1355-c956-4f44-8808-2f5a45ded7d0"
+          ],
+          "time": "2026-10-27T22:39:20.578Z"
+        },
+        {
+          "id": "9221206f-d5f5-4786-ac12-6302f82a1a22",
+          "role": "system",
+          "title": "Lesson rejected",
+          "text": "The idea changed the practice score by 0.2 and the check-up score by 0.0. It didn’t pass both checks. Let’s keep the old notes and try another idea.",
+          "evidence": [
+            "fb0e6a4a-1d19-413e-9244-13a38b9c8e32",
+            "530e1355-c956-4f44-8808-2f5a45ded7d0"
+          ],
+          "time": "2026-10-27T22:39:20.874Z"
+        },
+        {
+          "id": "2b38936c-1043-4f89-88b1-653fdfe634f7",
+          "role": "teacher",
+          "title": "Teacher → Lin",
+          "text": "That up move took you from 14 open spaces to 13. Let’s try looking a little further ahead and checking how much room each move leaves. It’s an idea to test, not a sure fix.",
+          "evidence": [
+            "b7893540-d632-4e69-ba99-e7751132f60b"
+          ],
+          "time": "2026-10-27T22:39:20.876Z"
+        },
+        {
+          "id": "cbc890ef-b61e-401d-8e3a-3dbf5bd9f49d",
+          "role": "peer",
+          "title": "Ada → Lin",
+          "text": "My up move opened up 1 more spaces. Maybe checking for room before a big merge would help you too. I’ve shared that move so you can check it yourself.",
+          "evidence": [
+            "f99f6260-034c-4721-bbde-40990e357464"
+          ],
+          "time": "2026-10-27T22:39:20.876Z"
+        },
+        {
+          "id": "8116e3a1-f7f8-47d8-80d2-0db21a1c785a",
+          "role": "student",
+          "title": "Lin makes a plan",
+          "text": "I’ll try Ada’s idea on different boards. If it helps without hurting my other attempts, I’ll keep it in my notes.",
+          "evidence": [
+            "b7893540-d632-4e69-ba99-e7751132f60b",
+            "f99f6260-034c-4721-bbde-40990e357464"
+          ],
+          "time": "2026-10-27T22:39:20.876Z"
+        },
+        {
+          "id": "45e8da0d-eb3f-4d61-b4cc-b64cb976d320",
+          "role": "system",
+          "title": "Lesson accepted",
+          "text": "The idea changed the practice score by 8.8 and the check-up score by 1.8. It passed both checks, so we’ll keep it and try it in the next test.",
+          "evidence": [
+            "b7893540-d632-4e69-ba99-e7751132f60b",
+            "f99f6260-034c-4721-bbde-40990e357464"
+          ],
+          "time": "2026-10-27T22:39:21.137Z"
+        },
+        {
+          "id": "c1069985-1e9f-49fd-8525-d312df9c6117",
+          "role": "teacher",
+          "title": "Teacher → Sam",
+          "text": "That up move took you from 14 open spaces to 13. Let’s try looking a little further ahead and checking how much room each move leaves. It’s an idea to test, not a sure fix.",
+          "evidence": [
+            "3ce2912e-3376-49cf-b566-af03cd0aeb45"
+          ],
+          "time": "2026-10-27T22:39:21.138Z"
+        },
+        {
+          "id": "011a869d-8303-423a-a14f-a1f6978360fd",
+          "role": "peer",
+          "title": "Ada → Sam",
+          "text": "My up move opened up 1 more spaces. Maybe checking for room before a big merge would help you too. I’ve shared that move so you can check it yourself.",
+          "evidence": [
+            "f99f6260-034c-4721-bbde-40990e357464"
+          ],
+          "time": "2026-10-27T22:39:21.138Z"
+        },
+        {
+          "id": "40ba17ee-5a31-4299-82b0-9c47abe560dd",
+          "role": "student",
+          "title": "Sam makes a plan",
+          "text": "I’ll try Ada’s idea on different boards. If it helps without hurting my other attempts, I’ll keep it in my notes.",
+          "evidence": [
+            "3ce2912e-3376-49cf-b566-af03cd0aeb45",
+            "f99f6260-034c-4721-bbde-40990e357464"
+          ],
+          "time": "2026-10-27T22:39:21.138Z"
+        },
+        {
+          "id": "b2c0d4fd-8c6f-4252-b9df-55bfefc4cf9f",
+          "role": "system",
+          "title": "Lesson accepted",
+          "text": "The idea changed the practice score by 2.0 and the check-up score by -1.7. It passed both checks, so we’ll keep it and try it in the next test.",
+          "evidence": [
+            "3ce2912e-3376-49cf-b566-af03cd0aeb45",
+            "f99f6260-034c-4721-bbde-40990e357464"
+          ],
+          "time": "2026-10-27T22:39:21.397Z"
+        },
+        {
+          "id": "0c4f4dbc-56aa-4a0a-9c4c-db1f5f65c87c",
+          "role": "system",
+          "title": "Independent exam",
+          "text": "Teacher and peers are disabled. Workspaces are frozen; every game starts with fresh context.",
+          "time": "2026-10-27T22:39:21.398Z"
+        },
+        {
+          "id": "ec690fd9-ace1-4405-8a5b-f9ffecc57ac0",
+          "role": "system",
+          "title": "Exam complete",
+          "text": "3 game outcomes recorded. Results are local heuristic simulation, not LLM learning evidence.",
+          "time": "2026-10-27T22:39:24.000Z"
+        }
+      ]
+    }
+  ],
+  "completedAt": "2026-10-27T22:39:24.001Z"
+}

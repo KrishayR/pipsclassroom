@@ -1,0 +1,1056 @@
+{
+  "schemaVersion": 1,
+  "mode": "simulation",
+  "engine": "cl-2048-1",
+  "rng": "mulberry32-1",
+  "config": {
+    "repetitions": 1,
+    "seeds": 2,
+    "cap": 1500,
+    "trainingMoves": 24,
+    "trainingRounds": 1,
+    "simulationBudget": 30000,
+    "tokenBudget": 100000,
+    "model": null
+  },
+  "notes": [
+    "All results include failures. No positive gain is assumed.",
+    "Simulation arms share a heuristic proposal rule; their comparison tests infrastructure, not social learning.",
+    "Equal training ceilings; actual consumption is reported. Stopping mid-verification leaves memory unchanged.",
+    "Exam model budgets are fresh and equal per arm/repetition.",
+    "Seed pairing is by random stream, not identical board states after diverging moves.",
+    "Ablations reuse frozen learned workspaces, without retraining.",
+    "One repetition is exploratory; multiple games do not constitute independent training repetitions."
+  ],
+  "runs": [
+    {
+      "repetition": 0,
+      "arm": "solo",
+      "training": {
+        "tokens": 0,
+        "calls": 0,
+        "simulations": 29790,
+        "ledger": [
+          {
+            "title": "Compare the next few moves",
+            "rule": "When space is limited, compare candidate moves using sampled continuations. Prefer room and future legal options over immediate score when the evidence supports it.",
+            "trigger": "crowded boards",
+            "exception": "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
+            "source": "Self-review",
+            "evidence": [
+              "64a8d51f-a1d6-41b6-bf12-469524647453"
+            ],
+            "skill": {
+              "id": "compare_escape_moves",
+              "name": "Compare possible moves",
+              "version": 2,
+              "depth": 3,
+              "spaceWeight": 14,
+              "structureWeight": 1.5,
+              "mergeWeight": 1,
+              "riskWeight": 100
+            },
+            "id": "83ab26f4-940f-484a-ae2d-3cca44cfb328",
+            "status": "rejected",
+            "createdAt": "2026-10-27T22:36:53.589Z",
+            "verification": {
+              "rows": [
+                {
+                  "snapshot": "practice-0-0",
+                  "split": "practice",
+                  "seed": 4017786581,
+                  "baseline": 28,
+                  "candidate": 31.5,
+                  "delta": 3.5
+                },
+                {
+                  "snapshot": "practice-0-1",
+                  "split": "practice",
+                  "seed": 2834789097,
+                  "baseline": 38.5,
+                  "candidate": 33,
+                  "delta": -5.5
+                },
+                {
+                  "snapshot": "practice-0-2",
+                  "split": "practice",
+                  "seed": 2384461598,
+                  "baseline": 26,
+                  "candidate": 28.5,
+                  "delta": 2.5
+                },
+                {
+                  "snapshot": "practice-0-3",
+                  "split": "practice",
+                  "seed": 24055875,
+                  "baseline": 35,
+                  "candidate": 44,
+                  "delta": 9
+                },
+                {
+                  "snapshot": "practice-0-4",
+                  "split": "practice",
+                  "seed": 2617797824,
+                  "baseline": 39,
+                  "candidate": 39,
+                  "delta": 0
+                },
+                {
+                  "snapshot": "practice-0-5",
+                  "split": "practice",
+                  "seed": 3080792975,
+                  "baseline": 31.5,
+                  "candidate": 23,
+                  "delta": -8.5
+                },
+                {
+                  "snapshot": "regression-0-0",
+                  "split": "regression",
+                  "seed": 1243910528,
+                  "baseline": 31,
+                  "candidate": 25.5,
+                  "delta": -5.5
+                },
+                {
+                  "snapshot": "regression-0-1",
+                  "split": "regression",
+                  "seed": 1315281900,
+                  "baseline": 39,
+                  "candidate": 39,
+                  "delta": 0
+                },
+                {
+                  "snapshot": "regression-0-2",
+                  "split": "regression",
+                  "seed": 2927114106,
+                  "baseline": 33.5,
+                  "candidate": 36.5,
+                  "delta": 3
+                }
+              ],
+              "meanDelta": 0.16666666666666666,
+              "regressionDelta": -0.8333333333333334,
+              "accepted": false,
+              "rule": "Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. Six practice and three regression snapshots; 8 moves each.",
+              "mode": "simulation"
+            }
+          }
+        ],
+        "workspaces": [
+          {
+            "id": "student-1",
+            "name": "Ada",
+            "workspace": {
+              "version": 1,
+              "lessons": [],
+              "skill": {
+                "id": "compare_escape_moves",
+                "name": "Compare possible moves",
+                "version": 1,
+                "depth": 2,
+                "spaceWeight": 12,
+                "structureWeight": 1,
+                "mergeWeight": 1,
+                "riskWeight": 100
+              }
+            }
+          },
+          {
+            "id": "student-2",
+            "name": "Lin",
+            "workspace": {
+              "version": 1,
+              "lessons": [],
+              "skill": {
+                "id": "compare_escape_moves",
+                "name": "Compare possible moves",
+                "version": 1,
+                "depth": 2,
+                "spaceWeight": 12,
+                "structureWeight": 1,
+                "mergeWeight": 1,
+                "riskWeight": 100
+              }
+            }
+          },
+          {
+            "id": "student-3",
+            "name": "Sam",
+            "workspace": {
+              "version": 1,
+              "lessons": [],
+              "skill": {
+                "id": "compare_escape_moves",
+                "name": "Compare possible moves",
+                "version": 1,
+                "depth": 2,
+                "spaceWeight": 12,
+                "structureWeight": 1,
+                "mergeWeight": 1,
+                "riskWeight": 100
+              }
+            }
+          }
+        ]
+      },
+      "rows": [
+        {
+          "studentId": "student-1",
+          "name": "Ada",
+          "arm": "solo",
+          "seed": 301546601,
+          "score": 7352,
+          "highest": 512,
+          "moves": 511,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 49056,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-2",
+          "name": "Lin",
+          "arm": "solo",
+          "seed": 301546601,
+          "score": 7352,
+          "highest": 512,
+          "moves": 511,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 49056,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-3",
+          "name": "Sam",
+          "arm": "solo",
+          "seed": 301546601,
+          "score": 7352,
+          "highest": 512,
+          "moves": 511,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 49056,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-1",
+          "name": "Ada",
+          "arm": "solo",
+          "seed": 284768982,
+          "score": 3352,
+          "highest": 256,
+          "moves": 275,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 26400,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-2",
+          "name": "Lin",
+          "arm": "solo",
+          "seed": 284768982,
+          "score": 3352,
+          "highest": 256,
+          "moves": 275,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 26400,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-3",
+          "name": "Sam",
+          "arm": "solo",
+          "seed": 284768982,
+          "score": 3352,
+          "highest": 256,
+          "moves": 275,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 26400,
+          "workspaceVersion": 1
+        }
+      ],
+      "summary": {
+        "n": 6,
+        "successes": 0,
+        "successRate": 0,
+        "meanScore": 5352,
+        "successfulMeanMoves": null,
+        "cappedMeanMoves": 1500,
+        "errors": 0
+      },
+      "ablations": []
+    },
+    {
+      "repetition": 0,
+      "arm": "teacher",
+      "training": {
+        "tokens": 0,
+        "calls": 0,
+        "simulations": 29790,
+        "ledger": [
+          {
+            "title": "Compare the next few moves",
+            "rule": "When space is limited, compare candidate moves using sampled continuations. Prefer room and future legal options over immediate score when the evidence supports it.",
+            "trigger": "crowded boards",
+            "exception": "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
+            "source": "Teacher",
+            "evidence": [
+              "856b4774-e72f-4824-beb6-c0f24ee2a615"
+            ],
+            "skill": {
+              "id": "compare_escape_moves",
+              "name": "Compare possible moves",
+              "version": 2,
+              "depth": 3,
+              "spaceWeight": 14,
+              "structureWeight": 1.5,
+              "mergeWeight": 1,
+              "riskWeight": 100
+            },
+            "id": "018d9f3d-d9c5-4066-94c7-fd933baab337",
+            "status": "rejected",
+            "createdAt": "2026-10-27T22:37:00.722Z",
+            "verification": {
+              "rows": [
+                {
+                  "snapshot": "practice-0-0",
+                  "split": "practice",
+                  "seed": 4017786581,
+                  "baseline": 28,
+                  "candidate": 31.5,
+                  "delta": 3.5
+                },
+                {
+                  "snapshot": "practice-0-1",
+                  "split": "practice",
+                  "seed": 2834789097,
+                  "baseline": 38.5,
+                  "candidate": 33,
+                  "delta": -5.5
+                },
+                {
+                  "snapshot": "practice-0-2",
+                  "split": "practice",
+                  "seed": 2384461598,
+                  "baseline": 26,
+                  "candidate": 28.5,
+                  "delta": 2.5
+                },
+                {
+                  "snapshot": "practice-0-3",
+                  "split": "practice",
+                  "seed": 24055875,
+                  "baseline": 35,
+                  "candidate": 44,
+                  "delta": 9
+                },
+                {
+                  "snapshot": "practice-0-4",
+                  "split": "practice",
+                  "seed": 2617797824,
+                  "baseline": 39,
+                  "candidate": 39,
+                  "delta": 0
+                },
+                {
+                  "snapshot": "practice-0-5",
+                  "split": "practice",
+                  "seed": 3080792975,
+                  "baseline": 31.5,
+                  "candidate": 23,
+                  "delta": -8.5
+                },
+                {
+                  "snapshot": "regression-0-0",
+                  "split": "regression",
+                  "seed": 1243910528,
+                  "baseline": 31,
+                  "candidate": 25.5,
+                  "delta": -5.5
+                },
+                {
+                  "snapshot": "regression-0-1",
+                  "split": "regression",
+                  "seed": 1315281900,
+                  "baseline": 39,
+                  "candidate": 39,
+                  "delta": 0
+                },
+                {
+                  "snapshot": "regression-0-2",
+                  "split": "regression",
+                  "seed": 2927114106,
+                  "baseline": 33.5,
+                  "candidate": 36.5,
+                  "delta": 3
+                }
+              ],
+              "meanDelta": 0.16666666666666666,
+              "regressionDelta": -0.8333333333333334,
+              "accepted": false,
+              "rule": "Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. Six practice and three regression snapshots; 8 moves each.",
+              "mode": "simulation"
+            }
+          }
+        ],
+        "workspaces": [
+          {
+            "id": "student-1",
+            "name": "Ada",
+            "workspace": {
+              "version": 1,
+              "lessons": [],
+              "skill": {
+                "id": "compare_escape_moves",
+                "name": "Compare possible moves",
+                "version": 1,
+                "depth": 2,
+                "spaceWeight": 12,
+                "structureWeight": 1,
+                "mergeWeight": 1,
+                "riskWeight": 100
+              }
+            }
+          },
+          {
+            "id": "student-2",
+            "name": "Lin",
+            "workspace": {
+              "version": 1,
+              "lessons": [],
+              "skill": {
+                "id": "compare_escape_moves",
+                "name": "Compare possible moves",
+                "version": 1,
+                "depth": 2,
+                "spaceWeight": 12,
+                "structureWeight": 1,
+                "mergeWeight": 1,
+                "riskWeight": 100
+              }
+            }
+          },
+          {
+            "id": "student-3",
+            "name": "Sam",
+            "workspace": {
+              "version": 1,
+              "lessons": [],
+              "skill": {
+                "id": "compare_escape_moves",
+                "name": "Compare possible moves",
+                "version": 1,
+                "depth": 2,
+                "spaceWeight": 12,
+                "structureWeight": 1,
+                "mergeWeight": 1,
+                "riskWeight": 100
+              }
+            }
+          }
+        ]
+      },
+      "rows": [
+        {
+          "studentId": "student-1",
+          "name": "Ada",
+          "arm": "teacher",
+          "seed": 301546601,
+          "score": 7352,
+          "highest": 512,
+          "moves": 511,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 49056,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-2",
+          "name": "Lin",
+          "arm": "teacher",
+          "seed": 301546601,
+          "score": 7352,
+          "highest": 512,
+          "moves": 511,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 49056,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-3",
+          "name": "Sam",
+          "arm": "teacher",
+          "seed": 301546601,
+          "score": 7352,
+          "highest": 512,
+          "moves": 511,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 49056,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-1",
+          "name": "Ada",
+          "arm": "teacher",
+          "seed": 284768982,
+          "score": 3352,
+          "highest": 256,
+          "moves": 275,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 26400,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-2",
+          "name": "Lin",
+          "arm": "teacher",
+          "seed": 284768982,
+          "score": 3352,
+          "highest": 256,
+          "moves": 275,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 26400,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-3",
+          "name": "Sam",
+          "arm": "teacher",
+          "seed": 284768982,
+          "score": 3352,
+          "highest": 256,
+          "moves": 275,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 26400,
+          "workspaceVersion": 1
+        }
+      ],
+      "summary": {
+        "n": 6,
+        "successes": 0,
+        "successRate": 0,
+        "meanScore": 5352,
+        "successfulMeanMoves": null,
+        "cappedMeanMoves": 1500,
+        "errors": 0
+      },
+      "ablations": []
+    },
+    {
+      "repetition": 0,
+      "arm": "classroom",
+      "training": {
+        "tokens": 0,
+        "calls": 0,
+        "simulations": 29796,
+        "ledger": [
+          {
+            "title": "Compare the next few moves",
+            "rule": "When space is limited, compare candidate moves using sampled continuations. Prefer room and future legal options over immediate score when the evidence supports it.",
+            "trigger": "crowded boards",
+            "exception": "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
+            "source": "Teacher + Sam",
+            "evidence": [
+              "fd549b79-c8d8-4b23-8253-9d7f36fdce63",
+              "4f12b577-4452-4d29-8557-c1ae49e8e473"
+            ],
+            "skill": {
+              "id": "compare_escape_moves",
+              "name": "Compare possible moves",
+              "version": 2,
+              "depth": 3,
+              "spaceWeight": 16,
+              "structureWeight": 1.5,
+              "mergeWeight": 1,
+              "riskWeight": 100
+            },
+            "id": "121be495-cd4f-4af5-af05-9d20baf08e83",
+            "status": "rejected",
+            "createdAt": "2026-10-27T22:37:07.799Z",
+            "verification": {
+              "rows": [
+                {
+                  "snapshot": "practice-0-0",
+                  "split": "practice",
+                  "seed": 4017786581,
+                  "baseline": 28,
+                  "candidate": 31.5,
+                  "delta": 3.5
+                },
+                {
+                  "snapshot": "practice-0-1",
+                  "split": "practice",
+                  "seed": 2834789097,
+                  "baseline": 38.5,
+                  "candidate": 33,
+                  "delta": -5.5
+                },
+                {
+                  "snapshot": "practice-0-2",
+                  "split": "practice",
+                  "seed": 2384461598,
+                  "baseline": 26,
+                  "candidate": 28.5,
+                  "delta": 2.5
+                },
+                {
+                  "snapshot": "practice-0-3",
+                  "split": "practice",
+                  "seed": 24055875,
+                  "baseline": 35,
+                  "candidate": 44,
+                  "delta": 9
+                },
+                {
+                  "snapshot": "practice-0-4",
+                  "split": "practice",
+                  "seed": 2617797824,
+                  "baseline": 39,
+                  "candidate": 39,
+                  "delta": 0
+                },
+                {
+                  "snapshot": "practice-0-5",
+                  "split": "practice",
+                  "seed": 3080792975,
+                  "baseline": 31.5,
+                  "candidate": 23,
+                  "delta": -8.5
+                },
+                {
+                  "snapshot": "regression-0-0",
+                  "split": "regression",
+                  "seed": 1243910528,
+                  "baseline": 31,
+                  "candidate": 28,
+                  "delta": -3
+                },
+                {
+                  "snapshot": "regression-0-1",
+                  "split": "regression",
+                  "seed": 1315281900,
+                  "baseline": 39,
+                  "candidate": 39,
+                  "delta": 0
+                },
+                {
+                  "snapshot": "regression-0-2",
+                  "split": "regression",
+                  "seed": 2927114106,
+                  "baseline": 33.5,
+                  "candidate": 36.5,
+                  "delta": 3
+                }
+              ],
+              "meanDelta": 0.16666666666666666,
+              "regressionDelta": 0,
+              "accepted": false,
+              "rule": "Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. Six practice and three regression snapshots; 8 moves each.",
+              "mode": "simulation"
+            }
+          }
+        ],
+        "workspaces": [
+          {
+            "id": "student-1",
+            "name": "Ada",
+            "workspace": {
+              "version": 1,
+              "lessons": [],
+              "skill": {
+                "id": "compare_escape_moves",
+                "name": "Compare possible moves",
+                "version": 1,
+                "depth": 2,
+                "spaceWeight": 12,
+                "structureWeight": 1,
+                "mergeWeight": 1,
+                "riskWeight": 100
+              }
+            }
+          },
+          {
+            "id": "student-2",
+            "name": "Lin",
+            "workspace": {
+              "version": 1,
+              "lessons": [],
+              "skill": {
+                "id": "compare_escape_moves",
+                "name": "Compare possible moves",
+                "version": 1,
+                "depth": 2,
+                "spaceWeight": 12,
+                "structureWeight": 1,
+                "mergeWeight": 1,
+                "riskWeight": 100
+              }
+            }
+          },
+          {
+            "id": "student-3",
+            "name": "Sam",
+            "workspace": {
+              "version": 1,
+              "lessons": [],
+              "skill": {
+                "id": "compare_escape_moves",
+                "name": "Compare possible moves",
+                "version": 1,
+                "depth": 2,
+                "spaceWeight": 12,
+                "structureWeight": 1,
+                "mergeWeight": 1,
+                "riskWeight": 100
+              }
+            }
+          }
+        ]
+      },
+      "rows": [
+        {
+          "studentId": "student-1",
+          "name": "Ada",
+          "arm": "classroom",
+          "seed": 301546601,
+          "score": 7352,
+          "highest": 512,
+          "moves": 511,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 49056,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-2",
+          "name": "Lin",
+          "arm": "classroom",
+          "seed": 301546601,
+          "score": 7352,
+          "highest": 512,
+          "moves": 511,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 49056,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-3",
+          "name": "Sam",
+          "arm": "classroom",
+          "seed": 301546601,
+          "score": 7352,
+          "highest": 512,
+          "moves": 511,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 49056,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-1",
+          "name": "Ada",
+          "arm": "classroom",
+          "seed": 284768982,
+          "score": 3352,
+          "highest": 256,
+          "moves": 275,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 26400,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-2",
+          "name": "Lin",
+          "arm": "classroom",
+          "seed": 284768982,
+          "score": 3352,
+          "highest": 256,
+          "moves": 275,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 26400,
+          "workspaceVersion": 1
+        },
+        {
+          "studentId": "student-3",
+          "name": "Sam",
+          "arm": "classroom",
+          "seed": 284768982,
+          "score": 3352,
+          "highest": 256,
+          "moves": 275,
+          "reached": false,
+          "terminal": "loss",
+          "tokens": 0,
+          "calls": 0,
+          "simulations": 26400,
+          "workspaceVersion": 1
+        }
+      ],
+      "summary": {
+        "n": 6,
+        "successes": 0,
+        "successRate": 0,
+        "meanScore": 5352,
+        "successfulMeanMoves": null,
+        "cappedMeanMoves": 1500,
+        "errors": 0
+      },
+      "ablations": [
+        {
+          "condition": "no-learned-workspace",
+          "rows": [
+            {
+              "studentId": "student-1",
+              "name": "Ada",
+              "arm": "classroom",
+              "seed": 301546601,
+              "score": 7352,
+              "highest": 512,
+              "moves": 511,
+              "reached": false,
+              "terminal": "loss",
+              "tokens": 0,
+              "calls": 0,
+              "simulations": 49056,
+              "workspaceVersion": 1
+            },
+            {
+              "studentId": "student-2",
+              "name": "Lin",
+              "arm": "classroom",
+              "seed": 301546601,
+              "score": 7352,
+              "highest": 512,
+              "moves": 511,
+              "reached": false,
+              "terminal": "loss",
+              "tokens": 0,
+              "calls": 0,
+              "simulations": 49056,
+              "workspaceVersion": 1
+            },
+            {
+              "studentId": "student-3",
+              "name": "Sam",
+              "arm": "classroom",
+              "seed": 301546601,
+              "score": 7352,
+              "highest": 512,
+              "moves": 511,
+              "reached": false,
+              "terminal": "loss",
+              "tokens": 0,
+              "calls": 0,
+              "simulations": 49056,
+              "workspaceVersion": 1
+            },
+            {
+              "studentId": "student-1",
+              "name": "Ada",
+              "arm": "classroom",
+              "seed": 284768982,
+              "score": 3352,
+              "highest": 256,
+              "moves": 275,
+              "reached": false,
+              "terminal": "loss",
+              "tokens": 0,
+              "calls": 0,
+              "simulations": 26400,
+              "workspaceVersion": 1
+            },
+            {
+              "studentId": "student-2",
+              "name": "Lin",
+              "arm": "classroom",
+              "seed": 284768982,
+              "score": 3352,
+              "highest": 256,
+              "moves": 275,
+              "reached": false,
+              "terminal": "loss",
+              "tokens": 0,
+              "calls": 0,
+              "simulations": 26400,
+              "workspaceVersion": 1
+            },
+            {
+              "studentId": "student-3",
+              "name": "Sam",
+              "arm": "classroom",
+              "seed": 284768982,
+              "score": 3352,
+              "highest": 256,
+              "moves": 275,
+              "reached": false,
+              "terminal": "loss",
+              "tokens": 0,
+              "calls": 0,
+              "simulations": 26400,
+              "workspaceVersion": 1
+            }
+          ],
+          "summary": {
+            "n": 6,
+            "successes": 0,
+            "successRate": 0,
+            "meanScore": 5352,
+            "successfulMeanMoves": null,
+            "cappedMeanMoves": 1500,
+            "errors": 0
+          }
+        },
+        {
+          "condition": "lessons-only",
+          "rows": [
+            {
+              "studentId": "student-1",
+              "name": "Ada",
+              "arm": "classroom",
+              "seed": 301546601,
+              "score": 7352,
+              "highest": 512,
+              "moves": 511,
+              "reached": false,
+              "terminal": "loss",
+              "tokens": 0,
+              "calls": 0,
+              "simulations": 49056,
+              "workspaceVersion": 1
+            },
+            {
+              "studentId": "student-2",
+              "name": "Lin",
+              "arm": "classroom",
+              "seed": 301546601,
+              "score": 7352,
+              "highest": 512,
+              "moves": 511,
+              "reached": false,
+              "terminal": "loss",
+              "tokens": 0,
+              "calls": 0,
+              "simulations": 49056,
+              "workspaceVersion": 1
+            },
+            {
+              "studentId": "student-3",
+              "name": "Sam",
+              "arm": "classroom",
+              "seed": 301546601,
+              "score": 7352,
+              "highest": 512,
+              "moves": 511,
+              "reached": false,
+              "terminal": "loss",
+              "tokens": 0,
+              "calls": 0,
+              "simulations": 49056,
+              "workspaceVersion": 1
+            },
+            {
+              "studentId": "student-1",
+              "name": "Ada",
+              "arm": "classroom",
+              "seed": 284768982,
+              "score": 3352,
+              "highest": 256,
+              "moves": 275,
+              "reached": false,
+              "terminal": "loss",
+              "tokens": 0,
+              "calls": 0,
+              "simulations": 26400,
+              "workspaceVersion": 1
+            },
+            {
+              "studentId": "student-2",
+              "name": "Lin",
+              "arm": "classroom",
+              "seed": 284768982,
+              "score": 3352,
+              "highest": 256,
+              "moves": 275,
+              "reached": false,
+              "terminal": "loss",
+              "tokens": 0,
+              "calls": 0,
+              "simulations": 26400,
+              "workspaceVersion": 1
+            },
+            {
+              "studentId": "student-3",
+              "name": "Sam",
+              "arm": "classroom",
+              "seed": 284768982,
+              "score": 3352,
+              "highest": 256,
+              "moves": 275,
+              "reached": false,
+              "terminal": "loss",
+              "tokens": 0,
+              "calls": 0,
+              "simulations": 26400,
+              "workspaceVersion": 1
+            }
+          ],
+          "summary": {
+            "n": 6,
+            "successes": 0,
+            "successRate": 0,
+            "meanScore": 5352,
+            "successfulMeanMoves": null,
+            "cappedMeanMoves": 1500,
+            "errors": 0
+          }
+        }
+      ]
+    }
+  ]
+}
