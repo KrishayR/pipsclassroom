@@ -1,4 +1,4 @@
-# ConsequenceLab
+# Pip’s Classroom
 
 Meet **Pip**, the little owl who helps you follow a runnable agent classroom: seeded 2048, inspectable planning tools, an adaptive curriculum, teacher and peer feedback, candidate verification, versioned memory, independent exams, and a four-group comparison.
 
@@ -121,3 +121,9 @@ npm run preview
 ```
 
 The Node backend is loopback-only and not suitable for unauthenticated public deployment. See `docs/HANDOFF.md` for remaining work.
+
+## Guided first run
+
+Open the app and follow Pip’s field guide: guided practice → review → test the idea → short independent exam → inspect the evidence. The guide follows actual run state, including rejected ideas, and can be hidden or reopened. Simulation needs no API key. The short exam demonstrates the workflow; use matched comparisons and longer evaluations for performance claims.
+
+Current utility: demonstrate agent tool use, inspect decisions, investigate teaching approaches in 2048, and export evidence. Coding, support, and planning environments are future extensions, not implemented integrations. A configured model endpoint alone does not demonstrate Muse Image or Muse Wonder use for the creative category.

@@ -50,6 +50,7 @@ export interface Skill {
 }
 export interface Lesson {
   id: string;
+  studentId?: string;
   title: string;
   rule: string;
   trigger: string;

@@ -372,6 +372,7 @@ export class Classroom {
         throw new Error("Candidate references unknown evidence.");
       const lesson = {
         ...l,
+        studentId: student.id,
         focus: choice.focus,
         id: id(),
         status: "candidate" as const,

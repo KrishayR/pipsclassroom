@@ -2048,7 +2048,7 @@ td b {
     display: none;
   }
   .topbar > div:first-child:before {
-    content: "ConsequenceLab";
+    content: "Pip’s Classroom";
     color: #506a3c;
     font-size: 13px;
     font-weight: 700;
@@ -2786,4 +2786,229 @@ td b {
   font-size: 12px;
   color: #6b7466;
   margin-top: 4px;
+}
+
+.learning-guide {
+  margin: 20px 0 26px;
+  border: 1px solid #ccd9c8;
+  border-radius: 16px;
+  background: #fffef9;
+  overflow: hidden;
+}
+.guide-heading {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.guide-heading h2 {
+  margin: 5px 0 0;
+  font-size: 21px;
+}
+.guide-steps {
+  display: flex;
+  gap: 8px;
+  padding: 0 24px 18px;
+}
+.guide-steps button {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 10px;
+  padding: 12px;
+  text-align: left;
+  color: var(--green);
+  font-weight: 700;
+}
+.guide-steps button span {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.guide-steps button.active {
+  background: var(--green);
+  color: white;
+}
+.guide-body {
+  padding: 20px 24px;
+  border-top: 1px solid var(--line);
+  background: #f1f5ed;
+}
+.guide-body h3 {
+  margin: 8px 0;
+  font-size: 20px;
+}
+.guide-body p,
+.guide-utility p {
+  max-width: 850px;
+  line-height: 1.7;
+}
+.guide-look {
+  color: #4b6250;
+}
+.guide-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 16px 24px;
+  align-items: center;
+}
+.guide-evidence b {
+  color: var(--green);
+  font-size: 20px;
+}
+.guide-evidence small {
+  color: #58675b;
+}
+.guide-utility {
+  padding: 16px 24px;
+  border-top: 1px solid var(--line);
+}
+.guide-utility summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+@media (max-width: 700px) {
+  .guide-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .guide-steps {
+    flex-wrap: wrap;
+  }
+  .guide-steps button {
+    flex: 1 1 28%;
+  }
+  .guide-body .controls {
+    flex-wrap: wrap;
+  }
+}
+.guide-steps > div {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 10px;
+  padding: 12px;
+  color: #617064;
+}
+.guide-steps > div span {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.guide-steps > div.active {
+  background: var(--green);
+  color: white;
+  box-shadow: 0 4px 12px #3d665120;
+}
+.guide-steps > div.done {
+  background: #eaf1e4;
+  color: var(--green);
+}
+.guide-body {
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+}
+.guide-body > svg {
+  flex-shrink: 0;
+}
+.guide-caption {
+  font-size: 12px;
+  color: #58675b;
+  line-height: 1.6;
+}
+.learning-verdict {
+  padding: 20px 24px;
+  border-top: 1px solid var(--line);
+}
+.learning-verdict h3 {
+  margin: 8px 0;
+}
+.learning-verdict p {
+  line-height: 1.65;
+}
+.utility-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  padding-top: 22px;
+}
+.utility-grid h3 {
+  margin: 8px 0;
+}
+@media (max-width: 700px) {
+  .guide-steps > div {
+    flex: 1 1 28%;
+  }
+  .guide-body > svg {
+    display: none;
+  }
+  .utility-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+.learning-record {
+  margin: 22px 0;
+  padding: 24px;
+}
+.learning-record > p {
+  line-height: 1.65;
+  max-width: 900px;
+  color: #58675b;
+}
+.record-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 22px;
+}
+.record-grid > div {
+  border-top: 2px solid #d9e5d2;
+  padding-top: 16px;
+}
+.record-grid h3 {
+  margin: 8px 0;
+}
+.record-grid p {
+  line-height: 1.65;
+}
+.record-grid article {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.record-grid dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+.record-grid dd {
+  margin: 0;
+  white-space: nowrap;
+}
+.setup-steps {
+  padding-left: 20px;
+  line-height: 1.8;
+}
+.setup-steps li {
+  margin: 12px 0;
+}
+@media (max-width: 900px) {
+  .record-grid {
+    grid-template-columns: 1fr;
+  }
 }

@@ -31,8 +31,11 @@ test("full classroom cycle records actual tools, verifies candidate, and freezes
       lab.state.students.some((s) => s.traces.some((t) => t.id === id)),
     ),
   );
+  const otherNotebooks = structuredClone(lab.state.students.slice(1).map(s => s.workspace));
   await lab.verify();
   const lesson = lab.state.ledger[0];
+  assert.equal(lesson.studentId, "student-1");
+  assert.deepEqual(lab.state.students.slice(1).map(s => s.workspace), otherNotebooks);
   assert.equal(lesson.verification!.rows.length, 9);
   assert.equal(
     lab.state.students[0].workspace.version,

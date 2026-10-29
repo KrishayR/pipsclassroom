@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import LearningRecord from "./components/LearningRecord";
+import LearningGuide from "./components/LearningGuide";
 import Pip from "./components/Pip";
 import ComparisonPanel, { armNames } from "./components/ComparisonPanel";
 import {
@@ -450,7 +452,7 @@ export default function App() {
       );
       const a = document.createElement("a");
       a.href = url;
-      a.download = `consequencelab-${mode}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `pips-classroom-${mode}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -472,7 +474,7 @@ export default function App() {
             <FlaskConical size={24} />
           </span>
           <span>
-            Consequence<span>Lab</span>
+            Pip’s<span> Classroom</span>
             <small>THE AGENT CLASSROOM</small>
           </span>
         </a>
@@ -532,7 +534,7 @@ export default function App() {
       <div className="main-shell">
         <header className="topbar">
           <div>
-            <span>ConsequenceLab</span>
+            <span>Pip’s Classroom</span>
             <ChevronRight size={14} />
             <b>{pages.find((p) => p.id === page)?.name ?? "Configuration"}</b>
           </div>
@@ -548,7 +550,7 @@ export default function App() {
             >
               <Download size={17} />
             </button>
-            <span className="user-avatar">CL</span>
+            <span className="user-avatar">PC</span>
           </div>
         </header>
         <nav className="mobile-nav" aria-label="Main navigation">
@@ -572,7 +574,7 @@ export default function App() {
               <div className="eyebrow">OBSERVE. TEACH. VERIFY.</div>
               <h1>
                 {page === "classroom"
-                  ? "A little practice. A little help. A better agent?"
+                  ? "Watch agents turn practice into tested lessons."
                   : page === "lessons"
                     ? "Good ideas have to prove themselves."
                     : page === "compare"
@@ -622,7 +624,7 @@ export default function App() {
                 {state.busy
                   ? "They’re working on it. You can watch the steps or stop after the current move."
                   : page === "compare"
-                    ? "Here’s our little experiment: three fresh study groups, then the same test with no hints."
+                    ? "Here’s our little experiment: four fresh study groups, then the same test with no hints."
                     : state.candidate
                       ? `${state.students.find((s) => s.id === state.candidate?.studentId)?.name ?? "A student"} has an idea to try. Let’s test it before calling it a lesson.`
                       : state.phase === "exam"
@@ -652,6 +654,14 @@ export default function App() {
               <ArrowRight size={13} />
             </button>
           </div>
+          <LearningGuide
+            selected={selected}
+            navigate={setPage}
+            state={state}
+            busy={busy}
+            ready={!!connection}
+            run={run}
+          />
           {(error || state.error) && (
             <div className="error" role="alert">
               {error || state.error}
@@ -831,6 +841,11 @@ export default function App() {
                   </button>
                 </aside>
               </div>
+              <LearningRecord
+                student={student}
+                mode={mode}
+                onInspect={inspect}
+              />
               <div className="lower-grid">
                 <section className="panel activity-panel">
                   <div className="panel-title">
@@ -1014,7 +1029,12 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              {state.candidate && (
+              <LearningRecord
+                student={student}
+                mode={mode}
+                onInspect={inspect}
+              />
+              {state.candidate?.studentId === selected && (
                 <div className="pending-candidate">
                   <LessonCard
                     lesson={state.candidate.lesson}
@@ -1030,10 +1050,22 @@ export default function App() {
                   </button>
                 </div>
               )}
+              <h2>Classroom idea archive</h2>
+              <p className="fine">
+                All students’ tested ideas, including rejected and retired ones.
+                The individual notebook above shows only the selected student’s
+                active memory.
+              </p>
               {state.ledger.length ? (
                 <div className="lesson-grid">
                   {[...state.ledger].reverse().map((l) => (
-                    <LessonCard key={l.id} lesson={l} onEvidence={inspect} />
+                    <div key={l.id}>
+                      <p className="eyebrow">
+                        {state.students.find((s) => s.id === l.studentId)
+                          ?.name ?? "Earlier record · owner not recorded"}
+                      </p>
+                      <LessonCard lesson={l} onEvidence={inspect} />
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -1347,7 +1379,68 @@ export default function App() {
                   ))}
                 </div>
                 <div className="config-instructions">
-                  <b>Connect Muse</b>
+                  <b>Connect a live model</b>
+                  <ol className="setup-steps">
+                    <li>
+                      Copy <code>.env.example</code> to <code>.env</code> in the
+                      project folder. Add your provider key to{" "}
+                      <code>MODEL_API_KEY</code>; set the endpoint and model
+                      using <code>MODEL_BASE_URL</code> and{" "}
+                      <code>MODEL_ID</code>.
+                    </li>
+                    <li>
+                      Restart <code>npm run dev</code>, then refresh the
+                      connection below. Select Muse / model API when enabled.
+                    </li>
+                    <li>
+                      Run one move per student first. Inspect the recorded tools
+                      and model calls before starting a longer practice or
+                      verification run.
+                    </li>
+                  </ol>
+                  <button
+                    className="secondary"
+                    disabled={busy}
+                    onClick={() => connect().then(setConnection)}
+                  >
+                    Refresh connection
+                  </button>
+                  <p>
+                    <b>Connection:</b>{" "}
+                    {connection?.kind === "server"
+                      ? connection.modelAvailable
+                        ? "Model configured; a successful move is still needed to verify credentials and compatibility."
+                        : "Server connected; no model key configured."
+                      : "Browser-only simulation; start the local backend for model mode."}
+                  </p>
+                  <p>
+                    <b>What gets sent:</b> game boards, recent moves, saved
+                    rules, and review evidence. The server makes model requests;
+                    the key stays out of the browser. The supplied example
+                    selects Contributor mode: review your provider’s data-use
+                    terms before using it.
+                  </p>
+                  <p>
+                    <b>What changes:</b> the model chooses moves and writes
+                    review advice. The engine checks legal moves; paired tests
+                    decide whether a lesson is stored. Each student has separate
+                    memory, using the same configured model.
+                  </p>
+                  <p>
+                    <b>Cost:</b> practice, peer feedback, verification rollouts,
+                    and exams can all make paid calls. Token limits and
+                    estimated key spending are configured in the environment
+                    file; they are not a guaranteed provider billing cap.
+                  </p>
+                  <button
+                    className="primary"
+                    disabled={
+                      busy || mode !== "model" || !connection?.modelAvailable
+                    }
+                    onClick={() => run("practice", { steps: 1 })}
+                  >
+                    Test connection · one move per student
+                  </button>
                   <p>
                     Copy <code>.env.example</code> to <code>.env</code> in the
                     project, set <code>MODEL_API_KEY</code>, and restart{" "}
@@ -1470,7 +1563,7 @@ export default function App() {
             </div>
           )}
           <footer>
-            ConsequenceLab <span>Learning is better when you can see it.</span>
+            Pip’s Classroom <span>Learning is better when you can see it.</span>
             <button onClick={() => setIntro(true)}>
               Meet the classroom <ArrowUp size={12} />
             </button>
