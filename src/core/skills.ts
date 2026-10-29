@@ -116,16 +116,33 @@ export function simulate(
 export function emptyWorkspace(): Workspace {
   return { version: 1, lessons: [], skill: { ...DEFAULT_SKILL } };
 }
+export const MEMORY_LESSONS = 3;
+// One active lesson per focus: a newer verified lesson supersedes a duplicate or
+// contradictory one. When full, the least-supported lesson (lowest practice gain) leaves.
+export function mergeLessons(
+  lessons: import("./types").Lesson[],
+  lesson: import("./types").Lesson,
+) {
+  const kept = lessons.filter(
+    (l) => l.id !== lesson.id && !(lesson.focus && l.focus === lesson.focus),
+  );
+  while (kept.length >= MEMORY_LESSONS) {
+    const weakest = kept.reduce((a, b) =>
+      (b.verification?.meanDelta ?? 0) < (a.verification?.meanDelta ?? 0)
+        ? b
+        : a,
+    );
+    kept.splice(kept.indexOf(weakest), 1);
+  }
+  return [...kept, lesson];
+}
 export function installLesson(
   workspace: Workspace,
   lesson: import("./types").Lesson,
 ): Workspace {
   if (lesson.status !== "verified" || !lesson.verification?.accepted)
     throw new Error("Only independently verified lessons may be installed.");
-  const lessons = [
-    ...workspace.lessons.filter((l) => l.id !== lesson.id),
-    lesson,
-  ].slice(-3);
+  const lessons = mergeLessons(workspace.lessons, lesson);
   if (
     lessons.reduce(
       (n, l) => n + l.rule.length + l.trigger.length + l.exception.length,

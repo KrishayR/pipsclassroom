@@ -3,7 +3,24 @@ export type Board = number[];
 export type Mode = "simulation" | "model";
 export type Phase =
   "idle" | "practice" | "review" | "verify" | "exam" | "comparison";
-export type Arm = "solo" | "teacher" | "classroom";
+// solo = A, teacher = B (random exercises), adaptive = C (targeted), classroom = D (targeted + peers).
+export type Arm = "solo" | "teacher" | "adaptive" | "classroom";
+export type Focus = "space" | "structure" | "planning";
+export interface FocusChoice {
+  focus: Focus;
+  name: string;
+  reason: string;
+  adaptive: boolean;
+}
+export interface RecentMove {
+  action: Direction;
+  scoreDelta: number;
+  emptyBefore: number;
+  emptyAfter: number;
+}
+export interface DecisionContext {
+  recent?: RecentMove[];
+}
 export interface Game {
   board: Board;
   score: number;
@@ -39,6 +56,7 @@ export interface Lesson {
   exception: string;
   source: string;
   evidence: string[];
+  focus?: Focus;
   status: "candidate" | "verified" | "rejected" | "retired";
   skill: Skill;
   verification?: Verification;
@@ -62,6 +80,8 @@ export interface Decision {
   tokens: number;
   calls: number;
   simulations: number;
+  lessonId?: string;
+  invalid?: number;
 }
 export interface Trace {
   id: string;
@@ -72,6 +92,9 @@ export interface Trace {
   action: Direction;
   summary: string;
   tools: ToolEvent[];
+  lessonId?: string;
+  exercise?: Focus;
+  invalid?: number;
   spawn: { index: number; value: number } | null;
   scoreDelta: number;
   workspaceVersion: number;
@@ -100,6 +123,7 @@ export interface VerificationRow {
   baseline: number;
   candidate: number;
   delta: number;
+  errors?: number;
 }
 export interface Verification {
   rows: VerificationRow[];
@@ -108,6 +132,8 @@ export interface Verification {
   accepted: boolean;
   rule: string;
   mode: Mode;
+  focus?: Focus;
+  sizes?: { practice: number; regression: number; moves: number };
 }
 export interface Message {
   id: string;
@@ -131,6 +157,9 @@ export interface ExamRow {
   calls: number;
   simulations: number;
   workspaceVersion: number;
+  invalid?: number;
+  latencyMs?: number[];
+  repetition?: number;
   error?: string;
 }
 export interface Exam {
@@ -162,6 +191,7 @@ export interface LabState {
   error: string | null;
   trainingRound: number;
   selectedSkill: string;
+  focus?: FocusChoice | null;
   modelId: string | null;
   comparisons: Comparison[];
 }
@@ -172,11 +202,13 @@ export interface Policy {
     observation: Observation,
     workspace: Workspace,
     seed: number,
+    context?: DecisionContext,
   ): Promise<Decision>;
   propose(
     student: Student,
     arm: Arm,
     peer?: Student,
+    focus?: FocusChoice,
   ): Promise<{
     lesson: Omit<Lesson, "id" | "status" | "createdAt">;
     messages: {

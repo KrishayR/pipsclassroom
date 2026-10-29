@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Pip from "./components/Pip";
-import ComparisonPanel from "./components/ComparisonPanel";
+import ComparisonPanel, { armNames } from "./components/ComparisonPanel";
 import {
   Activity,
   ArrowDown,
@@ -31,7 +31,9 @@ import {
 import { action, connect, exportRun, watch, type Connection } from "./client";
 import { initialState } from "./core/classroom";
 import { createGame, move, observe } from "./core/engine";
-import { summarize } from "./core/evaluation";
+import { MILESTONES, summarize } from "./core/evaluation";
+import { FOCI, focusName, skillEstimates } from "./core/curriculum";
+import { ARMS } from "./core/classroom";
 import type {
   Board,
   Direction,
@@ -179,6 +181,19 @@ function StudentCard({
           </span>
         </div>
       </div>
+      <div
+        className="skill-counts"
+        title="Practice checks passed / applicable moves. Outcome checks, not grades."
+      >
+        {Object.entries(skillEstimates(student.traces)).map(([id, e]) => (
+          <span key={id}>
+            {focusName(id as keyof ReturnType<typeof skillEstimates>)}{" "}
+            <b>
+              {e.successes}/{e.attempts}
+            </b>
+          </span>
+        ))}
+      </div>
       <div className="student-footer">
         <span>
           <Layers size={13} />
@@ -201,7 +216,10 @@ function LessonCard({
   return (
     <article className="lesson-card">
       <div className="row-between">
-        <span className="eyebrow">{lesson.source}</span>
+        <span className="eyebrow">
+          {lesson.source}
+          {lesson.focus ? ` · ${focusName(lesson.focus)}` : ""}
+        </span>
         <Status value={lesson.status} />
       </div>
       <h3>{lesson.title}</h3>
@@ -507,7 +525,7 @@ export default function App() {
             {connection?.kind === "server"
               ? "Local server · SQLite"
               : "Browser workspace"}
-            <span>v0.1</span>
+            <span>v0.2</span>
           </div>
         </div>
       </aside>
@@ -765,11 +783,16 @@ export default function App() {
                   </div>
                   <div className="teacher-content">
                     <span className="eyebrow">TODAY’S FOCUS</span>
-                    <h3>{state.selectedSkill}</h3>
+                    <h3>{state.focus?.name ?? "Chosen at the next review"}</h3>
                     <p>
-                      A big merge looks good. But does it leave you room for the
-                      next move?
+                      {state.focus
+                        ? FOCI.find((f) => f.id === state.focus!.focus)!
+                            .question
+                        : "Each review picks one skill. Targeted groups usually pick the weakest measured skill; the rest pick at random."}
                     </p>
+                    {state.focus && (
+                      <p className="focus-reason">{state.focus.reason}</p>
+                    )}
                     <div className="focus-detail">
                       <Layers size={16} />
                       <span>
@@ -779,17 +802,12 @@ export default function App() {
                     <div className="teacher-divider" />
                     <span className="eyebrow">LET’S TALK ABOUT THAT MOVE</span>
                     {state.messages
-                      .filter(
-                        (m) => m.role === "teacher",
-                      )
+                      .filter((m) => m.role === "teacher")
                       .at(-1) ? (
                       <p className="teacher-quote">
                         {
                           state.messages
-                            .filter(
-                              (m) =>
-                                m.role === "teacher",
-                            )
+                            .filter((m) => m.role === "teacher")
                             .at(-1)!.text
                         }
                       </p>
@@ -907,8 +925,8 @@ export default function App() {
                         Test this idea
                       </button>
                       <p className="fine">
-                        We’ll try 6 new boards and check 3 familiar kinds of
-                        challenge too.
+                        We’ll compare old and new notes on fresh boards chosen
+                        for this skill, plus a few general check-up boards.
                       </p>
                     </>
                   ) : (
@@ -1056,9 +1074,9 @@ export default function App() {
                     disabled={busy}
                     onChange={(e) => setSeedCount(Number(e.target.value))}
                   >
-                    {[1, 3, 6].map((n) => (
+                    {[1, 3, 6, 12].map((n) => (
                       <option key={n} value={n}>
-                        {n} fresh seeds
+                        {n} development seeds
                       </option>
                     ))}
                   </select>
@@ -1079,41 +1097,50 @@ export default function App() {
                   </select>
                 </label>
                 <p>
-                  Short caps test the workflow. Full games are needed to
-                  evaluate reaching 2048.
+                  Short caps test the workflow. These are public development
+                  seeds; the final study uses sealed seeds via the evaluation
+                  runner.
                 </p>
               </div>
               {lastExam && stats ? (
                 <>
                   <div className="result-metrics">
                     <div>
-                      <label>REACHED 2048</label>
-                      <strong>
-                        {stats.successes}
-                        <small> / {stats.n}</small>
-                      </strong>
+                      <label>MEAN SCORE · PRIMARY</label>
+                      <strong>{format(stats.meanScore)}</strong>
                       <span>
-                        {(stats.successRate * 100).toFixed(0)}% success rate
+                        Every game counts, under a {lastExam.cap}-move cap
                       </span>
                     </div>
                     <div>
-                      <label>MEAN SCORE</label>
-                      <strong>{format(stats.meanScore)}</strong>
-                      <span>Across every completed outcome</span>
+                      <label>MEDIAN SCORE</label>
+                      <strong>{format(stats.medianScore ?? 0)}</strong>
+                      <span>{stats.n} games</span>
                     </div>
                     <div>
-                      <label>MOVES TO TARGET</label>
+                      <label>TILE MILESTONES</label>
                       <strong>
-                        {stats.successfulMeanMoves === null
-                          ? "—"
-                          : format(stats.successfulMeanMoves)}
+                        {stats.successes}
+                        <small> / {stats.n} reached 2048</small>
                       </strong>
-                      <span>Successful games only</span>
+                      <span>
+                        {MILESTONES.slice(0, 3)
+                          .map(
+                            (m) =>
+                              `${m}+: ${Math.round(stats.milestones[m] * stats.n)}`,
+                          )
+                          .join(" · ")}
+                      </span>
                     </div>
                     <div>
-                      <label>CAPPED TIME TO TARGET</label>
-                      <strong>{format(stats.cappedMeanMoves)}</strong>
-                      <span>Failures count as {lastExam.cap} moves</span>
+                      <label>HOW GAMES ENDED</label>
+                      <strong>
+                        {stats.truncated}
+                        <small> hit the move cap</small>
+                      </strong>
+                      <span>
+                        {stats.losses} ran out of moves · {stats.errors} errors
+                      </span>
                     </div>
                   </div>
                   <div className="panel">
@@ -1346,9 +1373,11 @@ export default function App() {
                     disabled={busy || !!traces.length || !!state.ledger.length}
                     onChange={(e) => run("arm", { arm: e.target.value })}
                   >
-                    <option value="solo">On their own</option>
-                    <option value="teacher">With a teacher</option>
-                    <option value="classroom">Teacher + classmates</option>
+                    {ARMS.map((a) => (
+                      <option key={a} value={a}>
+                        {armNames[a]}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <div className="configuration-facts">
@@ -1359,12 +1388,33 @@ export default function App() {
                     Active memory limit <b>3 lessons</b>
                   </span>
                   <span>
-                    Verification set <b>6 + 3 snapshots</b>
+                    Lesson check{" "}
+                    <b>
+                      {(() => {
+                        const v =
+                          connection?.protocol?.[mode]?.verify ??
+                          ({ practice: 6, regression: 3, moves: 8 } as const);
+                        return `${v.practice} + ${v.regression} boards × ${v.moves} moves`;
+                      })()}
+                    </b>
                   </span>
                   <span>
                     Model session token ceiling{" "}
                     <b>{format(connection?.tokenBudget ?? 100000)}</b>
                   </span>
+                  {!!connection?.keys?.length && (
+                    <span>
+                      API keys{" "}
+                      <b>
+                        {connection.keys.filter((k) => !k.retired).length} of{" "}
+                        {connection.keys.length} available · $
+                        {connection.keys
+                          .reduce((n, k) => n + k.spentUsd, 0)
+                          .toFixed(2)}{" "}
+                        estimated
+                      </b>
+                    </span>
+                  )}
                   <span>
                     Storage{" "}
                     <b>
@@ -1401,7 +1451,9 @@ export default function App() {
                     "Their notebooks + rollback",
                     "Frozen independent exams + JSON export",
                     "Server-side model tool loop + SQLite storage",
-                    "CLI comparison runner + automated tests",
+                    "Adaptive curriculum: per-skill checks + 80/20 scheduler",
+                    "Four-arm CLI study, sealed seeds, paired intervals",
+                    "Cost pilot + automated tests",
                   ].map((t) => (
                     <span key={t}>
                       <CheckCircle2 size={16} />
@@ -1455,6 +1507,13 @@ function TraceDetail({ trace }: { trace: Trace }) {
           Empty cells {trace.before.empty} → {trace.after.empty} · score +
           {trace.scoreDelta} · {trace.tokens} tokens ·{" "}
           {trace.durationMs.toFixed(0)} ms
+          {trace.exercise
+            ? ` · targeted exercise: ${focusName(trace.exercise)}`
+            : ""}
+          {trace.lessonId
+            ? ` · applied lesson ${trace.lessonId.slice(0, 8)}`
+            : ""}
+          {trace.invalid ? ` · ${trace.invalid} invalid tool requests` : ""}
         </p>
       </div>
       <h3 className="tool-heading">Tool activity</h3>

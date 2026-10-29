@@ -6,6 +6,13 @@ export interface Connection {
   modelAvailable: boolean;
   modelId: string | null;
   tokenBudget?: number;
+  keys?: { label: string; spentUsd: number; retired?: string }[];
+  protocol?: Partial<
+    Record<
+      Mode,
+      { verify: { practice: number; regression: number; moves: number } }
+    >
+  >;
 }
 let local: Classroom | null = null;
 function browserLab() {
@@ -43,6 +50,8 @@ export async function connect(): Promise<Connection> {
       modelAvailable: h.modelAvailable,
       modelId: h.modelId,
       tokenBudget: h.tokenBudget,
+      protocol: h.protocol,
+      keys: h.keys,
     };
   } catch {
     return { kind: "browser", modelAvailable: false, modelId: null };

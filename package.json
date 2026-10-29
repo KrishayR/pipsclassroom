@@ -1,6 +1,6 @@
 {
   "name": "consequencelab",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,9 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "tsx --test tests/*.test.ts",
     "evaluate": "tsx scripts/evaluate.ts",
-    "format": "prettier --write src server scripts tests docs/*.md README.md package.json tsconfig.json vite.config.ts .github/workflows/ci.yml"
+    "format": "prettier --write src server scripts tests docs/*.md README.md package.json tsconfig.json vite.config.ts .github/workflows/ci.yml",
+    "pilot": "tsx scripts/pilot.ts",
+    "seal-seeds": "tsx scripts/seal-seeds.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

@@ -161,15 +161,20 @@ export function analyze(board: Board) {
   };
 }
 // Reachable snapshots are collected exclusively through legal trajectories.
+// With a filter, the latest trajectory state matching it is used (tagged exercises).
 export function snapshotPool(
-  split: "practice" | "regression",
+  split: "practice" | "regression" | "exercise",
   round = 0,
-): { id: string; board: Board; seed: number }[] {
+  filter?: { key: string; applies: (board: Board) => boolean },
+  count = split === "regression" ? 3 : 6,
+): { id: string; board: Board; seed: number; tagged: boolean }[] {
   const pool = [];
-  for (let n = 0; n < (split === "practice" ? 6 : 3); n++) {
-    const seed = hash(`${split}:${round}:${n}`);
+  const prefix = filter ? `${split}:${filter.key}` : split;
+  for (let n = 0; n < count; n++) {
+    const seed = hash(`${prefix}:${round}:${n}`);
     let game = createGame(seed);
     let usable = game.board.slice();
+    let tagged: Board | null = null;
     let r = hash(`policy:${seed}`);
     for (let k = 0; k < 70 + n * 9; k++) {
       const legal = legalMoves(game.board);
@@ -179,11 +184,14 @@ export function snapshotPool(
       game = move(game, legal[Math.floor(u * legal.length)]).game;
       if (!game.over && game.board.filter((v) => v === 0).length >= 2)
         usable = game.board.slice();
+      if (!game.over && filter?.applies(game.board))
+        tagged = game.board.slice();
     }
     pool.push({
-      id: `${split}-${round}-${n}`,
-      board: usable,
+      id: `${filter ? `${split}-${filter.key}` : split}-${round}-${n}`,
+      board: tagged ?? usable,
       seed: hash(`rollout:${seed}`),
+      tagged: !!tagged,
     });
   }
   return pool;

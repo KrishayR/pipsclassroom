@@ -140,3 +140,45 @@ test("accepted workspace retains bounded memory and previous workspace stays imm
   assert.equal(before.lessons.length, 0);
   assert.equal(before.skill.spaceWeight, 12);
 });
+test("a newer lesson for the same focus supersedes the older one; full memory drops the least supported", () => {
+  const lesson = (
+    id: string,
+    focus: "space" | "structure" | "planning",
+    meanDelta: number,
+  ) => ({
+    id,
+    title: id,
+    rule: "r",
+    trigger: "always",
+    exception: "e",
+    source: "test",
+    evidence: ["t"],
+    focus,
+    status: "verified" as const,
+    skill: { ...DEFAULT_SKILL, version: 2 },
+    createdAt: "2026-10-28",
+    verification: {
+      rows: [],
+      meanDelta,
+      regressionDelta: 0,
+      accepted: true,
+      rule: "",
+      mode: "simulation" as const,
+    },
+  });
+  let w = emptyWorkspace();
+  w = installLesson(w, lesson("a", "space", 3));
+  w = installLesson(w, lesson("b", "structure", 1));
+  w = installLesson(w, lesson("c", "space", 2));
+  assert.deepEqual(
+    w.lessons.map((l) => l.id),
+    ["b", "c"],
+  );
+  w = installLesson(w, lesson("d", "planning", 5));
+  w = installLesson(
+    { ...w, lessons: [...w.lessons, lesson("x", undefined as never, 9)] },
+    lesson("e", "planning", 4),
+  );
+  assert.ok(!w.lessons.some((l) => l.id === "b"));
+  assert.ok(w.lessons.some((l) => l.id === "e") && w.lessons.length === 3);
+});

@@ -2,7 +2,20 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Classroom } from "../src/core/classroom";
 import { simulationPolicy } from "../src/core/policy";
-import { summarize } from "../src/core/evaluation";
+import {
+  pairedContrast,
+  planningTarget,
+  summarize,
+} from "../src/core/evaluation";
+import {
+  chooseFocus,
+  focusApplies,
+  focusOutcome,
+  skillEstimates,
+  FOCI,
+} from "../src/core/curriculum";
+import { snapshotPool } from "../src/core/engine";
+import type { ExamRow, FocusChoice } from "../src/core/types";
 test("full classroom cycle records actual tools, verifies candidate, and freezes exams", async () => {
   const lab = new Classroom(simulationPolicy());
   await lab.practice(8);
@@ -87,7 +100,7 @@ test("practice after an exam starts a separate training episode, including after
     ),
   );
 });
-test("comparison uses fresh groups, keeps current notebooks, and records all three conditions", async () => {
+test("comparison uses fresh groups, keeps current notebooks, and records all four conditions", async () => {
   const lab = new Classroom(simulationPolicy());
   await lab.practice(1);
   const originals = structuredClone(
@@ -101,7 +114,7 @@ test("comparison uses fresh groups, keeps current notebooks, and records all thr
   const comparison = lab.state.comparisons[0];
   assert.deepEqual(
     comparison.runs.map((r) => r.arm),
-    ["solo", "teacher", "classroom"],
+    ["solo", "teacher", "adaptive", "classroom"],
   );
   assert.equal(comparison.status, "complete");
   assert.ok(
@@ -118,7 +131,12 @@ test("comparison uses fresh groups, keeps current notebooks, and records all thr
     })),
     originals,
   );
-  assert.ok(comparison.runs[2].messages.some((m) => m.role === "peer"));
+  assert.ok(comparison.runs[3].messages.some((m) => m.role === "peer"));
+  assert.ok(
+    comparison.runs
+      .slice(0, 3)
+      .every((r) => r.messages.every((m) => m.role !== "peer")),
+  );
   assert.ok(
     comparison.runs[0].messages.every(
       (m) => m.role !== "peer" && m.role !== "teacher",
@@ -127,20 +145,144 @@ test("comparison uses fresh groups, keeps current notebooks, and records all thr
 });
 test("peer feedback changes a proposed skill only when an actual peer example exists", async () => {
   const lab = new Classroom(simulationPolicy());
-  await lab.practice(12);
+  await lab.practice(40);
   const policy = simulationPolicy();
+  const peer = lab.state.students[1];
+  const focus = FOCI.find((f) =>
+    peer.traces.some((t) => focusOutcome(f.id, t.before, t.after) === true),
+  )!;
+  assert.ok(focus, "peer should have passed at least one focus check");
+  const choice: FocusChoice = {
+    focus: focus.id,
+    name: focus.name,
+    reason: "test",
+    adaptive: true,
+  };
   const a = await policy.propose(
     lab.state.students[0],
-    "teacher",
-    lab.state.students[1],
+    "adaptive",
+    peer,
+    choice,
   );
   const b = await policy.propose(
     lab.state.students[0],
     "classroom",
-    lab.state.students[1],
+    peer,
+    choice,
   );
   assert.ok(b.messages.some((m) => m.role === "peer"));
   assert.ok(b.messages.some((m) => m.role === "student"));
   assert.notDeepEqual(a.lesson.skill, b.lesson.skill);
   assert.ok(b.lesson.evidence.length > a.lesson.evidence.length);
+});
+test("adaptive arms target the weakest measured skill about 80% of the time; random arms do not", () => {
+  const estimates = {
+    space: { attempts: 20, successes: 2 },
+    structure: { attempts: 20, successes: 18 },
+    planning: { attempts: 20, successes: 17 },
+  };
+  const picks = (arm: "adaptive" | "teacher") =>
+    Array.from({ length: 1000 }, (_, i) =>
+      chooseFocus(arm, estimates, `k${i}`),
+    );
+  const adaptive = picks("adaptive");
+  const targeted = adaptive.filter((c) => c.adaptive);
+  assert.ok(targeted.every((c) => c.focus === "space"));
+  assert.ok(Math.abs(targeted.length / 1000 - 0.8) < 0.05);
+  const random = picks("teacher");
+  assert.ok(random.every((c) => !c.adaptive));
+  const share = random.filter((c) => c.focus === "space").length / 1000;
+  assert.ok(Math.abs(share - 1 / 3) < 0.06);
+  assert.deepEqual(
+    chooseFocus("adaptive", estimates, "same"),
+    chooseFocus("adaptive", estimates, "same"),
+  );
+});
+test("review chooses a focus, runs a targeted exercise, and records evidence without touching the practice game", async () => {
+  const lab = new Classroom(simulationPolicy());
+  lab.state.arm = "adaptive";
+  await lab.practice(6);
+  const student = lab.state.students[0];
+  const game = structuredClone(student.game);
+  await lab.review(student.id);
+  assert.ok(lab.state.focus);
+  assert.equal(lab.state.candidate!.lesson.focus, lab.state.focus!.focus);
+  const exercise = student.traces.filter((t) => t.exercise);
+  assert.equal(exercise.length, 4);
+  assert.ok(exercise.every((t) => t.exercise === lab.state.focus!.focus));
+  assert.deepEqual(student.game, game);
+  assert.ok(skillEstimates(student.traces));
+  assert.ok(
+    lab.state.messages.some((m) => m.title.startsWith("Practice focus")),
+  );
+});
+test("tagged snapshot pools are reachable and match their focus where possible", () => {
+  for (const f of FOCI) {
+    const pool = snapshotPool("practice", 0, {
+      key: f.id,
+      applies: (b) => focusApplies(f.id, b),
+    });
+    assert.equal(pool.length, 6);
+    assert.ok(
+      pool.filter((p) => p.tagged).every((p) => focusApplies(f.id, p.board)),
+    );
+  }
+});
+test("an agent failure ends the episode but not the practice session", async () => {
+  const base = simulationPolicy();
+  let n = 0;
+  const lab = new Classroom({
+    ...base,
+    decide: async (...args) => {
+      if (++n === 2)
+        throw new Error(
+          "Agent failed to select a legal move within its call budget.",
+        );
+      return base.decide(...args);
+    },
+  });
+  await lab.practice(2);
+  assert.equal(lab.state.students[1].episodes, 2);
+  assert.ok(lab.state.messages.some((m) => /episode ended/.test(m.title)));
+  assert.equal(lab.state.students.flatMap((s) => s.traces).length, 5);
+});
+test("summary reports median, milestones, truncation; contrasts pair by seed and student", () => {
+  const row = (
+    score: number,
+    seed: number,
+    studentId: string,
+    terminal = "cap",
+  ) =>
+    ({
+      score,
+      seed,
+      studentId,
+      highest: score > 1000 ? 512 : 128,
+      terminal,
+      reached: false,
+      moves: 150,
+    }) as ExamRow;
+  const base = [
+    row(1000, 1, "a"),
+    row(1200, 2, "a"),
+    row(900, 1, "b"),
+    row(1100, 2, "b"),
+  ];
+  const treat = [
+    row(1300, 1, "a"),
+    row(1500, 2, "a"),
+    row(1100, 1, "b"),
+    row(1400, 2, "b", "loss"),
+  ];
+  const s = summarize(treat, 150);
+  assert.equal(s.medianScore, 1350);
+  assert.equal(s.truncated, 3);
+  assert.equal(s.losses, 1);
+  assert.equal(s.milestones[512], 1);
+  const c = pairedContrast(treat, base, 500);
+  assert.equal(c.pairs, 4);
+  assert.equal(c.meanDiff, 275);
+  assert.ok(c.ci95[0]! > 0 && c.ci95[1]! <= 300);
+  assert.equal(c.exploratory, true);
+  assert.equal(planningTarget(treat, base, c).met, true);
 });

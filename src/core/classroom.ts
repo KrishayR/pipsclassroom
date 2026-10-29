@@ -1,13 +1,44 @@
-import { analyze, createGame, hash, move, observe } from "./engine";
+import {
+  analyze,
+  createGame,
+  hash,
+  move,
+  observe,
+  snapshotPool,
+  fromBoard,
+} from "./engine";
 import { emptyWorkspace, installLesson, validateSkill } from "./skills";
 import { decisionSeed } from "./policy";
 import {
+  chooseFocus,
+  focusApplies,
+  focusOutcome,
+  skillEstimates,
+} from "./curriculum";
+import {
   DEFAULT_MOVE_CAP,
+  DEFAULT_VERIFY,
+  DEV_SEEDS,
   examEpisode,
-  EXAM_SEEDS,
+  isAgentError,
   verifyCandidate,
+  type VerifyOptions,
 } from "./evaluation";
-import type { Arm, LabState, Message, Policy, Student } from "./types";
+import type {
+  Arm,
+  FocusChoice,
+  Game,
+  LabState,
+  Message,
+  Policy,
+  Student,
+} from "./types";
+export const ARMS: Arm[] = ["solo", "teacher", "adaptive", "classroom"];
+export interface ClassroomOptions {
+  verify?: VerifyOptions;
+  // Moves in the short targeted exercise that precedes each review (0 disables).
+  exerciseMoves?: number;
+}
 const clone = <T>(v: T): T => structuredClone(v);
 const id = () => crypto.randomUUID();
 export function initialState(mode: Policy["mode"] = "simulation"): LabState {
@@ -40,7 +71,8 @@ export function initialState(mode: Policy["mode"] = "simulation"): LabState {
     busy: false,
     error: null,
     trainingRound: 0,
-    selectedSkill: "Leave yourself some room",
+    selectedSkill: "Not chosen yet",
+    focus: null,
     modelId: null,
     comparisons: [],
   };
@@ -49,12 +81,18 @@ export class Classroom {
   state: LabState;
   private listeners = new Set<(state: LabState) => void>();
   private cancelled = false;
+  readonly verifyOptions: VerifyOptions;
+  readonly exerciseMoves: number;
   constructor(
     public policy: Policy,
     state?: LabState,
+    public options: ClassroomOptions = {},
   ) {
+    this.verifyOptions = options.verify ?? DEFAULT_VERIFY;
+    this.exerciseMoves = options.exerciseMoves ?? 4;
     this.state = state ?? initialState(policy.mode);
     this.state.comparisons ??= [];
+    this.state.focus ??= null;
     this.state.mode = policy.mode;
     this.state.modelId = policy.modelId ?? null;
     if (this.state.busy)
@@ -136,6 +174,105 @@ export class Classroom {
     this.state.modelId = this.policy.modelId ?? null;
     this.emit();
   }
+  // One recorded decision on the student's current game. Returns false when an
+  // agent-level failure ended the episode (see isAgentError).
+  private async step(student: Student, exercise?: FocusChoice) {
+    const before = observe(student.game);
+    const started = performance.now();
+    const recent = student.traces
+      .filter((t) => t.episodeId === student.episodeId)
+      .slice(-3)
+      .map((t) => ({
+        action: t.action,
+        scoreDelta: t.scoreDelta,
+        emptyBefore: t.before.empty,
+        emptyAfter: t.after.empty,
+      }));
+    let decision;
+    try {
+      decision = await this.policy.decide(
+        before,
+        student.workspace,
+        decisionSeed(student.episodeId, student.game.moves),
+        { recent },
+      );
+    } catch (e) {
+      if (!isAgentError(e)) throw e;
+      this.message(
+        "system",
+        `${student.name}’s episode ended`,
+        `${(e as Error).message} The episode is recorded as an agent failure; a fresh one starts next.`,
+      );
+      student.status = "Decision failed · episode ended";
+      return false;
+    }
+    const result = move(student.game, decision.action);
+    this.usage(decision.tokens, decision.calls, decision.simulations);
+    if (!result.changed) throw new Error("Agent attempted an invalid move.");
+    student.game = result.game;
+    const after = observe(student.game);
+    student.traces.push({
+      id: id(),
+      studentId: student.id,
+      episodeId: student.episodeId,
+      before,
+      after,
+      action: decision.action,
+      summary: decision.summary,
+      tools: [
+        ...decision.tools,
+        {
+          name: "apply_move",
+          args: { direction: decision.action },
+          result: {
+            scoreDelta: result.gain,
+            spawn: result.spawn,
+            empty: after.empty,
+          },
+          durationMs: performance.now() - started,
+        },
+      ],
+      lessonId: decision.lessonId,
+      exercise: exercise?.focus,
+      invalid: decision.invalid,
+      spawn: result.spawn,
+      scoreDelta: result.gain,
+      workspaceVersion: student.workspace.version,
+      mode: this.state.mode,
+      tokens: decision.tokens,
+      calls: decision.calls,
+      simulations: decision.simulations,
+      durationMs: performance.now() - started,
+    });
+    const check = exercise ? focusOutcome(exercise.focus, before, after) : null;
+    student.status = `Moved ${decision.action} · ${after.empty} empty cells${check === null ? "" : check ? " · check passed" : " · check missed"}`;
+    return true;
+  }
+  // A short targeted exercise on a reachable board chosen for the focus. The
+  // practice game is restored afterwards; exercise moves are recorded as evidence.
+  private async exercise(student: Student, choice: FocusChoice) {
+    if (!this.exerciseMoves) return;
+    const [snapshot] = snapshotPool(
+      "exercise",
+      this.state.trainingRound,
+      {
+        key: `${choice.focus}:${student.id}`,
+        applies: (b) => focusApplies(choice.focus, b),
+      },
+      1,
+    );
+    const saved: [Game, string] = [student.game, student.episodeId];
+    student.episodeId = `exercise:${this.state.trainingRound}:${student.id}`;
+    student.game = fromBoard(snapshot.board, snapshot.seed);
+    try {
+      for (let k = 0; k < this.exerciseMoves && !this.cancelled; k++) {
+        if (student.game.over || !(await this.step(student, choice))) break;
+        this.emit();
+      }
+    } finally {
+      [student.game, student.episodeId] = saved;
+    }
+  }
   async practice(steps = 12) {
     if (!Number.isInteger(steps) || steps < 1 || steps > 100)
       throw new Error("Practice steps must be 1–100.");
@@ -155,50 +292,11 @@ export class Classroom {
             student.episodeId = `practice:${student.id}:${student.episodes}`;
             student.game = createGame(hash(student.episodeId));
           }
-          const before = observe(student.game);
-          const started = performance.now();
-          const decision = await this.policy.decide(
-            before,
-            student.workspace,
-            decisionSeed(student.episodeId, student.game.moves),
-          );
-          const result = move(student.game, decision.action);
-          this.usage(decision.tokens, decision.calls, decision.simulations);
-          if (!result.changed)
-            throw new Error("Agent attempted an invalid move.");
-          student.game = result.game;
-          const after = observe(student.game);
-          student.traces.push({
-            id: id(),
-            studentId: student.id,
-            episodeId: student.episodeId,
-            before,
-            after,
-            action: decision.action,
-            summary: decision.summary,
-            tools: [
-              ...decision.tools,
-              {
-                name: "apply_move",
-                args: { direction: decision.action },
-                result: {
-                  scoreDelta: result.gain,
-                  spawn: result.spawn,
-                  empty: after.empty,
-                },
-                durationMs: performance.now() - started,
-              },
-            ],
-            spawn: result.spawn,
-            scoreDelta: result.gain,
-            workspaceVersion: student.workspace.version,
-            mode: this.state.mode,
-            tokens: decision.tokens,
-            calls: decision.calls,
-            simulations: decision.simulations,
-            durationMs: performance.now() - started,
-          });
-          student.status = `Moved ${decision.action} · ${after.empty} empty cells`;
+          if (!(await this.step(student))) {
+            student.episodes++;
+            student.episodeId = `practice:${student.id}:${student.episodes}`;
+            student.game = createGame(hash(student.episodeId));
+          }
           this.emit();
         }
         await new Promise((resolve) =>
@@ -222,14 +320,40 @@ export class Classroom {
         [...eligible].sort(
           (a, b) => analyze(a.game.board).empty - analyze(b.game.board).empty,
         )[0];
+      const choice = chooseFocus(
+        this.state.arm,
+        skillEstimates(student.traces),
+        // Deterministic and shared across arms (common random numbers).
+        `${student.id}:${this.state.trainingRound}`,
+      );
+      this.state.focus = choice;
+      this.state.selectedSkill = choice.name;
+      this.message(
+        "system",
+        `Practice focus for ${student.name}: ${choice.name}`,
+        `${choice.reason} ${this.exerciseMoves ? `${student.name} plays ${this.exerciseMoves} moves alone on a reachable board chosen for this skill.` : ""}`,
+      );
+      this.emit();
+      await this.exercise(student, choice);
+      // A peer is chosen for relevant recorded evidence on this focus, not for score.
+      const passed = (s: Student) =>
+        s.traces.filter(
+          (t) => focusOutcome(choice.focus, t.before, t.after) === true,
+        ).length;
       const peer = eligible
-        .filter((s) => s.id !== student.id)
+        .filter((s) => s.id !== student.id && passed(s) > 0)
         .sort(
           (a, b) =>
-            b.traces.filter((t) => t.after.empty > t.before.empty).length -
-            a.traces.filter((t) => t.after.empty > t.before.empty).length,
+            b.workspace.lessons.filter((l) => l.focus === choice.focus).length -
+              a.workspace.lessons.filter((l) => l.focus === choice.focus)
+                .length || passed(b) - passed(a),
         )[0];
-      const proposed = await this.policy.propose(student, this.state.arm, peer);
+      const proposed = await this.policy.propose(
+        student,
+        this.state.arm,
+        peer,
+        choice,
+      );
       this.usage(proposed.tokens, proposed.calls, 0);
       const l = proposed.lesson;
       validateSkill(l.skill);
@@ -248,6 +372,7 @@ export class Classroom {
         throw new Error("Candidate references unknown evidence.");
       const lesson = {
         ...l,
+        focus: choice.focus,
         id: id(),
         status: "candidate" as const,
         createdAt: new Date().toISOString(),
@@ -286,6 +411,7 @@ export class Classroom {
           student.status = `Checking candidate · ${n}/${total} snapshots`;
           this.emit();
         },
+        this.verifyOptions,
       );
       const lesson = {
         ...candidate.lesson,
@@ -299,6 +425,11 @@ export class Classroom {
       if (verification.accepted) {
         student.history.push(clone(student.workspace));
         student.workspace = installLesson(student.workspace, lesson);
+        for (const old of student.history.at(-1)!.lessons)
+          if (!student.workspace.lessons.some((l) => l.id === old.id)) {
+            const ledger = this.state.ledger.find((x) => x.id === old.id);
+            if (ledger) ledger.status = "retired";
+          }
         student.status = `Workspace v${student.workspace.version} · verified on practice set`;
       } else student.status = "Candidate rejected · workspace unchanged";
       this.message(
@@ -335,7 +466,7 @@ export class Classroom {
     if (
       !Number.isInteger(seedCount) ||
       seedCount < 1 ||
-      seedCount > 6 ||
+      seedCount > 12 ||
       !Number.isInteger(cap) ||
       cap < 1 ||
       cap > 5000
@@ -350,7 +481,7 @@ export class Classroom {
         mode: this.state.mode,
         arm: this.state.arm,
         cap,
-        seeds: EXAM_SEEDS.slice(0, seedCount),
+        seeds: DEV_SEEDS.slice(0, seedCount),
         frozen,
         rows: [],
         startedAt: new Date().toISOString(),
@@ -359,7 +490,7 @@ export class Classroom {
       this.message(
         "system",
         "Independent exam",
-        "Teacher and peers are disabled. Workspaces are frozen; every game starts with fresh context.",
+        "Teacher and peers are disabled. Workspaces are frozen; every decision starts with fresh context. These are development seeds; the final study uses sealed seeds from the CLI.",
       );
       for (const seed of exam.seeds) {
         for (const student of this.state.students) {
@@ -423,9 +554,9 @@ export class Classroom {
       this.message(
         "system",
         "Let’s compare three classrooms",
-        "We’ll start fresh students in each group: solo practice, a teacher, and a teacher plus classmates. Your current students keep their saved lessons.",
+        "We’ll start fresh students in each group: solo practice, a teacher with random exercises, a teacher with targeted exercises, and a teacher plus classmates. Your current students keep their saved lessons.",
       );
-      for (const arm of ["solo", "teacher", "classroom"] as Arm[]) {
+      for (const arm of ARMS) {
         if (this.cancelled) break;
         comparison.activeArm = arm;
         const result: (typeof comparison.runs)[number] = {
@@ -466,7 +597,7 @@ export class Classroom {
             return p;
           },
         };
-        const child = new Classroom(bounded);
+        const child = new Classroom(bounded, undefined, this.options);
         child.state.arm = arm;
         const unsubscribe = child.subscribe((s) => {
           result.lessons = clone(s.ledger);
@@ -518,6 +649,10 @@ export class Classroom {
       exportedAt: new Date().toISOString(),
       engine: "cl-2048-1",
       rng: "mulberry32-1",
+      protocol: {
+        verify: this.verifyOptions,
+        exerciseMoves: this.exerciseMoves,
+      },
       limitations: [
         "Simulation mode is a deterministic heuristic controller, not an LLM.",
         "Single classroom runs are exploratory.",

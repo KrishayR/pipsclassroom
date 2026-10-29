@@ -10,12 +10,23 @@ import {
   BookOpen,
 } from "lucide-react";
 import { summarize } from "../core/evaluation";
+import { ARMS } from "../core/classroom";
 import type { Arm, Comparison } from "../core/types";
 import Pip from "./Pip";
-const names: Record<Arm, string> = {
+export const armNames: Record<Arm, string> = {
   solo: "On their own",
-  teacher: "With a teacher",
-  classroom: "With a teacher + classmates",
+  teacher: "Teacher · random practice",
+  adaptive: "Teacher · targeted practice",
+  classroom: "Teacher + classmates",
+};
+const descriptions: Record<Arm, string> = {
+  solo: "Students try random exercises, review their own mistakes, and test their ideas.",
+  teacher:
+    "A teacher reviews each student, but exercises are picked at random.",
+  adaptive:
+    "The same teacher, with exercises aimed at each student’s weakest measured skill (80% targeted, 20% exploration).",
+  classroom:
+    "Targeted exercises and a teacher, plus a classmate who shares a recorded example. Each student tests the advice alone.",
 };
 export default function ComparisonPanel({
   comparison,
@@ -36,7 +47,7 @@ export default function ComparisonPanel({
           <span className="eyebrow">THE QUESTION WE’RE HERE TO ANSWER</span>
           <h2>Does learning together actually help?</h2>
           <p>
-            Give three fresh groups the same game, tools, and starting skills.
+            Give four fresh groups the same game, tools, and starting skills.
             Change who they can learn from. Then let everyone take the same test
             alone.
           </p>
@@ -54,7 +65,7 @@ export default function ComparisonPanel({
         )}
       </div>
       <div className="comparison-groups">
-        {(["solo", "teacher", "classroom"] as Arm[]).map((arm, i) => {
+        {ARMS.map((arm, i) => {
           const run = comparison?.runs.find((r) => r.arm === arm);
           const result = run?.rows.length
             ? summarize(run.rows, comparison!.cap)
@@ -80,14 +91,8 @@ export default function ComparisonPanel({
                   </>
                 )}
               </div>
-              <h3>{names[arm]}</h3>
-              <p>
-                {arm === "solo"
-                  ? "Students try, review their own mistakes, and test their ideas."
-                  : arm === "teacher"
-                    ? "A teacher helps each student spot a mistake and test a better approach."
-                    : "A teacher helps, and classmates share examples. Each student tests the advice for themselves."}
-              </p>
+              <h3>{armNames[arm]}</h3>
+              <p>{descriptions[arm]}</p>
               <div className="group-status">
                 {run ? (
                   <>
@@ -112,12 +117,17 @@ export default function ComparisonPanel({
               {result ? (
                 <div className="group-results">
                   <strong>
-                    {result.successes}
-                    <small> / {result.n} reached 2048</small>
+                    {Math.round(result.meanScore).toLocaleString()}
+                    <small> mean score</small>
                   </strong>
                   <span>
-                    Average score{" "}
-                    <b>{Math.round(result.meanScore).toLocaleString()}</b>
+                    Reached 2048{" "}
+                    <b>
+                      {result.successes} / {result.n}
+                    </b>
+                  </span>
+                  <span>
+                    Hit the move limit <b>{result.truncated}</b>
                   </span>
                   <span>
                     Accepted lessons <b>{run!.accepted}</b>
@@ -193,11 +203,11 @@ export default function ComparisonPanel({
         <FlaskConical size={18} />
         <p>
           <b>A small pilot, not the final verdict.</b> Each group starts with 12
-          practice moves per student, then tests one idea per student on fresh
-          boards. They share a 50,000-transition training ceiling and take one
-          new exam game each, up to 1,500 moves. Teaching costs are shown, not
-          hidden. A larger, cost-matched model study is needed to establish a
-          classroom advantage.
+          practice moves per student, then works on one chosen skill per student
+          and tests one idea on fresh boards. They share a 50,000-transition
+          training ceiling and take one new exam game each, up to 1,500 moves.
+          Teaching costs are shown, not hidden. A larger, cost-matched model
+          study is needed to establish a classroom advantage.
         </p>
       </div>
       {comparison && (
@@ -219,7 +229,7 @@ export default function ComparisonPanel({
                 open={comparison.activeArm === run.arm}
               >
                 <summary>
-                  <span>{names[run.arm]}</span>
+                  <span>{armNames[run.arm]}</span>
                   <span>{run.messages.length} updates</span>
                 </summary>
                 <div className="feed">

@@ -1,31 +1,18 @@
 import { createServer } from "node:http";
 import { DatabaseSync } from "node:sqlite";
-import { mkdirSync, readFileSync, existsSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { Classroom } from "../src/core/classroom";
+import { ARMS, Classroom } from "../src/core/classroom";
 import { simulationPolicy } from "../src/core/policy";
-import { modelPolicy } from "./model";
+import { loadEnv, modelFromEnv, protocolFromEnv } from "./config";
 import type { Arm, LabState } from "../src/core/types";
-if (existsSync(".env"))
-  for (const line of readFileSync(".env", "utf8").split("\n")) {
-    const match = line.match(/^([A-Z_]+)=(.*)$/);
-    if (match && !process.env[match[1]])
-      process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, "");
-  }
+loadEnv();
 mkdirSync("data", { recursive: true });
 const db = new DatabaseSync(resolve("data/classroom.sqlite"));
 db.exec(
   "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS sessions (mode TEXT PRIMARY KEY, state TEXT NOT NULL, updated_at TEXT NOT NULL); CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, mode TEXT NOT NULL, phase TEXT NOT NULL, time TEXT NOT NULL, detail TEXT NOT NULL)",
 );
-const key = process.env.MODEL_API_KEY;
-const real = key
-  ? modelPolicy({
-      key,
-      baseUrl: process.env.MODEL_BASE_URL ?? "https://api.meta.ai/v1",
-      model: process.env.MODEL_ID ?? "muse-spark-1.3",
-      tokenBudget: Number(process.env.MODEL_TOKEN_BUDGET ?? 100000),
-    })
-  : null;
+const real = modelFromEnv();
 const usageOffsets = new Map<string, { tokens: number; calls: number }>();
 const classes = new Map<string, Classroom>();
 const clients = new Map<string, Set<import("node:http").ServerResponse>>();
@@ -36,6 +23,7 @@ for (const policy of [simulationPolicy(), ...(real ? [real] : [])]) {
   const lab = new Classroom(
     policy,
     stored ? (JSON.parse(stored.state) as LabState) : undefined,
+    protocolFromEnv(policy.mode),
   );
   usageOffsets.set(policy.mode, {
     tokens: lab.state.tokens,
@@ -90,7 +78,13 @@ const server = createServer(async (req, res) => {
       modelAvailable: !!real,
       modelId: real?.modelId ?? null,
       storage: "SQLite",
-      tokenBudget: Number(process.env.MODEL_TOKEN_BUDGET ?? 100000),
+      tokenBudget: Number(process.env.MODEL_TOKEN_BUDGET || 100000),
+      // Fingerprints and estimated spend only; keys never leave the server.
+      keys: real?.keyStatus() ?? [],
+      protocol: {
+        simulation: protocolFromEnv("simulation"),
+        model: protocolFromEnv("model"),
+      },
     });
   const mode = url.searchParams.get("mode") ?? "simulation";
   const lab = classes.get(mode);
@@ -150,8 +144,7 @@ const server = createServer(async (req, res) => {
     else if (action === "reset") lab.reset();
     else if (action === "rollback") lab.rollback(input.studentId);
     else if (action === "arm") {
-      if (!["solo", "teacher", "classroom"].includes(input.arm))
-        throw new Error("Unknown condition.");
+      if (!ARMS.includes(input.arm)) throw new Error("Unknown condition.");
       lab.setArm(input.arm as Arm);
     } else throw new Error("Unknown action.");
     db.prepare(

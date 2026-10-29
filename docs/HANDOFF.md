@@ -1,71 +1,70 @@
-# Handoff — October 27, 2026
+# Handoff — October 28, 2026 (v0.2)
+
+Written for whoever picks up the project next: a teammate, a judge reading the repository, or a future session.
 
 ## Current state
 
-This is a working prototype, not a finished learning result. The complete game workflow runs locally and in the standalone browser simulation build. Real model integration is implemented and mock-tested, but needs credentials and live validation. The initial heuristic does not reliably reach 2048. No learning gain is fabricated.
+The plan's software is complete and runs end to end in simulation. The live Meta Model API integration works in Contributor mode (`muse-spark-1.3-contributor`) for student moves and a full teacher review. **No live lesson check, exam or study has completed yet.** There is no evidence yet, positive or negative, that the classroom helps an LLM. The simulation reports in `docs/` are mechanism checks only. In the current one, every simulated group rejected all of its candidate lessons, so every group matches the untrained baseline.
 
-## What is finished
+At the time of this handoff, a live lesson check was running locally (one classroom: 18 practice moves, review, 64-decision verification). It writes `data/live-lesson-check.json`, which Git ignores. Its outcome is not part of this commit.
 
-- Pip, an original animated SVG owl guide; natural classroom copy; explicit teacher → student and peer → student exchanges.
-- In-app three-condition comparison with fresh groups, recorded teaching exchanges, saved/rejected lesson counts, usage and independent exam results.
-- Responsive classroom, three boards, introduction with playable demo, activity feed, candidate cards, lesson ledger, pairwise verification details, tool trace explorer, episode replay, exam table, configuration, JSON export.
-- Deterministic 2048 mechanics and seed replay. No-op handling, once-per-move merges, score, terminal and target detection tested.
-- Independent student workspaces and fresh per-decision context. Model-selected tool calls with bounded simulation and validation.
-- Teacher review and a bounded peer explanation from actual trace excerpts. Unknown evidence is rejected.
-- Six practice + three regression snapshots drawn from legal trajectories, all nonterminal. Paired 8-move rollouts and explicit acceptance rule.
-- Accepted memory installation, rejection, version history, rollback and retirement. Exam workspaces are frozen.
-- Local SQLite + server-sent events; static browser simulation fallback.
-- Per-process model token reservation and bounded calls/timeouts; API failures are visible.
-- CLI solo / teacher / classroom comparisons, independent repetitions, paired seeds, no-workspace and lessons-only ablations.
-- Automated engine, lifecycle, evaluation, mock-provider and budget tests.
+## Plan coverage
 
-## Highest-priority work for the next developer
+| Plan step                         | Status                                                                                                                                                     |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 Engine                          | Done. Mechanics and replay tests; human-playable intro board.                                                                                              |
+| 2 One Muse student                | Done, validated live (Standard and Contributor modes).                                                                                                     |
+| 3 Save and replay                 | Done. Traces, replay without model calls, JSON export.                                                                                                     |
+| 4 Three independent students      | Done.                                                                                                                                                      |
+| 5 Diagnostic review               | Done, validated live. Evidence IDs validated, uncertainty flag, one correction attempt.                                                                    |
+| 6 Reachable practice + curriculum | Done. Skill-tagged reachable snapshots, per-skill counts, 80/20 scheduler (deterministic, shared draws across arms), targeted exercise before each review. |
+| 7 Bounded peer exchange           | Done. Peer chosen by relevant evidence on the focus; recipient plan; peer advice must pass the same gate.                                                  |
+| 8 Verification + versioned memory | Done in software; live check pending. Targeted + regression pairs, one lesson per focus, least-supported replacement, rollback.                            |
+| 9 Locked exam runner              | Done. Four arms, untrained baseline, sealed seeds, code hash, paired bootstrap contrasts, planning-target rule, ablations, parallel and resumable.         |
+| 10 UI                             | Done. Focus and reason, per-skill counts (no percentages), mean/median/milestones, four groups, API key status. Not yet re-checked in a browser for v0.2.  |
+| Cost pilot                        | Done (`npm run pilot`).                                                                                                                                    |
 
-1. **Live API pilot.** Supply a key locally, check model availability, exercise actual parallel tool responses, structured teacher output, token usage, and rate limits. Current schema and function messages follow the official Meta docs; account compatibility is unverified. Keep credentials out of frontend bundles.
-2. **Planning quality.** The current skill uses shallow sampled random continuations and simple space/smoothness/corner heuristics. Improve it using development-only seeds, count all simulated transitions, and preserve equal access for every comparison arm. Do not hide a stronger solver in the taught arm. A future expectimax skill should remain explicitly inspectable.
-3. **Adaptive curriculum.** Review currently chooses a selected student (or the most crowded one) and a peer with space-preserving examples. Verification uses reachable pools. A measured skill mastery model and the proposed 80/20 targeted-exercise scheduler are not implemented. Add coverage-aware selection using only training traces; label the chosen exercise and selection reason.
-4. **Study design.** The checked-in fixed exam seeds have now been used for software tests and are development fixtures. Generate and seal NEW final exam seeds outside source control before the real study. Tune only on development data. Add multiple independent training repetitions, paired/clustered uncertainty intervals and quality-versus-cost curves. Current report is descriptive, with equal ceilings rather than exact cost matching. The UI comparison runs one candidate per student and uses a shared 50,000-transition training ceiling per arm; model calls also share the server’s process token ceiling, so interrupted model comparisons must not be presented as matched studies.
-5. **Persistence scale.** SQLite currently persists the full state blob on each emission, plus operation records. Normalize episodes, moves, lessons, and provider usage when runs grow; use checkpointed jobs and restart recovery. Browser fallback stores the full state and is intended for short demos.
-6. **Coding environment.** Deferred until the 2048 loop and evaluation are validated. Define a shared environment adapter, isolated file workspace, bounded test execution, hidden tests and objective success. Do not expose a shell to the model without real isolation and execution limits.
+## What changed in v0.2 (Oct 28)
 
-## Known limits and concrete tradeoffs
+- Curriculum (`src/core/curriculum.ts`), four arms (solo / teacher-random / teacher-adaptive / classroom), memory replacement rules, agent-failure episodes.
+- Model adapter fixes found live: completion cap raised to 4,000 because hidden reasoning used it up; truncated replies are no longer echoed back; `reasoning_effort` set to `low` (the API rejects `none`).
+- One call per move: the skill ranking is supplied up front (in the first live runs the model requested it in 15 of 16 moves), with `lesson_id` citation and invalid-action counts.
+- Reliability: process-wide rate limiter (`MODEL_RPM`), backoff retries for 429/5xx/timeouts, one correction attempt for teacher, peer and student-plan JSON.
+- Spend: multi-key pool (`MODEL_API_KEYS`) that switches keys before an estimated $145 per key or on billing/authentication errors. The ledger is in `data/key-spend.json` and stores fingerprints only. Cached-input pricing is supported.
+- Study tooling: `npm run seal-seeds`, `npm run pilot`, and a rewritten `npm run evaluate`. Training runs in parallel, exam games run concurrently, the report is saved after each game, `--resume` works, and the report carries a source-code hash.
 
-- Verification is a small screening gate, not a guarantee. Score/survival utility can favor short-term improvements; the held-out full-game exam is necessary.
-- Lessons and skill parameter changes are currently verified together. The lessons-only ablation helps separate them at exam time but does not establish all causal effects.
-- Teaching uses bounded trace excerpts injected as context; a model-driven `inspect_trace` retrieval tool for teachers is a next extension.
-- No confidence intervals, currency conversion, provider rate cards, p50/p95 dashboard or multi-user authentication yet.
-- Skill procedures are prewritten with learned parameter proposals. Arbitrary skill composition/code generation is not implemented.
-- Browser mode has no access to a model. The hosted version is a usable simulation, not a hosted live-model service.
-- Failed requests conservatively consume reserved tokens. Provider bills may differ; actual dollars require current rate information and billing reconciliation.
-- The server binds localhost and restricts browser origins. Before remote deployment add authentication, per-user state, request validation hardening, durable job execution and provider quota enforcement.
-- The model API budget is per process (CLI: per provider instance), not a permanent account spending cap. UI resets do not reset it; server restarts do.
-- Simulation results cannot demonstrate whether peer discussion helps an LLM. All three simulation arms start with the same heuristic. The classroom arm can use observed peer examples or verified peer skills to alter its proposed parameters, which still must pass verification.
+## Configuration (local `.env`, not committed)
 
-## Suggested acceptance sequence
+`MODEL_ID=muse-spark-1.3-contributor`; prices $0.10 input / $0.002 cached / $0.20 output per 1M tokens. Contributor mode lets Meta train on prompts and responses and limits the team to 150 requests per minute. Every arm must use the same model ID. See `.env.example` for all settings.
 
-1. `npm ci`, `npm test`, `npm run build`.
-2. `npm run dev`; complete practice → discuss → verify → exam → export.
-3. Confirm a rejected candidate leaves memory unchanged; confirm an accepted one can be rolled back. Never force an acceptance for a demo.
-4. Run a small real-model pilot. Inspect tool IDs, actual tokens, failure reports and evidence IDs.
-5. Freeze prompts, skill definitions, model ID, budgets, rollout utility and acceptance thresholds.
-6. Run all three conditions with fresh final seeds and independent training repetitions; publish all outcomes and total costs.
+Sealed final exam seeds: `data/sealed-exam-seeds.json` (12 seeds, not committed). SHA-256 `75e71b7451df0867b080fd6f3d810ed972190403de21f5d51a35499091186066`. Publish this hash before results. Don't regenerate the file unless no exam has used it.
+
+## Next steps, in order
+
+1. **Finish the live lesson check.** Confirm practice, review and verification complete with real calls, and that the verification table is recorded. Rejection is an acceptable outcome; a crash is not.
+2. **Freeze.** After step 1, change no prompts, skills, thresholds, budgets or model ID. The study report records a SHA-256 of the source code; `--resume` refuses to continue if it changes.
+3. **Run the study** (about $15–25 in Contributor mode; about 9–12 hours, bound by the rate limit):
+   ```sh
+   MODEL_RPM=140 npm run evaluate -- --mode model --split exam --seeds 12 --cap 150 \
+     --training-moves 24 --training-rounds 3 --token-budget 1000000 --simulation-budget 60000 \
+     --repetitions 3 --concurrency 16 --out data/model-study.json
+   ```
+   If it stops, rerun the same command with `--resume`.
+4. **Report every outcome.** Fill the Results section of `docs/SUBMISSION.md` from `data/model-study.json`: the primary contrast (classroom − adaptive) with its interval, each arm against the untrained baseline, both ablations, costs, and the planning-target decision. Report a negative or mixed result as such.
+5. **Demo and submission.** A 3-minute video, a labeled replay of a real live episode, a browser check of the v0.2 UI, and final checks by Nov 4, 3 PM PST (deadline 6 PM PST).
+
+## Known limits
+
+- The model usually follows its skill ranking, so a classroom effect could come from tuned skill parameters rather than changed model behavior. The `no-skill-tool` and `lessons-only` ablations separate these; report them.
+- The outcome checks are proxies. A failed check can be the right move, and skill estimates are noisy with few moves.
+- Short model-mode rollouts (4 moves) make the gate noisy and myopic. The sealed exam is the real test.
+- Lessons and skill parameters are verified together.
+- The server's SQLite stores a full state blob per update. Long live runs should use the CLI, which saves after every game.
+- Memory rechecks when conflicting evidence builds up are not implemented beyond same-focus replacement and manual rollback.
+- Model budgets are per process (CLI: per provider), not account caps. Key spend is a local estimate; spending outside this app isn't in the ledger.
+- The server is loopback-only with no authentication. The hosted build is simulation-only.
+- The coding-task environment is deferred until the 2048 loop is validated.
 
 ## Demo script
 
-Explain 2048 in one sentence. Show a real recorded move, inspect its tool output, propose a conditional lesson, and show the acceptance or rejection evidence. Run a short independent exercise live. Use explicitly labeled replay and full-game aggregate results for the longer portion. State the active mode on screen and verbally. A negative result is still a valid engineering demonstration.
-
-## Publication status
-
-Source is uploaded to the private GitHub repository https://github.com/KrishayR/consequencelab. The repository includes automated test/build checks. The final ZIP includes the production build; GitHub stores source and build instructions.
-
-A private Sites project was registered as `appgprj_6ae122fb32308191aacaac56c91eb100`; the exact ID is persisted in `.openai/hosting.json`. Source upload was blocked by automatic approval review before credentials were passed to the workflow, so no hosted version or deployment was completed. Reuse this project ID if publishing later; do not create a duplicate. The local production build is ready. No source credential is stored in this handoff.
-
-## Final handoff additions
-
-Pip is drawn in `src/components/Pip.tsx` as an original animated SVG. Its happy/thinking/cheer states respond to classroom activity; it is a guide, not another learning agent. Animation respects reduced-motion preferences.
-
-`src/components/ComparisonPanel.tsx` shows the three study groups, per-game results, resource counts and directed teaching exchanges. The comparison is implemented in `Classroom.compare()`, so it works both in the browser simulation and through the local API. Current student workspaces are isolated from the fresh comparison classrooms. In model mode, all groups share the provider process budget; a budget interruption makes the run incomplete, not evidence of a classroom effect.
-
-The simulation peer proposal is evidence-dependent: it either incorporates a verified peer skill or adjusts a bounded space parameter based on an observed peer move that made room. The gate can reject it. In live mode, peer explanations and the recipient’s test plan are actual model calls. Neither path forces a positive result.
-
-Final delivery includes readable formatted source, a locked dependency file, a production build in the ZIP, 18 automated tests, a GitHub Actions test/build workflow, and both CLI and in-app pilot reports.
+Explain 2048 in one sentence. Show a real recorded live move with its context and ranking, the chosen focus and its reason, the teacher's evidence-linked (possibly uncertain) diagnosis, and the gate's accept/reject table. Run a short live exercise. Use a labeled replay and the study aggregate for the rest. State the mode on screen. Present the result plainly, including if it is negative.
