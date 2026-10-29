@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Classroom } from "../src/core/classroom";
+import { ARMS, Classroom } from "../src/core/classroom";
 import { simulationPolicy } from "../src/core/policy";
 import {
   pairedContrast,
@@ -16,6 +16,77 @@ import {
 } from "../src/core/curriculum";
 import { snapshotPool } from "../src/core/engine";
 import type { ExamRow, FocusChoice } from "../src/core/types";
+test("diagnostic practice gives every condition real evidence for all three skills without changing games or memory", async () => {
+  for (const arm of ARMS) {
+    const lab = new Classroom(simulationPolicy());
+    lab.setArm(arm);
+    const original = structuredClone(lab.state.students);
+    await lab.diagnose();
+    for (const [i, student] of lab.state.students.entries()) {
+      assert.deepEqual(student.game, original[i].game);
+      assert.equal(student.episodeId, original[i].episodeId);
+      assert.deepEqual(student.workspace, original[i].workspace);
+      assert.equal(student.history.length, 0);
+      const estimates = skillEstimates(student.traces);
+      for (const focus of FOCI) assert.ok(estimates[focus.id].attempts > 0);
+      assert.equal(new Set(student.traces.map((t) => t.episodeId)).size, 3);
+    }
+    assert.equal(lab.state.candidate, null);
+    assert.equal(lab.state.ledger.length, 0);
+    assert.equal(lab.state.calls, 0);
+  }
+});
+test("diagnostic evidence makes a real classmate eligible and pending candidates cannot be overwritten", async () => {
+  const lab = new Classroom(simulationPolicy());
+  await lab.diagnose();
+  await lab.review("student-1");
+  assert.ok(lab.state.messages.some((m) => m.role === "peer"));
+  const teacher = lab.state.messages.find((m) => m.role === "teacher")!;
+  const cited = lab.state.students[0].traces.find(
+    (t) => t.id === teacher.evidence![0],
+  )!;
+  assert.notEqual(
+    focusOutcome(lab.state.focus!.focus, cited.before, cited.after),
+    null,
+  );
+  const before = structuredClone(lab.state);
+  await assert.rejects(lab.review("student-2"), /pending idea/);
+  await assert.rejects(lab.diagnose(), /pending idea/);
+  assert.deepEqual(lab.state, before);
+  const exercises = lab.state.students[0].traces.filter((t) => t.exercise);
+  assert.equal(new Set(exercises.map((t) => t.episodeId)).size, 4);
+});
+test("stopped diagnostic practice preserves recorded evidence and restores the student's practice game", async () => {
+  const lab = new Classroom(simulationPolicy());
+  const original = structuredClone(lab.state.students.map((s) => s.game));
+  let stopped = false;
+  lab.subscribe((state) => {
+    if (!stopped && state.students[0].traces.length >= 2) {
+      stopped = true;
+      lab.stop();
+    }
+  });
+  await lab.diagnose();
+  assert.equal(lab.state.students[0].traces.length, 2);
+  assert.deepEqual(
+    lab.state.students.map((s) => s.game),
+    original,
+  );
+  assert.equal(lab.state.busy, false);
+  assert.equal(lab.state.candidate, null);
+});
+test("diagnostics after an exam keep the next practice episode separate from exam play", async () => {
+  const lab = new Classroom(simulationPolicy());
+  await lab.exam(1, 5);
+  await lab.diagnose();
+  assert.equal(lab.state.phase, "exam");
+  await lab.practice(1);
+  for (const student of lab.state.students) {
+    assert.equal(student.game.moves, 1);
+    assert.ok(student.episodeId.startsWith("practice:"));
+    assert.equal(student.traces.at(-1)!.before.moves, 0);
+  }
+});
 test("full classroom cycle records actual tools, verifies candidate, and freezes exams", async () => {
   const lab = new Classroom(simulationPolicy());
   await lab.practice(8);
@@ -31,11 +102,16 @@ test("full classroom cycle records actual tools, verifies candidate, and freezes
       lab.state.students.some((s) => s.traces.some((t) => t.id === id)),
     ),
   );
-  const otherNotebooks = structuredClone(lab.state.students.slice(1).map(s => s.workspace));
+  const otherNotebooks = structuredClone(
+    lab.state.students.slice(1).map((s) => s.workspace),
+  );
   await lab.verify();
   const lesson = lab.state.ledger[0];
   assert.equal(lesson.studentId, "student-1");
-  assert.deepEqual(lab.state.students.slice(1).map(s => s.workspace), otherNotebooks);
+  assert.deepEqual(
+    lab.state.students.slice(1).map((s) => s.workspace),
+    otherNotebooks,
+  );
   assert.equal(lesson.verification!.rows.length, 9);
   assert.equal(
     lab.state.students[0].workspace.version,

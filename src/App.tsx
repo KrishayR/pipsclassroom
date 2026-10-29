@@ -743,11 +743,19 @@ export default function App() {
                     <>
                       <button
                         className="secondary"
-                        disabled={!traces.length}
+                        disabled={!traces.length || !!state.candidate}
                         onClick={() => run("review", { studentId: selected })}
                       >
                         <Users size={15} />
                         Discuss
+                      </button>
+                      <button
+                        className="secondary"
+                        onClick={() => run("diagnose")}
+                        disabled={!connection || !!state.candidate}
+                      >
+                        <FlaskConical size={14} />
+                        Focused practice
                       </button>
                       <button
                         className="primary"
@@ -761,6 +769,12 @@ export default function App() {
                   )}
                 </div>
               </div>
+              <p className="fine">
+                Focused practice gives every student short exercises in all
+                three skills, so reviews have relevant examples to discuss.
+                Their regular games and saved notes stay in place.
+                {mode === "model" ? " These exercises use API credits." : ""}
+              </p>
               <div className="classroom-grid">
                 <div className="students-grid">
                   {state.students.map((s) => (
@@ -834,7 +848,7 @@ export default function App() {
                     </span>
                   </div>
                   <button
-                    disabled={busy || !traces.length}
+                    disabled={busy || !traces.length || !!state.candidate}
                     onClick={() => run("review", { studentId: selected })}
                   >
                     Review {student.name}’s attempt <ArrowRight size={15} />

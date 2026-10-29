@@ -136,6 +136,7 @@ const server = createServer(async (req, res) => {
       return send(409, { error: "An operation is already running." });
     let operation: Promise<void> | undefined;
     if (action === "practice") operation = lab.practice(input.steps ?? 12);
+    else if (action === "diagnose") operation = lab.diagnose();
     else if (action === "review") operation = lab.review(input.studentId);
     else if (action === "verify") operation = lab.verify();
     else if (action === "exam")

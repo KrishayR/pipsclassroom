@@ -92,6 +92,8 @@ export async function action(
   }
   const lab = browserLab();
   switch (name) {
+    case "diagnose":
+      return lab.diagnose();
     case "practice":
       return lab.practice((params.steps as number) ?? 12);
     case "review":

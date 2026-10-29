@@ -40,21 +40,21 @@ export default function LearningGuide({
           ? 3
           : 4;
   const titles = [
-    "Make a few moves",
+    "Practice the three skills",
     "Ask for feedback",
     "Test the idea",
     "Try it independently",
     "Read the evidence",
   ];
   const descriptions = [
-    "Watch three students slide and merge matching tiles. Each move leaves a record: what they saw, which tools they used, and what happened next.",
+    "Each student tries short exercises in preserving room, keeping structure, and planning ahead. These reachable boards give the teacher and classmates relevant examples to discuss. Mistakes and successes are both recorded; a lesson still has to pass verification.",
     "The class now has real moves to discuss. A review selects a skill to work on and proposes a rule grounded in recorded decisions.",
     "An idea is not a lesson yet. Compare it against the old approach on targeted boards, then check that it does not hurt general play.",
     "Now freeze the students’ notes and try fresh games without teacher hints. This short, 100-move exam demonstrates the workflow; it is not a full performance study.",
     "You have completed the learning loop. Inspect the outcomes, then compare teaching approaches to investigate whether the classroom helps.",
   ];
   const labels = [
-    "Start guided practice",
+    "Start focused practice",
     "Review a student",
     "Test this idea",
     "Run a short exam",
@@ -63,7 +63,7 @@ export default function LearningGuide({
   const act = () => {
     if (stage === 0) {
       navigate("classroom");
-      void run("practice", { steps: 6 });
+      void run("diagnose");
     }
     if (stage === 1) {
       navigate("classroom");
@@ -197,7 +197,8 @@ export default function LearningGuide({
               {latest.verification.regressionDelta >= 0 ? "+" : ""}
               {latest.verification.regressionDelta.toFixed(1)}
             </b>{" "}
-            score points on average.
+            verification utility points on average (a combined check, not raw
+            game score).
           </p>
           <button className="text-button" onClick={() => navigate("lessons")}>
             See the rule and paired checks <ArrowRight size={14} />

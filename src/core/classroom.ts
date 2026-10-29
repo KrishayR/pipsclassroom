@@ -11,6 +11,7 @@ import { emptyWorkspace, installLesson, validateSkill } from "./skills";
 import { decisionSeed } from "./policy";
 import {
   chooseFocus,
+  FOCI,
   focusApplies,
   focusOutcome,
   skillEstimates,
@@ -250,19 +251,35 @@ export class Classroom {
   }
   // A short targeted exercise on a reachable board chosen for the focus. The
   // practice game is restored afterwards; exercise moves are recorded as evidence.
-  private async exercise(student: Student, choice: FocusChoice) {
+  private async exercise(
+    student: Student,
+    choice: FocusChoice,
+    diagnostic = false,
+  ) {
     if (!this.exerciseMoves) return;
-    const [snapshot] = snapshotPool(
+    const snapshots = snapshotPool(
       "exercise",
       this.state.trainingRound,
       {
         key: `${choice.focus}:${student.id}`,
         applies: (b) => focusApplies(choice.focus, b),
       },
-      1,
+      diagnostic ? 6 : 1,
     );
+    const snapshot = diagnostic
+      ? snapshots.find((s) => s.tagged)
+      : snapshots[0];
+    if (!snapshot)
+      throw new Error(
+        `No reachable diagnostic board found for ${choice.name}.`,
+      );
     const saved: [Game, string] = [student.game, student.episodeId];
-    student.episodeId = `exercise:${this.state.trainingRound}:${student.id}`;
+    const baseEpisode = `exercise:${this.state.trainingRound}:${student.id}`;
+    let episode = baseEpisode;
+    let attempt = 0;
+    while (student.traces.some((t) => t.episodeId === episode))
+      episode = `${baseEpisode}:${++attempt}`;
+    student.episodeId = episode;
     student.game = fromBoard(snapshot.board, snapshot.seed);
     try {
       for (let k = 0; k < this.exerciseMoves && !this.cancelled; k++) {
@@ -271,6 +288,59 @@ export class Classroom {
       }
     } finally {
       [student.game, student.episodeId] = saved;
+    }
+  }
+  // Explicit, optional diagnostic stage. Every condition gets the same opportunity
+  // to collect real skill evidence; existing CLI studies do not invoke this stage.
+  async diagnose() {
+    if (this.state.candidate)
+      throw new Error(
+        "Test the pending idea before starting diagnostic practice.",
+      );
+    if (!this.exerciseMoves)
+      throw new Error(
+        "Diagnostic practice requires exercise moves to be enabled.",
+      );
+    const afterExam = this.state.phase === "exam";
+    try {
+      await this.task("practice", async () => {
+        this.message(
+          "system",
+          "Focused diagnostic practice",
+          `Each student tries ${this.exerciseMoves} moves per skill on reachable boards. There is no feedback or memory update during these exercises.`,
+        );
+        for (const focus of FOCI) {
+          for (const student of this.state.students) {
+            if (this.cancelled) break;
+            const choice: FocusChoice = {
+              focus: focus.id,
+              name: focus.name,
+              reason:
+                "Diagnostic exercise: collect evidence for this skill before choosing feedback.",
+              adaptive: false,
+            };
+            this.state.focus = choice;
+            this.state.selectedSkill = choice.name;
+            student.status = `Diagnostic practice · ${choice.name}`;
+            this.emit();
+            await this.exercise(student, choice, true);
+          }
+          if (this.cancelled) break;
+        }
+        this.message(
+          "system",
+          this.cancelled
+            ? "Diagnostic practice stopped"
+            : "Diagnostic practice finished",
+          "Recorded exercises are available for diagnosis and peer selection. A classmate contributes only when a real move passed the chosen skill check; lesson acceptance still requires the existing verification gate.",
+        );
+      });
+    } finally {
+      // A diagnostic exercise must not turn an exam board into training play.
+      if (afterExam) {
+        this.state.phase = "exam";
+        this.emit();
+      }
     }
   }
   async practice(steps = 12) {
@@ -311,6 +381,10 @@ export class Classroom {
     });
   }
   async review(studentId?: string) {
+    if (this.state.candidate)
+      throw new Error(
+        "Test the pending idea before reviewing another student.",
+      );
     await this.task("review", async () => {
       const eligible = this.state.students.filter((s) => s.traces.length);
       if (!eligible.length)
@@ -554,7 +628,7 @@ export class Classroom {
       this.state.comparisons.push(comparison);
       this.message(
         "system",
-        "Let’s compare three classrooms",
+        "Let’s compare four classrooms",
         "We’ll start fresh students in each group: solo practice, a teacher with random exercises, a teacher with targeted exercises, and a teacher plus classmates. Your current students keep their saved lessons.",
       );
       for (const arm of ARMS) {

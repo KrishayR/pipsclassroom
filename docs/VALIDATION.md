@@ -1,5 +1,25 @@
 # Validation record
 
+## October 29, 2026 — Focused practice
+
+See [Focused practice handoff](FOCUSED_PRACTICE_HANDOFF.md) for the diagnostic
+stage, implementation details, and evaluation boundaries. All 36 automated
+tests, TypeScript checking, and the production build pass. A browser
+simulation completed focused practice, an evidence-based Sam → Ada peer
+contribution, and verification with zero model calls. The unchanged gate
+rejected the candidate. The new flow has not yet been validated live.
+
+## October 29, 2026 — Windows checkout and live teaching check
+
+See [Live teaching check](LIVE_TEACHING_CHECK.md) for the complete small-run
+configuration and results. All 32 automated tests and the production build
+passed after fixing Windows environment-file line endings. Live teacher
+review and all eight verification pairs completed; the candidate was rejected
+(targeted utility +0.4167, general utility 0). Ada's notebook stayed unchanged.
+Independent 25-move exam scores were 176 before feedback and 148 afterward;
+this is repeat-run variation, not evidence of adopted learning. No peer was
+eligible. The experiment used an estimated $0.04287.
+
 ## v0.2 — October 28, 2026
 
 Software (Node 24, local):

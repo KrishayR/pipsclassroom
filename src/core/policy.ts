@@ -53,7 +53,12 @@ export function simulationPolicy(): Policy {
       const failed = traces.filter(
         (t) => focusOutcome(focus, t.before, t.after) === false,
       );
-      const critical = [...(failed.length ? failed : traces)].sort(
+      const applicable = traces.filter(
+        (t) => focusOutcome(focus, t.before, t.after) !== null,
+      );
+      const critical = [
+        ...(failed.length ? failed : applicable.length ? applicable : traces),
+      ].sort(
         (a, b) =>
           a.after.empty - a.before.empty - (b.after.empty - b.before.empty),
       )[0];

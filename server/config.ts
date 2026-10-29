@@ -6,7 +6,7 @@ import type { ClassroomOptions } from "../src/core/classroom";
 import type { Mode } from "../src/core/types";
 export function loadEnv(path = ".env") {
   if (existsSync(path))
-    for (const line of readFileSync(path, "utf8").split("\n")) {
+    for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
       const match = line.match(/^([A-Z_]+)=(.*)$/);
       if (match && !process.env[match[1]])
         process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, "");

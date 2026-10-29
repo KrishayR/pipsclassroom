@@ -1,4 +1,50 @@
-# Handoff — October 28, 2026 (v0.2)
+# Handoff — October 29, 2026
+
+## Latest working branch and next chat
+
+Continue on `codex/consequencelab-work`. The October 29 update below takes
+precedence over the historical October 28 plan retained later in this file.
+Do not launch that older large study as the next step: the current preference
+is to keep Muse spending very small.
+
+- [Focused practice handoff](FOCUSED_PRACTICE_HANDOFF.md) explains the new
+  classroom button, the diagnostic evidence gap it addresses, implementation,
+  evaluation boundaries, and next validation steps. All three students try
+  all three skills, up to 36 decisions with the default settings. Regular
+  games and saved notes are preserved. Live mode uses API credits.
+- [Live teaching check](LIVE_TEACHING_CHECK.md) records the actual Muse test:
+  eight verification pairs completed without errors, the candidate failed
+  the unchanged acceptance gate, and Ada's notebook stayed unchanged.
+  Short independent exams scored 176 and 148; this is repeat-run variation,
+  not evidence of learning. No peer was eligible in that live run.
+- Additional fixes cover Windows `.env` line endings, unique exercise
+  episodes, protecting pending candidates from overwritten reviews, keeping
+  exam boards separate from later practice, relevant simulation teacher
+  citations, and clearer verification utility labels.
+- All 36 automated tests, TypeScript checking, and the production build pass.
+  A browser simulation exercised focused practice, recorded Sam's contribution
+  to Ada, and verification. Its candidate was rejected. The new diagnostic
+  flow still needs live validation; accepted learning and a performance
+  advantage have not been demonstrated.
+- Estimated spending recorded by this checkout is about $0.04353 including
+  the connection check. The local key threshold was set to $1; it is an
+  estimate, not an account billing cap. No new Muse calls were made for the
+  focused-practice implementation.
+
+Next, inspect focused practice → Discuss → verification in simulation. Agree
+on a small budget before a live test of the same flow. Keep the gate fixed,
+preserve rejected results, and use matched preparation and independent
+repetitions before claiming gains. A future formal study needs a new source
+freeze; do not resume the older study across these changes.
+
+On another checkout, select this branch after cloning, install dependencies,
+and create a local `.env` from `.env.example` only if live access is needed.
+Keep secrets local. `.env`, SQLite state, spend ledgers, and raw `data/`
+reports are intentionally ignored; the linked summaries are saved in Git.
+The localhost browser tabs and running services belong to the current
+machine and may need restarting in a future session.
+
+## Historical handoff — October 28, 2026 (v0.2)
 
 Written for whoever picks up the project next: a teammate, a judge reading the repository, or a future session.
 
