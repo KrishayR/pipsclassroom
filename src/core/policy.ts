@@ -1,26 +1,35 @@
 import { analyze, hash } from "./engine";
-import { activeLessons, simulate } from "./skills";
-import { focusName, focusOutcome, moveFacts } from "./curriculum";
-import type { Board, Policy, ToolEvent, Workspace } from "./types";
-// The move a student plans without a model: the best-ranked move that keeps the skill
-// of every applicable saved lesson, or the top-ranked move when none does.
+import { activeLessons, lessonMoves, lessonObjects, simulate } from "./skills";
+import { focusName, focusOutcome } from "./curriculum";
+import type {
+  Board,
+  LessonLimits,
+  Policy,
+  ToolEvent,
+  Workspace,
+} from "./types";
+// The move a student plans without a model. Lessons step in only when the top-ranked
+// move breaks their skill; then the best-ranked move that every objecting lesson
+// recommends (within its limits) is taken, unless its sampled loss rate is more than
+// 0.25 above the top move's. Otherwise the top-ranked move stands.
 export function plannedMove(board: Board, workspace: Workspace, seed: number) {
   const result = simulate(board, workspace.skill, seed);
   const lessons = activeLessons(workspace, board).filter((l) => l.focus);
-  const facts = moveFacts(board);
-  // Same exception the model is given: never follow a lesson into a clearly dangerous
-  // move (very few options left, or a clearly higher sampled loss rate).
-  const topLoss = result.ranking[0]?.lossRate ?? 0;
-  const kept = result.ranking.find(
-    (r) =>
-      lessons.every((l) => facts[r.action]?.keeps[l.focus!]) &&
-      (facts[r.action]?.legalMovesAfterSlide ?? 0) >= 2 &&
-      r.lossRate <= topLoss + 0.25,
-  );
-  const best = kept ?? result.ranking[0];
+  const top = result.ranking[0];
+  const objecting = top
+    ? lessons.filter((l) => lessonObjects(l, board, top.action))
+    : [];
+  const allowed = objecting.map((l) => lessonMoves(l, board));
+  const pick = objecting.length
+    ? result.ranking.find(
+        (r) =>
+          allowed.every((moves) => moves.includes(r.action)) &&
+          r.lossRate <= top.lossRate + 0.25,
+      )
+    : undefined;
   return {
-    action: best?.action,
-    lessonId: kept && lessons.length ? lessons[0].id : undefined,
+    action: (pick ?? top)?.action,
+    lessonId: pick ? objecting[0].id : undefined,
     result,
     lessons,
   };
@@ -138,15 +147,32 @@ export function simulationPolicy(): Policy {
                 : (skill[key] + peerLesson.skill[key]) / 2;
         else nudge(Math.max(1, peerTrace.after.empty - peerTrace.before.empty));
       }
+      // Conditional by default: step in only where the move breaks the skill, keep at
+      // least three options and give up at most a small merge. After a rejection, the
+      // revision narrows the limits further.
+      const prior = options?.rejection?.limits;
+      const limits: LessonLimits = prior
+        ? {
+            minOptions: Math.min(4, prior.minOptions + 1),
+            maxGainLoss: Math.max(0, (prior.maxGainLoss ?? 16) / 2),
+          }
+        : { minOptions: 3, maxGainLoss: 8 };
       // If the change would not alter any planned move on the sample boards, strengthen
       // it (within bounds) up to three times; verification still decides.
       for (
         let n = 0;
         n < 3 &&
-        options?.check?.({ skill, trigger: "when the skill applies", focus });
+        options?.check?.({
+          skill,
+          trigger: "when the skill applies",
+          focus,
+          limits,
+        });
         n++
-      )
+      ) {
         nudge(2 ** (n + 1));
+        limits.maxGainLoss = (limits.maxGainLoss ?? 8) * 2;
+      }
       const name = focusName(focus);
       const source =
         arm === "solo"
@@ -178,6 +204,7 @@ export function simulationPolicy(): Policy {
         lesson: {
           ...lesson,
           trigger: "when the skill applies",
+          limits,
           exception:
             "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
           source,

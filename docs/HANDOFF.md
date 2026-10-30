@@ -1,6 +1,17 @@
 # Handoff — October 30, 2026
 
-## Latest update (Oct 30): lessons can now change behaviour
+## Latest update (Oct 30, evening): conditional lessons, calibration, live batches, no-helper option
+
+Read [Conditional lessons](CONDITIONAL_LESSONS.md) first. In short:
+
+1. **Conditional lessons** (`limits: { minOptions, maxGainLoss }`) step in only when a move breaks the skill. They removed large losses but have not produced an accepted lesson.
+2. **Free gate calibration** (11 probes, 4/8/12/24 moves) found no false rejects at any length, and almost no probe helped over long games. Keep 4-move model rollouts; the lessons, not the test length, are the problem.
+3. **Live batch with the helper** (`npm run live-batch -- --cycles 3`, $0.158): 6 candidates including revisions, all rejected; the best was neutral.
+4. **No-helper option** (`MODEL_STUDENT_HELPER=off`): the live batch stopped on a network outage after 1 cycle ($0.187). The gate is too noisy without the helper: Muse is stochastic, and one general board decides the verdict.
+
+**Decision needed:** helper on (reliable gate, likely null result) or off (more room, but sturdier gate needed first). Then freeze, seal seeds and run the study. 62 tests and the build pass. Total key spend is about $0.45.
+
+## Earlier update (Oct 30): lessons can now change behaviour
 
 Latest addition: [configurable live batch runner](LIVE_BATCH.md), with 1–100
 cycles, an estimated $1 additional budget, automatic baseline/stage/cycle

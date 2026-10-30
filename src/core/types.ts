@@ -48,6 +48,13 @@ export interface Skill {
   mergeWeight: number;
   riskWeight: number;
 }
+// Narrows a lesson to the situation it is about: its recommended move must leave at
+// least minOptions legal moves and give up at most maxGainLoss immediate points
+// compared with the best-scoring legal move (omitted means no point limit).
+export interface LessonLimits {
+  minOptions: number;
+  maxGainLoss?: number;
+}
 export interface Lesson {
   id: string;
   studentId?: string;
@@ -58,6 +65,7 @@ export interface Lesson {
   source: string;
   evidence: string[];
   focus?: Focus;
+  limits?: LessonLimits;
   // Sample boards (separate from verification) where this lesson changes the planned move.
   sensitivity?: { boards: number; changed: number };
   revisionOf?: string;
@@ -248,6 +256,8 @@ export interface Policy {
   allowSkill?: boolean;
   mode: Mode;
   modelId?: string;
+  // false when students decide without the skill ranking (no-helper mode).
+  usesHelper?: boolean;
   decide(
     observation: Observation,
     workspace: Workspace,
@@ -263,7 +273,7 @@ export interface Policy {
       rejection?: Lesson;
       // Returns a problem when a draft lesson would change no planned move.
       check?: (
-        draft: Pick<Lesson, "skill" | "trigger" | "focus">,
+        draft: Pick<Lesson, "skill" | "trigger" | "focus" | "limits">,
       ) => string | null;
     },
   ): Promise<{

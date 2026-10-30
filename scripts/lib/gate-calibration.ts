@@ -59,6 +59,7 @@ export function calibrationCases() {
     focus: Focus | undefined,
     skill: Workspace["skill"],
     rule: boolean,
+    limits?: Lesson["limits"],
   ) => {
     const lesson: Lesson = {
       id,
@@ -69,6 +70,7 @@ export function calibrationCases() {
       source: "fixed calibration probe",
       evidence: [],
       focus,
+      ...(limits ? { limits } : {}),
       status: "candidate",
       skill,
       createdAt: "fixed",
@@ -80,6 +82,12 @@ export function calibrationCases() {
   add("no-change-control", undefined, { ...current.skill }, false);
   for (const focus of ["space", "structure", "planning"] as const) {
     add(`${focus}-rule-only`, focus, { ...current.skill }, true);
+    // Conditional version: steps in only where the move breaks the skill, keeping
+    // three options and giving up at most a small merge.
+    add(`${focus}-conditional-rule`, focus, { ...current.skill }, true, {
+      minOptions: 3,
+      maxGainLoss: 8,
+    });
     const skill = { ...current.skill, version: 2 };
     if (focus === "space") skill.spaceWeight = 20;
     if (focus === "structure") {

@@ -233,6 +233,16 @@ function LessonCard({
         <b>When</b> {lesson.trigger}
         <br />
         <b>Exception</b> {lesson.exception}
+        {lesson.limits && (
+          <>
+            <br />
+            <b>Only steps in</b> when a move breaks the skill; recommends moves
+            leaving {lesson.limits.minOptions}+ options
+            {lesson.limits.maxGainLoss !== undefined
+              ? ` and giving up at most ${lesson.limits.maxGainLoss} points`
+              : ""}
+          </>
+        )}
         {lesson.sensitivity && (
           <>
             <br />

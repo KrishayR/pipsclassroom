@@ -400,6 +400,7 @@ test("a teacher reply that fails validation gets one correction with the specifi
     evidence: ["trace-1"],
     diagnosis,
     uncertain: true,
+    limits: { minOptions: 3, maxGainLoss: 8 },
     skill: { ...emptyWorkspace().skill, version: 2 },
   });
   const sent: string[] = [];

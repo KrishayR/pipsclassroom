@@ -22,6 +22,11 @@ const num = (key: string, fallback: number) => {
   if (!Number.isFinite(n) || n < 0) throw new Error(`${key} must be a number.`);
   return n;
 };
+// MODEL_STUDENT_HELPER=off: students get no move ranking and decide from the board,
+// per-move facts and lessons alone. Every arm of a study must use the same setting.
+export const studentHelper = () =>
+  process.env.MODEL_STUDENT_HELPER !== "off" &&
+  process.env.MODEL_USE_PLANNER !== "false";
 export const modelId = () => process.env.MODEL_ID || "muse-spark-1.3";
 // MODEL_API_KEY and/or MODEL_API_KEYS (comma-separated), used in that order.
 export const apiKeys = () => [
@@ -63,11 +68,11 @@ export function modelFromEnv(
     keys,
     baseUrl: process.env.MODEL_BASE_URL || "https://api.meta.ai/v1",
     model: modelId(),
-    allowSkill: process.env.MODEL_USE_PLANNER !== "false",
     tokenBudget: num("MODEL_TOKEN_BUDGET", 100000),
     maxCompletionTokens: num("MODEL_MAX_COMPLETION_TOKENS", 4000),
     reasoningEffort: process.env.MODEL_REASONING_EFFORT || "low",
     limiter: (limiter ??= rateLimiter(num("MODEL_RPM", 120))),
+    allowSkill: studentHelper(),
     requestGate,
     ...overrides,
   });

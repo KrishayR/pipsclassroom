@@ -12,6 +12,7 @@ import {
   installLesson,
   LESSON_TRIGGERS,
   mergeLessons,
+  validateLimits,
   validateSkill,
 } from "./skills";
 import { decisionSeed, lessonSensitivity } from "./policy";
@@ -47,7 +48,7 @@ export const ARMS: Arm[] = ["solo", "teacher", "adaptive", "classroom"];
 // The workspace a candidate lesson would produce, as verification tests it.
 export function candidateWorkspace(
   current: Workspace,
-  draft: Pick<Lesson, "skill" | "trigger" | "focus">,
+  draft: Pick<Lesson, "skill" | "trigger" | "focus" | "limits">,
 ): Workspace {
   const lesson: Lesson = {
     id: "draft",
@@ -148,7 +149,7 @@ export class Classroom {
     this.state.focus ??= null;
     this.state.mode = policy.mode;
     this.state.modelId = policy.modelId ?? null;
-    this.state.plannerEnabled = policy.allowSkill !== false;
+    this.state.plannerEnabled = policy.usesHelper !== false;
     if (this.state.busy)
       this.state.error =
         "The previous operation was interrupted. Its recorded results are preserved.";
@@ -611,7 +612,7 @@ export class Classroom {
         6,
       );
       const sensitivity = (
-        draft: Pick<Lesson, "skill" | "trigger" | "focus">,
+        draft: Pick<Lesson, "skill" | "trigger" | "focus" | "limits">,
       ) =>
         lessonSensitivity(
           student.workspace,
@@ -628,11 +629,12 @@ export class Classroom {
         choice,
         {
           check:
-            this.policy.allowSkill === false
-              ? undefined
+            this.policy.usesHelper === false
+              ? () => null
               : (draft) => {
                   try {
                     validateSkill(draft.skill);
+                    validateLimits(draft.limits);
                   } catch {
                     return null;
                   }
@@ -645,6 +647,7 @@ export class Classroom {
       this.usage(proposed.tokens, proposed.calls, 0);
       const l = proposed.lesson;
       validateSkill(l.skill);
+      l.limits = validateLimits(l.limits);
       if (!(LESSON_TRIGGERS as readonly string[]).includes(l.trigger))
         throw new Error("Unsupported lesson trigger.");
       if (
@@ -663,7 +666,7 @@ export class Classroom {
         studentId: student.id,
         focus: choice.focus,
         sensitivity:
-          this.policy.allowSkill === false ? undefined : sensitivity(l),
+          this.policy.usesHelper === false ? undefined : sensitivity(l),
         id: id(),
         status: "candidate" as const,
         createdAt: new Date().toISOString(),
@@ -760,6 +763,7 @@ export class Classroom {
         this.usage(proposed.tokens, proposed.calls, 0);
         const draft = proposed.lesson;
         validateSkill(draft.skill);
+        draft.limits = validateLimits(draft.limits);
         const known = new Set(
           this.state.students.flatMap((s) => s.traces.map((t) => t.id)),
         );

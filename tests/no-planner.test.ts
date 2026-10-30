@@ -67,6 +67,7 @@ test("planner-free live sessions omit all sampled rankings, preserve strategy an
             diagnosis: "Test room preservation.",
             uncertain: true,
             skill: { ...context.currentSkill, spaceWeight: 40, version: 2 },
+            limits: { minOptions: 3, maxGainLoss: 8 },
           }),
         };
       } else

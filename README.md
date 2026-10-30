@@ -42,6 +42,10 @@ MODEL_PRICE_OUTPUT_PER_M=...
 
 Each request uses the first key whose estimated spend plus the request's worst-case cost stays under the limit. Estimated spend per key (by fingerprint, never the key itself) is kept in `data/key-spend.json` and shared by the server and CLI runs. A key the provider reports as out of credit (HTTP 402, or an `insufficient_quota`/billing error) or invalid (HTTP 401) is retired, and the same request is sent to the next key. Ordinary rate limits never switch keys. When every key is used up, no request is sent. The default limit is $145 because local spend is an estimate; spending made outside this app (for example in the console) is not in the ledger. Without prices, keys switch only on provider errors. Settings shows how many keys remain.
 
+### Lessons, helper mode and command-line batches
+
+Lessons are conditional: they step in only when a move breaks their skill, within `limits` (minimum options left, maximum points given up). `MODEL_STUDENT_HELPER=off` removes the move ranking so students decide from the board, per-move facts and lessons alone; use the same setting for every study arm. `npm run live-batch -- --cycles 3` runs the budgeted live batch ($1 cap) without the server. See [Conditional lessons](docs/CONDITIONAL_LESSONS.md).
+
 ## Walk through the prototype
 
 1. **How this works** explains 2048 with an isolated human-playable board.

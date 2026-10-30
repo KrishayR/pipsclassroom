@@ -1,5 +1,19 @@
 # Validation record
 
+## October 30, 2026 — Integrate conditional lessons with Classroom Sessions
+
+Merged main's conditional lesson limits, recommendation logic, calibration probes
+and CLI batch runner with parallel Classroom Sessions, exam trajectories and
+planner-condition records. Both environment flags share studentHelper(): either
+MODEL_STUDENT_HELPER=off or MODEL_USE_PLANNER=false disables rankings. The Policy
+usesHelper field is shared by all paths. Planner-free teachers preserve current
+strategy parameters and teach through rules, exceptions and validated limits.
+
+All 68 tests, TypeScript checking and the production build pass. Coverage includes
+conditional move bounds, no-helper impact-check bypass, both environment flags,
+full planner-free sessions, revisions, frozen peers, concurrency and partial saves.
+No paid experiment was started; learning effectiveness remains unproven.
+
 ## October 30, 2026 — Planner-free browser runs
 
 All 65 tests, TypeScript checking and the production build pass. A fake-provider
@@ -70,6 +84,10 @@ with the lesson-influence improvements and parallel batch runner together.
 Preserved move facts, focus-based triggers, sensitivity correction, citation
 counts, bounded concurrency, isolated usage, and in-flight budget reservations.
 Validation used fake model calls; the running server was not restarted.
+
+## October 30, 2026 (evening) — Conditional lessons, calibration, live batches
+
+See [Conditional lessons](CONDITIONAL_LESSONS.md). 62 tests and the build pass. The full gate calibration ran in 171 s (95,635 local decisions, $0) and made no recommendation: 0 false rejects at 4/8/12/24 moves, 0/22 beneficial holdout probes. Live with the helper, 3 cycles: all 6 candidates were rejected ($0.158, 817 calls, 0 invalid actions). Live without the helper: interrupted by a network failure after 1 cycle ($0.187, 478 calls, 0 invalid actions); large general-board swings with zero lesson citations show the gate is noise-dominated in that mode.
 
 ## October 30, 2026 — Lessons that change behaviour
 

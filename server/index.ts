@@ -4,7 +4,12 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { ARMS, Classroom } from "../src/core/classroom";
 import { simulationPolicy } from "../src/core/policy";
-import { loadEnv, modelFromEnv, protocolFromEnv } from "./config";
+import {
+  loadEnv,
+  modelFromEnv,
+  protocolFromEnv,
+  studentHelper,
+} from "./config";
 import type { Arm, LabState } from "../src/core/types";
 import { liveBatchRunner } from "./batch";
 loadEnv();
@@ -91,7 +96,7 @@ const server = createServer(async (req, res) => {
       ok: true,
       modelAvailable: !!real,
       modelId: real?.modelId ?? null,
-      plannerEnabled: real?.allowSkill !== false,
+      plannerEnabled: real?.usesHelper !== false,
       storage: "SQLite",
       tokenBudget: Number(process.env.MODEL_TOKEN_BUDGET || 100000),
       // Fingerprints and estimated spend only; keys never leave the server.
@@ -99,6 +104,7 @@ const server = createServer(async (req, res) => {
       protocol: {
         simulation: protocolFromEnv("simulation"),
         model: protocolFromEnv("model"),
+        studentHelper: studentHelper(),
       },
     });
   const mode = url.searchParams.get("mode") ?? "simulation";

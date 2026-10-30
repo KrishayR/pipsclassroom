@@ -1,6 +1,13 @@
 import { analyze, fromBoard, legalMoves, move, draw, hash } from "./engine";
-import { focusApplies } from "./curriculum";
-import type { Board, Direction, Lesson, Skill, Workspace } from "./types";
+import { focusApplies, moveFacts } from "./curriculum";
+import type {
+  Board,
+  Direction,
+  Lesson,
+  LessonLimits,
+  Skill,
+  Workspace,
+} from "./types";
 export const DEFAULT_SKILL: Skill = {
   id: "compare_escape_moves",
   name: "Compare possible moves",
@@ -47,6 +54,55 @@ export function lessonApplies(lesson: Lesson, board: Board) {
     return !!lesson.focus && focusApplies(lesson.focus, board);
   return analyze(board).empty <= 6;
 }
+export const DEFAULT_LIMITS: LessonLimits = { minOptions: 2 };
+export function validateLimits(value: unknown): LessonLimits | undefined {
+  if (value === undefined || value === null) return undefined;
+  const v = value as LessonLimits;
+  if (
+    !Number.isInteger(v.minOptions) ||
+    v.minOptions < 1 ||
+    v.minOptions > 4 ||
+    (v.maxGainLoss !== undefined &&
+      (!Number.isFinite(v.maxGainLoss) ||
+        v.maxGainLoss < 0 ||
+        v.maxGainLoss > 4096))
+  )
+    throw new Error(
+      "Lesson limits need minOptions 1–4 and, optionally, maxGainLoss 0–4096.",
+    );
+  return {
+    minOptions: v.minOptions,
+    ...(v.maxGainLoss !== undefined ? { maxGainLoss: v.maxGainLoss } : {}),
+  };
+}
+// Moves a lesson recommends on this board: they keep its focus skill and respect its
+// limits. Deterministic and computed before the spawn.
+export function lessonMoves(lesson: Lesson, board: Board): Direction[] {
+  if (!lesson.focus) return [];
+  const facts = moveFacts(board);
+  const bestGain = Math.max(
+    0,
+    ...Object.values(facts).map((f) => f!.scoreGain),
+  );
+  const { minOptions, maxGainLoss } = lesson.limits ?? DEFAULT_LIMITS;
+  return (
+    Object.entries(facts) as [
+      Direction,
+      NonNullable<(typeof facts)[Direction]>,
+    ][]
+  )
+    .filter(
+      ([, f]) =>
+        f.keeps[lesson.focus!] &&
+        f.legalMovesAfterSlide >= minOptions &&
+        (maxGainLoss === undefined || bestGain - f.scoreGain <= maxGainLoss),
+    )
+    .map(([d]) => d);
+}
+// A lesson only objects to a move that breaks its skill; it never overrides a move
+// that already keeps it.
+export const lessonObjects = (lesson: Lesson, board: Board, move: Direction) =>
+  !!lesson.focus && moveFacts(board)[move]?.keeps[lesson.focus] === false;
 export function activeLessons(workspace: Workspace, board: Board) {
   return workspace.lessons
     .filter((l) => l.status === "verified" && lessonApplies(l, board))

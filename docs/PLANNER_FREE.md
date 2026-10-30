@@ -1,10 +1,12 @@
 # Planner-free live runs
 
-Set `MODEL_USE_PLANNER=false` in the local ignored `.env` and restart the backend
+Set `MODEL_STUDENT_HELPER=off` (or the compatible alias `MODEL_USE_PLANNER=false`)
+in the local ignored `.env` and restart the backend
 to remove sampled move rankings from browser practice, focused exercises,
 verification, revisions and exams. Both Classroom Session and Individual Cycles
-use this setting. It defaults to enabled when unset. Explicit provider overrides
-(including the command-line study's declared ablation conditions) take precedence.
+use this setting. Either disabled flag wins if both are set. The study runner also
+uses this shared setting consistently across arms. It defaults to enabled when
+both flags are unset; explicit provider overrides still take precedence.
 
 The live banner displays Planner OFF/ON. The current classroom export stores
 `state.plannerEnabled`; new batch status also stores `plannerEnabled`. Start a

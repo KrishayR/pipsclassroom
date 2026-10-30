@@ -88,7 +88,7 @@ export function liveBatchRunner(
       const protocol = { ...protocolFromEnv("model"), ...options.protocol };
       mkdirSync(directory, { recursive: true });
       status = {
-        plannerEnabled: policy.allowSkill !== false,
+        plannerEnabled: policy.usesHelper !== false,
         kind,
         status: "running",
         stage: "Starting baseline",
