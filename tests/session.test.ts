@@ -122,6 +122,7 @@ test("classroom batch shares practice and exams while individual cycles rotate A
         keyPool({ keys: ["fixture"], limitUsd: 1, prices: null }),
       getPrices: () => ({ input: 0.1, output: 0.2 }),
       protocol: {
+        evidenceBasedTeaching: false,
         exerciseMoves: 1,
         reviseRejected: false,
         verify: { practice: 1, regression: 1, moves: 1 },
@@ -200,6 +201,7 @@ test("a failed session preserves partial evidence and never starts the final exa
     createPool: () => keyPool({ keys: ["fixture"], limitUsd: 1, prices: null }),
     getPrices: () => ({ input: 0.1, output: 0.2 }),
     protocol: {
+      evidenceBasedTeaching: false,
       exerciseMoves: 1,
       verify: { practice: 1, regression: 1, moves: 1 },
     },

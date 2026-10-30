@@ -1,5 +1,13 @@
 # Validation record
 
+## October 30, 2026 — Conservative teaching diagnosis
+
+All 76 tests passed, with the affected diagnosis/session checks rerun after final
+recording changes. TypeScript and the production build pass. Tests cover sparse
+perfect evidence, unavoidable outcomes, distinct-board recurrence, supported
+interventions, verified teacher facts, no-lesson responses and candidate-free
+batches completing exams. No paid trial was started. See [diagnosis](TEACHING_DIAGNOSIS.md).
+
 ## October 30, 2026 — Lesson versus chance button
 
 All 70 tests, TypeScript checking and the production build pass. Offline checks

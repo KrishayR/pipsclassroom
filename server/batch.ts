@@ -189,7 +189,9 @@ export function liveBatchRunner(
               !(await stage(
                 `Cycle ${i + 1}/${count}: verification`,
                 `${prefix}-verification`,
-                () => active.verify(),
+                async () => {
+                  if (active.state.candidate) await active.verify();
+                },
               ))
             )
               break;
@@ -205,7 +207,14 @@ export function liveBatchRunner(
           status.cycles.push({
             cycle: i + 1,
             student: kind === "classroom" ? "Ada, Lin, Sam" : student.name,
-            lesson: structuredClone(active.state.ledger.at(-1)!),
+            lesson: structuredClone(
+              active.state.ledger
+                .filter((l) => !previousLessons.has(l.id))
+                .at(-1),
+            ),
+            notes: active.state.students
+              .filter((s) => s.teachingNote)
+              .map((s) => ({ student: s.name, reason: s.teachingNote! })),
             attempts: structuredClone(
               active.state.ledger.filter((l) => !previousLessons.has(l.id)),
             ),

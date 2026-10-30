@@ -87,6 +87,7 @@ export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
         concurrency: 1,
         verificationConcurrency: 1,
         reviseRejected: false,
+        evidenceBasedTeaching: false,
       }
     : {
         verify: {
@@ -98,6 +99,7 @@ export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
         concurrency: 3,
         verificationConcurrency: 6,
         reviseRejected: true,
+        evidenceBasedTeaching: true,
       };
 }
 // USD per million tokens; unset means costs are reported in tokens only.

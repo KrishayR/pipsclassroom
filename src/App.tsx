@@ -225,6 +225,9 @@ function LessonCard({
         <Status value={lesson.status} />
       </div>
       <h3>{lesson.title}</h3>
+      {lesson.rejectionReason && (
+        <p className="fine">{lesson.rejectionReason}</p>
+      )}
       {lesson.revisionOf && (
         <p className="fine">Teacher revision · tested on fresh boards</p>
       )}
@@ -973,7 +976,12 @@ export default function App() {
                       <h3>
                         Cycle {c.cycle} · {c.student}
                       </h3>
-                      {(c.attempts ?? [c.lesson]).map((l) => (
+                      {c.notes?.map((n) => (
+                        <p className="fine" key={n.student}>
+                          <b>{n.student}:</b> {n.reason}
+                        </p>
+                      ))}
+                      {(c.attempts ?? (c.lesson ? [c.lesson] : [])).map((l) => (
                         <LessonCard key={l.id} lesson={l} />
                       ))}
                     </section>

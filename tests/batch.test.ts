@@ -17,6 +17,7 @@ test("configurable batches validate counts and save baseline, each cycle, and fi
         keyPool({ keys: ["test-only"], limitUsd: 1, prices: null }),
       getPrices: () => ({ input: 0.1, output: 0.2 }),
       protocol: {
+        evidenceBasedTeaching: false,
         reviseRejected: false,
         verify: { practice: 1, regression: 1, moves: 1 },
         exerciseMoves: 1,
@@ -40,7 +41,7 @@ test("configurable batches validate counts and save baseline, each cycle, and fi
     );
     assert.ok(
       status.cycles.every(
-        (c) => c.rows.length === 3 && !!c.lesson.verification,
+        (c) => c.rows.length === 3 && !!c.lesson?.verification,
       ),
     );
     assert.equal(status.spentUsd, 0);

@@ -92,6 +92,49 @@ export type SkillEstimates = Record<
   Focus,
   { attempts: number; successes: number }
 >;
+// Potential corrections, not optimality labels: preserve the focus, leave two
+// slide options and give up no immediate merge points. No lookahead is used.
+export function diagnoseMove(
+  focus: Focus,
+  before: Observation,
+  action: Direction,
+) {
+  const facts = moveFacts(before.board),
+    chosen = facts[action];
+  const applicable = focusApplies(focus, before.board);
+  const alternatives = Object.entries(facts)
+    .filter(
+      ([d, f]) =>
+        d !== action &&
+        f!.keeps[focus] &&
+        f!.legalMovesAfterSlide >= 2 &&
+        f!.scoreGain >= (chosen?.scoreGain ?? 0),
+    )
+    .map(([d]) => d as Direction);
+  const kind = !applicable
+    ? "not-applicable"
+    : chosen?.keeps[focus]
+      ? "kept"
+      : alternatives.length
+        ? "potential-correction"
+        : Object.values(facts).some((f) => f!.keeps[focus])
+          ? "tradeoff"
+          : "unavoidable";
+  return { kind, alternatives, moveFacts: facts };
+}
+export function correctionEvidence(traces: Trace[], focus: Focus) {
+  const seen = new Set<string>();
+  return traces.filter((t) => {
+    const key = JSON.stringify(t.before.board);
+    if (
+      seen.has(key) ||
+      diagnoseMove(focus, t.before, t.action).kind !== "potential-correction"
+    )
+      return false;
+    seen.add(key);
+    return true;
+  });
+}
 export function skillEstimates(traces: Trace[]): SkillEstimates {
   const out = Object.fromEntries(
     FOCI.map((f) => [f.id, { attempts: 0, successes: 0 }]),
@@ -112,6 +155,7 @@ export function chooseFocus(
   arm: Arm,
   estimates: SkillEstimates,
   key: string,
+  evidenceBased = false,
 ): FocusChoice {
   const [u, r] = draw(hash(`curriculum:${key}`));
   const [v] = draw(r);
@@ -131,16 +175,36 @@ export function chooseFocus(
       reason: `Exploration draw (${Math.round((1 - ADAPTIVE_SHARE) * 100)}% of selections keep coverage).`,
       adaptive: false,
     };
-  const weakest = [...FOCI].sort(
+  const supported = FOCI.filter(
+    (f) => estimates[f.id].attempts - estimates[f.id].successes >= 2,
+  );
+  if (evidenceBased && !supported.length) {
+    const next = [...FOCI].sort(
+      (a, b) => estimates[a.id].attempts - estimates[b.id].attempts,
+    )[0];
+    return {
+      focus: next.id,
+      name: next.name,
+      reason:
+        "Coverage exercise: insufficient evidence of a recurring correctable weakness.",
+      adaptive: false,
+    };
+  }
+  const weakest = [...(evidenceBased ? supported : FOCI)].sort(
     (a, b) =>
-      mastery(estimates[a.id]) - mastery(estimates[b.id]) ||
+      (evidenceBased
+        ? estimates[a.id].successes / estimates[a.id].attempts -
+          estimates[b.id].successes / estimates[b.id].attempts
+        : mastery(estimates[a.id]) - mastery(estimates[b.id])) ||
       estimates[a.id].attempts - estimates[b.id].attempts,
   )[0];
   const e = estimates[weakest.id];
   return {
     focus: weakest.id,
     name: weakest.name,
-    reason: `Weakest measured skill: ${e.successes}/${e.attempts} recent checks passed.`,
+    reason: evidenceBased
+      ? `Recurring potential corrections: ${e.attempts - e.successes} distinct choices had a focus-preserving alternative with no immediate score sacrifice. This is evidence to investigate, not an optimality grade.`
+      : `Weakest measured skill: ${e.successes}/${e.attempts} recent checks passed.`,
     adaptive: true,
   };
 }

@@ -217,7 +217,7 @@ test("students see per-move facts and lesson skills; a no-impact teacher draft i
     /would not alter the planned move/,
   );
   assert.equal(checks, 1);
-  assert.equal(p.lesson.trigger, "when the skill applies");
+  assert.equal(p.lesson!.trigger, "when the skill applies");
 });
 test("without the helper, the impact check is skipped and the teacher is told parameters do nothing", async () => {
   const base = simulationPolicy();

@@ -185,7 +185,7 @@ test("a useful revision installs once after rejection while preserving both atte
     async propose(...args) {
       proposals++;
       const result = await base.propose(...args);
-      if (args[4]?.rejection) result.lesson.rule = "improved";
+      if (args[4]?.rejection) result.lesson!.rule = "improved";
       return result;
     },
   };

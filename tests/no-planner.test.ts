@@ -90,6 +90,7 @@ test("planner-free live sessions omit all sampled rankings, preserve strategy an
     createPool: () => keyPool({ keys: ["fixture"], limitUsd: 1, prices: null }),
     getPrices: () => ({ input: 0.1, output: 0.2 }),
     protocol: {
+      evidenceBasedTeaching: false,
       exerciseMoves: 1,
       reviseRejected: true,
       verify: { practice: 1, regression: 1, moves: 1 },

@@ -8,7 +8,12 @@ import {
   validateSkill,
 } from "../src/core/skills";
 import { analyze } from "../src/core/engine";
-import { focusOutcome, moveFacts } from "../src/core/curriculum";
+import {
+  focusOutcome,
+  moveFacts,
+  diagnoseMove,
+  correctionEvidence,
+} from "../src/core/curriculum";
 import type { Policy, ToolEvent, Direction, Lesson } from "../src/core/types";
 import {
   keyPool,
@@ -474,8 +479,24 @@ export function modelPolicy(config: ModelConfig): Policy & {
           focusCheckPassed: choice
             ? focusOutcome(choice.focus, t.before, t.after)
             : null,
+          ...(options?.evidenceBased && choice
+            ? { diagnosis: diagnoseMove(choice.focus, t.before, t.action) }
+            : {}),
         });
-        const compact = (s: typeof student) => s.traces.slice(-12).map(view);
+        const compact = (s: typeof student) => {
+          const corrections =
+            options?.evidenceBased && choice
+              ? correctionEvidence(s.traces, choice.focus).slice(-6)
+              : [];
+          return [
+            ...corrections,
+            ...s.traces
+              .slice(-12)
+              .filter((t) => !corrections.some((c) => c.id === t.id)),
+          ]
+            .slice(0, 12)
+            .map(view);
+        };
         const messages: {
           role: "teacher" | "peer" | "student";
           title: string;
@@ -544,7 +565,7 @@ export function modelPolicy(config: ModelConfig): Policy & {
           [
             {
               role: "system",
-              content: `You are ${arm === "solo" ? "a student reviewing your own work" : "a teacher reviewing a student"}. Write in friendly, plain language. Diagnose one likely weakness related to the practice focus. Tile spawns are random, so a bad outcome is not proof of a bad move: set uncertain=true when several explanations fit. Return JSON: {title,rule,trigger,exception,evidence,diagnosis,uncertain,skill,limits}. Make the lesson conditional, about the situation where the student actually failed: it only steps in when the student's move breaks the focus skill, and limits = {minOptions (integer 1-4), maxGainLoss (points, 0-4096)} restricts its recommended moves to those leaving at least minOptions legal moves and giving up at most maxGainLoss immediate points versus the best-scoring move. Base the limits on the evidence (for example, the points the student gained by breaking the skill); a rigid rule usually costs points where the default play was already fine.${config.allowSkill === false ? " The sampled planner is OFF for all decisions and tests; this student plays without the skill ranking. Copy currentSkill unchanged into skill; put the improvement in the written rule, exception and limits." : ""} Limits: title 100, rule 600, exception 250, diagnosis 700 characters. trigger must be exactly 'when the skill applies' (recommended: shown whenever the practice focus applies to a board), 'crowded boards' or 'always'. Students see moveFacts[direction].keeps[skill] for each move, so a rule about the focus skill is directly actionable. ${config.allowSkill === false ? "No ranking-based impact check applies in planner-free mode." : "Your skill change must alter the planned move on at least one sample board, or it cannot change behaviour."} evidence must contain IDs from supplied traces. skill uses exactly id='compare_escape_moves', name string, version=${config.allowSkill === false ? "current" : "current+1"}, depth integer 1..4, spaceWeight 0..40, structureWeight 0..8, mergeWeight 0..8, riskWeight 20..300. Change only parameters justified by evidence. Advice is a hypothesis; an independent paired test decides acceptance.`,
+              content: `You are ${arm === "solo" ? "a student reviewing your own work" : "a teacher reviewing a student"}. Write in friendly, plain language. Diagnose one likely weakness related to the practice focus. Tile spawns are random, so a bad outcome is not proof of a bad move: set uncertain=true when several explanations fit. Return JSON: {title,rule,trigger,exception,evidence,diagnosis,uncertain,skill,limits}. Make the lesson conditional, about the situation where the student actually failed: it only steps in when the student's move breaks the focus skill, and limits = {minOptions (integer 1-4), maxGainLoss (points, 0-4096)} restricts its recommended moves to those leaving at least minOptions legal moves and giving up at most maxGainLoss immediate points versus the best-scoring move. Base the limits on the evidence (for example, the points the student gained by breaking the skill); a rigid rule usually costs points where the default play was already fine.${config.allowSkill === false ? " The sampled planner is OFF for all decisions and tests; this student plays without the skill ranking. Copy currentSkill unchanged into skill; put the improvement in the written rule, exception and limits." : ""} Limits: title 100, rule 600, exception 250, diagnosis 700 characters. trigger must be exactly 'when the skill applies' (recommended: shown whenever the practice focus applies to a board), 'crowded boards' or 'always'. Students see moveFacts[direction].keeps[skill] for each move, so a rule about the focus skill is directly actionable. ${config.allowSkill === false ? "No ranking-based impact check applies in planner-free mode." : "Your skill change must alter the planned move on at least one sample board, or it cannot change behaviour."} evidence must contain IDs from supplied traces. skill uses exactly id='compare_escape_moves', name string, version=${config.allowSkill === false ? "current" : "current+1"}, depth integer 1..4, spaceWeight 0..40, structureWeight 0..8, mergeWeight 0..8, riskWeight 20..300. Change only parameters justified by evidence. Advice is a hypothesis; an independent paired test decides acceptance.${options?.evidenceBased ? " Evidence-based review: diagnosis.moveFacts gives verified BEFORE-SPAWN alternatives; a potential-correction is a hypothesis, not proof of optimal play. Unavoidable outcomes, tradeoffs, or perfect checks do not demonstrate a weakness. You may return ONLY {noLessonReason: string} when evidence does not support useful advice. The only supported intervention is preserving the focus when a chosen move breaks it; do not propose tie-breaking among moves that already keep the focus. Propose a lesson only if its trigger and limits cover two distinct demonstrated potential corrections. Do not infer future random tiles or claim an alternative leaves more room when the supplied facts disagree." : ""}`,
             },
             {
               role: "user",
@@ -565,6 +586,13 @@ export function modelPolicy(config: ModelConfig): Policy & {
             },
           ],
           (v, attempt) => {
+            if (options?.evidenceBased && v.noLessonReason !== undefined)
+              return (
+                tooLong(v.noLessonReason, "noLessonReason", 500) ??
+                (v.noLessonReason.trim()
+                  ? null
+                  : "Give a non-empty reason for abstaining.")
+              );
             const problem =
               tooLong(v.title, "title", 100) ??
               tooLong(v.rule, "rule", 600) ??
@@ -592,7 +620,8 @@ export function modelPolicy(config: ModelConfig): Policy & {
             }
             // Raised only while a correction is still available: a no-impact draft on
             // the last attempt goes to verification, with its sensitivity recorded.
-            return attempt === 0 && config.allowSkill !== false
+            return options?.evidenceBased ||
+              (attempt === 0 && config.allowSkill !== false)
               ? (options?.check?.({
                   skill: v.skill,
                   trigger: v.trigger,
@@ -602,6 +631,21 @@ export function modelPolicy(config: ModelConfig): Policy & {
               : null;
           },
         );
+        if (options?.evidenceBased && p.noLessonReason) {
+          messages.push({
+            role: "teacher",
+            title: `No lesson proposed for ${student.name}`,
+            text: p.noLessonReason,
+            evidence: [],
+          });
+          return {
+            lesson: null,
+            noLessonReason: p.noLessonReason,
+            messages,
+            tokens: local.tokens,
+            calls: local.calls,
+          };
+        }
         messages.push({
           role: arm === "solo" ? "student" : "teacher",
           title:

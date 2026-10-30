@@ -13,6 +13,9 @@ import {
   LESSON_TRIGGERS,
   mergeLessons,
   validateLimits,
+  lessonMoves,
+  lessonObjects,
+  lessonApplies,
   validateSkill,
 } from "./skills";
 import { decisionSeed, lessonSensitivity } from "./policy";
@@ -23,6 +26,8 @@ import {
   focusApplies,
   focusOutcome,
   skillEstimates,
+  diagnoseMove,
+  correctionEvidence,
 } from "./curriculum";
 import {
   DEFAULT_MOVE_CAP,
@@ -74,9 +79,27 @@ export interface ClassroomOptions {
   concurrency?: number;
   verificationConcurrency?: number;
   reviseRejected?: boolean;
+  evidenceBasedTeaching?: boolean;
 }
 const clone = <T>(v: T): T => structuredClone(v);
 const id = () => crypto.randomUUID();
+function supportsCorrections(
+  draft: Pick<Lesson, "skill" | "trigger" | "focus" | "limits">,
+  traces: Student["traces"],
+  focus: FocusChoice["focus"],
+  evidence?: string[],
+) {
+  const lesson = { ...draft, focus, status: "verified" } as Lesson;
+  return (
+    correctionEvidence(traces, focus).filter(
+      (t) =>
+        (!evidence || evidence.includes(t.id)) &&
+        lessonApplies(lesson, t.before.board) &&
+        lessonObjects(lesson, t.before.board, t.action) &&
+        lessonMoves(lesson, t.before.board).length,
+    ).length >= 2
+  );
+}
 export function initialState(mode: Policy["mode"] = "simulation"): LabState {
   const students = ["Ada", "Lin", "Sam"].map((name, i): Student => ({
     id: `student-${i + 1}`,
@@ -534,7 +557,8 @@ export class Classroom {
           async ({ child, student }) => {
             try {
               await child.review(student.id);
-              if (!this.cancelled && !failed) await child.verify();
+              if (!this.cancelled && !failed && child.state.candidate)
+                await child.verify();
             } catch (error) {
               failed = true;
               for (const other of this.teachingChildren) other.stop();
@@ -572,11 +596,24 @@ export class Classroom {
         [...eligible].sort(
           (a, b) => analyze(a.game.board).empty - analyze(b.game.board).empty,
         )[0];
+      student.teachingNote = undefined;
+      const estimates = skillEstimates(student.traces);
+      if (this.options.evidenceBasedTeaching)
+        for (const { id: focus } of FOCI) {
+          const kept = student.traces.filter(
+            (t) => diagnoseMove(focus, t.before, t.action).kind === "kept",
+          ).length;
+          estimates[focus] = {
+            attempts: kept + correctionEvidence(student.traces, focus).length,
+            successes: kept,
+          };
+        }
       const choice = chooseFocus(
         this.state.arm,
-        skillEstimates(student.traces),
+        estimates,
         // Deterministic and shared across arms (common random numbers).
         `${student.id}:${this.state.trainingRound}`,
+        this.options.evidenceBasedTeaching,
       );
       this.state.focus = choice;
       this.state.selectedSkill = choice.name;
@@ -587,6 +624,23 @@ export class Classroom {
       );
       this.emit();
       await this.exercise(student, choice);
+      const corrections = correctionEvidence(student.traces, choice.focus);
+      const skip = (reason: string) => {
+        this.state.trainingRound++;
+        student.teachingNote = reason;
+        student.status = "No lesson needed from current evidence";
+        this.message(
+          "teacher",
+          `No lesson proposed for ${student.name}`,
+          reason,
+        );
+      };
+      if (this.options.evidenceBasedTeaching && corrections.length < 2) {
+        skip(
+          `Only ${corrections.length} distinct practice boards show a potentially correctable ${choice.name.toLowerCase()} choice. Two are required before proposing advice; passed checks, unavoidable outcomes and tradeoffs do not establish a recurring weakness.`,
+        );
+        return;
+      }
       // A peer is chosen for relevant recorded evidence on this focus, not for score.
       const passed = (s: Student) =>
         s.traces.filter(
@@ -628,8 +682,14 @@ export class Classroom {
         peer,
         choice,
         {
-          check:
-            this.policy.usesHelper === false
+          evidenceBased: this.options.evidenceBasedTeaching,
+          check: this.options.evidenceBasedTeaching
+            ? (draft) => {
+                return supportsCorrections(draft, student.traces, choice.focus)
+                  ? null
+                  : "This lesson cannot intervene on two demonstrated practice choices within its trigger and limits. Narrow to supported focus-preservation corrections, or return noLessonReason. Tie-breaking among already-kept moves is unsupported.";
+              }
+            : this.policy.usesHelper === false
               ? () => null
               : (draft) => {
                   try {
@@ -646,8 +706,35 @@ export class Classroom {
       );
       this.usage(proposed.tokens, proposed.calls, 0);
       const l = proposed.lesson;
+      if (!l) {
+        for (const m of proposed.messages.filter((m) => m.role !== "teacher"))
+          this.message(m.role, m.title, m.text, m.evidence);
+        skip(
+          proposed.noLessonReason ?? "The teacher found no supported lesson.",
+        );
+        return;
+      }
       validateSkill(l.skill);
       l.limits = validateLimits(l.limits);
+      if (
+        this.options.evidenceBasedTeaching &&
+        !supportsCorrections(l, student.traces, choice.focus, l.evidence)
+      ) {
+        this.state.ledger.push({
+          ...l,
+          id: id(),
+          studentId: student.id,
+          focus: choice.focus,
+          status: "rejected",
+          createdAt: new Date().toISOString(),
+          rejectionReason:
+            "Unsupported intervention or insufficient cited correction evidence; not rollout-tested.",
+        });
+        skip(
+          "The proposed trigger, limits or cited evidence do not support intervention on two distinct practice choices. No lesson was queued.",
+        );
+        return;
+      }
       if (!(LESSON_TRIGGERS as readonly string[]).includes(l.trigger))
         throw new Error("Unsupported lesson trigger.");
       if (
@@ -758,12 +845,56 @@ export class Classroom {
           this.state.arm,
           undefined,
           this.state.focus ?? undefined,
-          { rejection: clone(lesson) },
+          {
+            rejection: clone(lesson),
+            evidenceBased: this.options.evidenceBasedTeaching,
+          },
         );
         this.usage(proposed.tokens, proposed.calls, 0);
         const draft = proposed.lesson;
+        if (!draft) {
+          student.teachingNote =
+            proposed.noLessonReason ?? "No supported revision.";
+          student.status = "No supported revision · workspace unchanged";
+          this.message(
+            "teacher",
+            `No revision proposed for ${student.name}`,
+            student.teachingNote,
+          );
+          break;
+        }
         validateSkill(draft.skill);
         draft.limits = validateLimits(draft.limits);
+        if (
+          this.options.evidenceBasedTeaching &&
+          lesson.focus &&
+          !supportsCorrections(
+            draft,
+            student.traces,
+            lesson.focus,
+            draft.evidence,
+          )
+        ) {
+          student.teachingNote =
+            "No supported revision: its trigger, limits and evidence do not cover two practice corrections.";
+          this.state.ledger.push({
+            ...draft,
+            id: id(),
+            studentId: student.id,
+            focus: lesson.focus,
+            revisionOf: lesson.id,
+            status: "rejected",
+            createdAt: new Date().toISOString(),
+            rejectionReason: student.teachingNote,
+          });
+          student.status = "No supported revision · workspace unchanged";
+          this.message(
+            "teacher",
+            `No revision for ${student.name}`,
+            student.teachingNote,
+          );
+          break;
+        }
         const known = new Set(
           this.state.students.flatMap((s) => s.traces.map((t) => t.id)),
         );
@@ -982,7 +1113,7 @@ export class Classroom {
           for (const student of child.state.students) {
             if (this.cancelled) break;
             await child.review(student.id);
-            await child.verify();
+            if (child.state.candidate) await child.verify();
           }
           if (this.cancelled) throw new Error("Comparison stopped.");
           training = false;
@@ -1020,6 +1151,7 @@ export class Classroom {
         concurrency: this.concurrency,
         verificationConcurrency: this.verificationConcurrency,
         reviseRejected: this.options.reviseRejected ?? false,
+        evidenceBasedTeaching: this.options.evidenceBasedTeaching ?? false,
         verify: this.verifyOptions,
         exerciseMoves: this.exerciseMoves,
       },

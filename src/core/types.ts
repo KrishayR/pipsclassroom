@@ -56,6 +56,7 @@ export interface LessonLimits {
   maxGainLoss?: number;
 }
 export interface Lesson {
+  rejectionReason?: string;
   id: string;
   studentId?: string;
   title: string;
@@ -117,6 +118,7 @@ export interface Trace {
   durationMs: number;
 }
 export interface Student {
+  teachingNote?: string;
   id: string;
   name: string;
   color: string;
@@ -278,9 +280,10 @@ export interface LiveBatch {
   completedAt?: string;
   baseline?: ExamRow[];
   cycles: {
+    notes?: { student: string; reason: string }[];
     cycle: number;
     student: string;
-    lesson: Lesson;
+    lesson?: Lesson;
     attempts?: Lesson[];
     rows: ExamRow[];
   }[];
@@ -303,6 +306,7 @@ export interface Policy {
     peer?: Student,
     focus?: FocusChoice,
     options?: {
+      evidenceBased?: boolean;
       rejection?: Lesson;
       // Returns a problem when a draft lesson would change no planned move.
       check?: (
@@ -310,7 +314,8 @@ export interface Policy {
       ) => string | null;
     },
   ): Promise<{
-    lesson: Omit<Lesson, "id" | "status" | "createdAt">;
+    lesson: Omit<Lesson, "id" | "status" | "createdAt"> | null;
+    noLessonReason?: string;
     messages: {
       role: "teacher" | "peer" | "student";
       title: string;

@@ -428,6 +428,6 @@ test("a teacher reply that fails validation gets one correction with the specifi
   });
   assert.equal(sent.length, 2);
   assert.match(sent[1], /diagnosis is 900 characters \(max 700\)/);
-  assert.equal(p.lesson.focus, "space");
+  assert.equal(p.lesson!.focus, "space");
   assert.match(p.messages[0].text, /^\(Uncertain\) Lost room\./);
 });

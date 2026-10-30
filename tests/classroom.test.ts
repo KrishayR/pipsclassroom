@@ -146,7 +146,7 @@ test("unknown evidence from a teacher cannot enter memory", async () => {
     ...base,
     propose: async (...args) => {
       const p = await base.propose(...args);
-      p.lesson.evidence = ["invented"];
+      p.lesson!.evidence = ["invented"];
       return p;
     },
   });
@@ -251,8 +251,8 @@ test("peer feedback changes a proposed skill only when an actual peer example ex
   );
   assert.ok(b.messages.some((m) => m.role === "peer"));
   assert.ok(b.messages.some((m) => m.role === "student"));
-  assert.notDeepEqual(a.lesson.skill, b.lesson.skill);
-  assert.ok(b.lesson.evidence.length > a.lesson.evidence.length);
+  assert.notDeepEqual(a.lesson!.skill, b.lesson!.skill);
+  assert.ok(b.lesson!.evidence.length > a.lesson!.evidence.length);
 });
 test("adaptive arms target the weakest measured skill about 80% of the time; random arms do not", () => {
   const estimates = {
