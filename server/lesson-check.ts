@@ -1,13 +1,8 @@
-import {
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-  renameSync,
-  existsSync,
-} from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { modelFromEnv, keysFromEnv, prices } from "./config";
 import { budgetedKeyPool } from "./keys";
+import { atomicWriteFileSync } from "./persistence";
 import { mapConcurrent } from "../src/core/concurrency";
 import { examEpisode, DEV_SEEDS } from "../src/core/evaluation";
 import { hash } from "../src/core/engine";
@@ -36,8 +31,7 @@ export function lessonCheckRunner(
   const save = () => {
     mkdirSync(root, { recursive: true });
     for (const path of [latest, `${status!.directory}/status.json`]) {
-      writeFileSync(`${path}.tmp`, JSON.stringify(status, null, 2));
-      renameSync(`${path}.tmp`, path);
+      atomicWriteFileSync(path, JSON.stringify(status, null, 2));
     }
     changed();
   };
