@@ -12,6 +12,7 @@ import { ARMS, Classroom, initialState } from "../src/core/classroom";
 import { simulationPolicy } from "../src/core/policy";
 import {
   keysFromEnv,
+  studentHelper,
   loadEnv,
   modelFromEnv,
   modelId,
@@ -97,7 +98,7 @@ const zero = (): Usage => ({
   completionTokens: 0,
   cachedTokens: 0,
 });
-function provider(budget: number, allowSkill = true): Provider {
+function provider(budget: number, allowSkill = studentHelper()): Provider {
   if (mode === "simulation") return simulationPolicy();
   const p = modelFromEnv({ tokenBudget: budget, allowSkill });
   if (!p) throw new Error("Set MODEL_API_KEY in .env for model evaluation.");
@@ -321,7 +322,7 @@ if (!flag("no-baseline"))
     repetition: 0,
     condition: "baseline",
     arm: "solo",
-    allowSkill: true,
+    allowSkill: studentHelper(),
     workspaces: () => names.map((s) => ({ ...s, workspace: emptyWorkspace() })),
   });
 for (let rep = 0; rep < repetitions; rep++)
@@ -333,7 +334,7 @@ for (let rep = 0; rep < repetitions; rep++)
       repetition: rep,
       condition: arm,
       arm,
-      allowSkill: true,
+      allowSkill: studentHelper(),
       workspaces: trained,
     });
     if (arm === "classroom" && rep < ablationReps && !flag("no-ablations")) {
@@ -341,7 +342,7 @@ for (let rep = 0; rep < repetitions; rep++)
         repetition: rep,
         condition: "classroom:lessons-only",
         arm,
-        allowSkill: true,
+        allowSkill: studentHelper(),
         workspaces: () =>
           trained().map((s) => ({
             ...s,
@@ -349,7 +350,7 @@ for (let rep = 0; rep < repetitions; rep++)
           })),
       });
       // Does Muse itself use the lessons, or does the skill ranking do the work?
-      if (mode === "model")
+      if (mode === "model" && studentHelper())
         conditions.push({
           repetition: rep,
           condition: "classroom:no-skill-tool",

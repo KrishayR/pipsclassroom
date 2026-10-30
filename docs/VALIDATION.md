@@ -52,6 +52,10 @@ Preserved move facts, focus-based triggers, sensitivity correction, citation
 counts, bounded concurrency, isolated usage, and in-flight budget reservations.
 Validation used fake model calls; the running server was not restarted.
 
+## October 30, 2026 (evening) — Conditional lessons, calibration, live batches
+
+See [Conditional lessons](CONDITIONAL_LESSONS.md). 62 tests and the build pass. The full gate calibration ran in 171 s (95,635 local decisions, $0) and made no recommendation: 0 false rejects at 4/8/12/24 moves, 0/22 beneficial holdout probes. Live with the helper, 3 cycles: all 6 candidates were rejected ($0.158, 817 calls, 0 invalid actions). Live without the helper: interrupted by a network failure after 1 cycle ($0.187, 478 calls, 0 invalid actions); large general-board swings with zero lesson citations show the gate is noise-dominated in that mode.
+
 ## October 30, 2026 — Lessons that change behaviour
 
 See [Lesson influence](LESSON_INFLUENCE.md). On this machine, 36/36 tests and the build passed on the merged `main` before the change, and 41/41 after. In simulation, the focused practice → Discuss → lesson test flow ran with a real Sam → Lin peer exchange. Live with Muse (classroom arm, Contributor mode), the same flow before the fixes produced a lesson that changed no move on any targeted board (rejected; $0.036, 107 calls). After the fixes, the lesson changed Muse's play on 3 of 6 targeted boards but lowered utility (targeted −3.25, general −2.25), and the unchanged gate rejected it ($0.025, 107 calls, 0 invalid actions, 0 errors). No lesson has been accepted live yet.

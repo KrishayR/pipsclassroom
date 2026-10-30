@@ -6,6 +6,8 @@ import {
   activeLessons,
   DEFAULT_SKILL,
   emptyWorkspace,
+  lessonMoves,
+  validateLimits,
 } from "../src/core/skills";
 import {
   lessonSensitivity,
@@ -43,27 +45,49 @@ test("a 'when the skill applies' lesson is shown exactly where its skill applies
     focusApplies("structure", open) ? 1 : 0,
   );
 });
-test("the planned move follows an applicable lesson whenever some move keeps its skill", () => {
-  const w = { ...emptyWorkspace(), lessons: [structureLesson()] };
-  let followed = 0;
+test("a lesson steps in only when the planned move breaks its skill, then picks a move it recommends", () => {
+  const lesson = structureLesson();
+  const w = { ...emptyWorkspace(), lessons: [lesson] };
+  let changed = 0;
   for (const b of boards) {
-    const facts = moveFacts(b.board);
+    const base = plannedMove(b.board, emptyWorkspace(), b.seed).action!;
     const plan = plannedMove(b.board, w, b.seed);
-    if (Object.values(facts).some((f) => f!.keeps.structure)) {
-      assert.equal(facts[plan.action!]!.keeps.structure, true);
+    // Never overrides a move that already keeps the skill.
+    if (moveFacts(b.board)[base]!.keeps.structure)
+      assert.equal(plan.action, base);
+    if (plan.action !== base) {
+      changed++;
+      assert.ok(lessonMoves(lesson, b.board).includes(plan.action!));
       assert.equal(plan.lessonId, "lesson-structure");
-    }
-    if (plan.action !== plannedMove(b.board, emptyWorkspace(), b.seed).action)
-      followed++;
+    } else assert.equal(plan.lessonId, undefined);
   }
   // Reachable structure boards are rarer than the others; 12 draws give several.
   assert.ok(boards.length >= 3);
-  // The lesson must change behaviour on at least one board to be testable at all.
-  assert.ok(followed >= 1);
-  assert.equal(
-    lessonSensitivity(emptyWorkspace(), w, boards).changed,
-    followed,
-  );
+  assert.ok(changed >= 1);
+  assert.equal(lessonSensitivity(emptyWorkspace(), w, boards).changed, changed);
+});
+test("limits narrow the recommended moves", () => {
+  const lesson = structureLesson();
+  for (const b of boards) {
+    const facts = moveFacts(b.board);
+    const best = Math.max(0, ...Object.values(facts).map((f) => f!.scoreGain));
+    const strict = lessonMoves(
+      { ...lesson, limits: { minOptions: 3, maxGainLoss: 0 } },
+      b.board,
+    );
+    for (const d of strict) {
+      assert.equal(facts[d]!.scoreGain, best);
+      assert.ok(facts[d]!.legalMovesAfterSlide >= 3);
+      assert.ok(facts[d]!.keeps.structure);
+    }
+    assert.ok(strict.every((d) => lessonMoves(lesson, b.board).includes(d)));
+  }
+  assert.throws(() => validateLimits({ minOptions: 5 }));
+  assert.throws(() => validateLimits({ minOptions: 2, maxGainLoss: -1 }));
+  assert.deepEqual(validateLimits({ minOptions: 3, maxGainLoss: 8 }), {
+    minOptions: 3,
+    maxGainLoss: 8,
+  });
 });
 test("review records how many sample boards the candidate changes", async () => {
   const lab = new Classroom(simulationPolicy());
@@ -151,6 +175,7 @@ test("students see per-move facts and lesson skills; a no-impact teacher draft i
           evidence: ["trace-1"],
           diagnosis: "It slid out.",
           uncertain: false,
+          limits: { minOptions: 3, maxGainLoss: 8 },
           skill: { ...DEFAULT_SKILL, version: 2 },
         }),
       });
@@ -193,4 +218,48 @@ test("students see per-move facts and lesson skills; a no-impact teacher draft i
   );
   assert.equal(checks, 1);
   assert.equal(p.lesson.trigger, "when the skill applies");
+});
+test("without the helper, the impact check is skipped and the teacher is told parameters do nothing", async () => {
+  const base = simulationPolicy();
+  let checked = false;
+  const lab = new Classroom({
+    ...base,
+    usesHelper: false,
+    propose: async (...args) => {
+      checked =
+        args[4]?.check?.({
+          skill: { ...DEFAULT_SKILL },
+          trigger: "when the skill applies",
+          focus: "structure",
+        }) !== null;
+      return base.propose(...args);
+    },
+  });
+  lab.state.arm = "adaptive";
+  await lab.diagnose();
+  await lab.review("student-1");
+  assert.equal(checked, false);
+  assert.equal(lab.state.candidate!.lesson.sensitivity, undefined);
+  let prompt = "";
+  const policy = modelPolicy({
+    key: "test",
+    baseUrl: "https://example.invalid/v1",
+    model: "m",
+    tokenBudget: 1e6,
+    allowSkill: false,
+    fetch: (async (_u, init) => {
+      prompt = JSON.parse(init!.body as string).messages[0].content;
+      return new Response("stop after capturing the prompt", { status: 400 });
+    }) as typeof fetch,
+  });
+  assert.equal(policy.usesHelper, false);
+  await assert.rejects(
+    policy.propose(
+      lab.state.students[0],
+      "adaptive",
+      undefined,
+      lab.state.focus!,
+    ),
+  );
+  assert.match(prompt, /without the skill ranking/);
 });

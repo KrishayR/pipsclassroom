@@ -76,7 +76,7 @@ test("saved checkpoints match the unchanged gate, preserve terminal scores and u
   });
   assert.equal(report.calls, 0);
   assert.equal(report.museCostUsd, 0);
-  assert.equal(report.rows.length, 8 * 2 * 2);
+  assert.equal(report.rows.length, calibrationCases().length * 2 * 2);
   const unchanged = report.rows.filter((r) => r.caseId === "no-change-control");
   assert.ok(
     unchanged.every(
