@@ -124,6 +124,10 @@ The Node backend is loopback-only and not suitable for unauthenticated public de
 
 ## Guided first run
 
+To compare lesson-test rollout lengths without API calls, run
+`npm run calibrate-gate`. It saves a development-only agreement report and
+leaves the live gate unchanged. See [Gate calibration](docs/GATE_CALIBRATION.md).
+
 For unattended live testing, the Classroom page has a **Cycles** field and
 **Run [count] live cycles · $1 max** button. Independent students and
 verification rollouts run with up to three concurrent model requests while

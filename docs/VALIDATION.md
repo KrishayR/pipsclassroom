@@ -1,5 +1,20 @@
 # Validation record
 
+## October 30, 2026 — Local gate calibration tool
+
+All 52 tests, TypeScript checking, and the production build pass. Calibration
+tests cover invalid configurations, held-out selection safeguards, exact
+agreement with the existing verification calculation, unchanged controls,
+disjoint short/reference seeds, and recorded reference scores.
+
+A small pilot (two rounds, three targeted/two general short boards, two
+reference boards per split, 80-move reference) completed in 38.7 seconds with
+14,060 local decisions, zero API calls, and zero Muse spending. It compared
+4/8/12/24 moves and made no recommendation because selection rounds lacked
+enough beneficial examples. The live gate was not changed. Per-board records
+and the readable report are local: `data/gate-calibration-pilot.json` and
+`data/gate-calibration-pilot.md`. See [Gate calibration](GATE_CALIBRATION.md).
+
 ## Combined lesson-influence and concurrency merge
 
 All 49 automated tests, TypeScript checking, and the production build pass

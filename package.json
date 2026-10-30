@@ -12,7 +12,8 @@
     "evaluate": "tsx scripts/evaluate.ts",
     "format": "prettier --write src server scripts tests docs/*.md README.md package.json tsconfig.json vite.config.ts .github/workflows/ci.yml",
     "pilot": "tsx scripts/pilot.ts",
-    "seal-seeds": "tsx scripts/seal-seeds.ts"
+    "seal-seeds": "tsx scripts/seal-seeds.ts",
+    "calibrate-gate": "tsx scripts/calibrate-gate.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
