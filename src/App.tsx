@@ -213,7 +213,7 @@ function LessonCard({
   onEvidence,
 }: {
   lesson: Lesson;
-  onEvidence: (id: string) => void;
+  onEvidence?: (id: string) => void;
 }) {
   return (
     <article className="lesson-card">
@@ -225,6 +225,9 @@ function LessonCard({
         <Status value={lesson.status} />
       </div>
       <h3>{lesson.title}</h3>
+      {lesson.revisionOf && (
+        <p className="fine">Teacher revision · tested on fresh boards</p>
+      )}
       <p>{lesson.rule}</p>
       <div className="lesson-scope">
         <b>When</b> {lesson.trigger}
@@ -278,6 +281,7 @@ function LessonCard({
                     <th title="Moves with the candidate where the student cited a saved lesson">
                       Cited
                     </th>
+                    <th>Decisions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -288,6 +292,46 @@ function LessonCard({
                       <td>{r.candidate.toFixed(1)}</td>
                       <td>{r.delta.toFixed(1)}</td>
                       <td>{r.cited ?? "—"}</td>
+                      <td>
+                        {r.trajectories && (
+                          <details>
+                            <summary>Inspect moves</summary>
+                            {(["baseline", "candidate"] as const).map(
+                              (side) => (
+                                <div key={side}>
+                                  <b>
+                                    {side === "baseline"
+                                      ? "Original strategy"
+                                      : "Lesson-guided strategy"}
+                                  </b>
+                                  {r.trajectories![side].map((m, i) => (
+                                    <details key={i}>
+                                      <summary>
+                                        Move {i + 1}: {m.action} · +
+                                        {m.after.score - m.before.score} points
+                                      </summary>
+                                      <p>{m.summary}</p>
+                                      <pre>
+                                        {Array.from({ length: 4 }, (_, row) =>
+                                          m.before.board
+                                            .slice(row * 4, row * 4 + 4)
+                                            .join("\t"),
+                                        ).join("\n")}
+                                        {"\n↓\n"}
+                                        {Array.from({ length: 4 }, (_, row) =>
+                                          m.after.board
+                                            .slice(row * 4, row * 4 + 4)
+                                            .join("\t"),
+                                        ).join("\n")}
+                                      </pre>
+                                    </details>
+                                  ))}
+                                </div>
+                              ),
+                            )}
+                          </details>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -298,11 +342,12 @@ function LessonCard({
         </>
       )}
       <div className="evidence-row">
-        {lesson.evidence.map((id, i) => (
-          <button key={id} onClick={() => onEvidence(id)}>
-            Evidence {i + 1} <ArrowRight size={12} />
-          </button>
-        ))}
+        {onEvidence &&
+          lesson.evidence.map((id, i) => (
+            <button key={id} onClick={() => onEvidence(id)}>
+              Evidence {i + 1} <ArrowRight size={12} />
+            </button>
+          ))}
       </div>
     </article>
   );
@@ -392,7 +437,7 @@ export default function App() {
     [traceId, setTraceId] = useState<string | null>(null),
     [cap, setCap] = useState(1500),
     [seedCount, setSeedCount] = useState(3),
-    [batchCycles, setBatchCycles] = useState("5"),
+    [batchCycles, setBatchCycles] = useState("3"),
     [pending, setPending] = useState(false),
     [replaying, setReplaying] = useState(false);
   useEffect(() => {
@@ -814,7 +859,7 @@ export default function App() {
               </div>
               <p className="fine">
                 {mode === "model" &&
-                  "Choose 1–100 cycles. Three students play side by side; verification can run 6 independent rollouts at once. Cycles stay in order: focused practice, one rotating student review, verification, then a 25-move exam per student. The batch uses a fresh classroom; your manual classroom returns afterward. The $1 estimated budget stays fixed; it may stop early. Results save automatically; keep the server running. "}
+                  "Choose 1–100 cycles. Three cycles give Ada, Lin and Sam one teaching attempt each. Three students play side by side; verification can run 6 independent rollouts at once. Each rejected lesson gets at most one teacher revision, tested on fresh boards. Each cycle ends with a 25-move exam per student; exam moves are saved. The batch uses a fresh classroom; your manual classroom returns afterward. The $1 estimated budget stays fixed; it may stop early. Results save automatically; keep the server running. "}
                 Focused practice gives every student short exercises in all
                 three skills, so reviews have relevant examples to discuss.
                 Their regular games and saved notes stay in place.
@@ -828,6 +873,21 @@ export default function App() {
                   {state.liveBatch.spentUsd.toFixed(4)} used. Results:{" "}
                   {state.liveBatch.directory}/status.json
                 </p>
+              )}
+              {mode === "model" && !!state.liveBatch?.cycles.length && (
+                <details>
+                  <summary>Inspect completed teaching attempts</summary>
+                  {state.liveBatch.cycles.map((c) => (
+                    <section key={c.cycle}>
+                      <h3>
+                        Cycle {c.cycle} · {c.student}
+                      </h3>
+                      {(c.attempts ?? [c.lesson]).map((l) => (
+                        <LessonCard key={l.id} lesson={l} />
+                      ))}
+                    </section>
+                  ))}
+                </details>
               )}
               <div className="classroom-grid">
                 <div className="students-grid">

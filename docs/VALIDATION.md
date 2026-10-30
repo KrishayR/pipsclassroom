@@ -1,5 +1,19 @@
 # Validation record
 
+## October 30, 2026 — Rejection feedback, one revision, and exam trajectories
+
+All 60 tests pass (59 in the full suite, plus the final successful-revision
+installation check); TypeScript checking and the production build pass.
+
+Offline coverage checks that the teacher receives paired rejection trajectories,
+the revision cannot retry a second failure, revised test starting boards and seeds
+are disjoint from the original, and a provider failure preserves the rejection
+without changing memory. Existing study protocols remain opt-in for revision.
+Saved batch exams include one trajectory entry per completed move. Concurrent
+and sequential trajectories remain equivalent after normalizing generated lesson
+IDs. No paid calls are required for these checks. Live learning benefit remains
+unvalidated. See [lesson revision](LESSON_REVISION.md).
+
 ## October 30, 2026 — Six-way verification and bounded planning cache
 
 All 55 tests, TypeScript checking, and the production build pass. Live

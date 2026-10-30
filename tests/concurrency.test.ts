@@ -6,6 +6,9 @@ import { mapConcurrent, requestLimiter } from "../src/core/concurrency";
 import { budgetedKeyPool, keyPool } from "../server/keys";
 
 const pause = () => new Promise<void>((r) => setImmediate(r));
+// Each fresh classroom assigns new lesson IDs; compare whether a lesson was cited.
+const normalizeCitations = (value: unknown) =>
+  JSON.parse(JSON.stringify(value, (key, v) => (key === "lessonId" ? !!v : v)));
 test("parallel stages preserve seeded game trajectories, evidence, verification and exam outcomes", async () => {
   const execute = async (
     concurrency: number,
@@ -60,9 +63,11 @@ test("parallel stages preserve seeded game trajectories, evidence, verification 
         skill: s.workspace.skill,
         rules: s.workspace.lessons.map((l) => l.rule),
       })),
-      checks: lab.state.ledger.map((l) => l.verification),
-      exams: lab.state.exams.flatMap((e) =>
-        e.rows.map(({ latencyMs, ...row }) => row),
+      checks: normalizeCitations(lab.state.ledger.map((l) => l.verification)),
+      exams: normalizeCitations(
+        lab.state.exams.flatMap((e) =>
+          e.rows.map(({ latencyMs, ...row }) => row),
+        ),
       ),
       games: lab.state.students.map((s) => s.game),
       usage: {

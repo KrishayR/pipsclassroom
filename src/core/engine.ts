@@ -163,7 +163,13 @@ export function analyze(board: Board) {
 // Reachable snapshots are collected exclusively through legal trajectories.
 // With a filter, the latest trajectory state matching it is used (tagged exercises).
 export function snapshotPool(
-  split: "practice" | "regression" | "exercise" | "sensitivity",
+  split:
+    | "practice"
+    | "regression"
+    | "exercise"
+    | "sensitivity"
+    | "revision-practice"
+    | "revision-regression",
   round = 0,
   filter?: { key: string; applies: (board: Board) => boolean },
   count = split === "regression" ? 3 : 6,

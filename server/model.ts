@@ -486,7 +486,12 @@ export function modelPolicy(config: ModelConfig): Policy & {
                 .slice(-8)
                 .map(view)
             : [];
-        if (arm === "classroom" && peer && peerTraces.length) {
+        if (
+          !options?.rejection &&
+          arm === "classroom" &&
+          peer &&
+          peerTraces.length
+        ) {
           const parsed = await structured(
             "Peer",
             [
@@ -525,6 +530,7 @@ export function modelPolicy(config: ModelConfig): Policy & {
         const allowedEvidence = new Set([
           ...student.traces.map((t) => t.id),
           ...messages.flatMap((m) => m.evidence),
+          ...(options?.rejection?.evidence ?? []),
         ]);
         const p = await structured(
           arm === "solo" ? "Self-review" : "Teacher",
@@ -541,6 +547,13 @@ export function modelPolicy(config: ModelConfig): Policy & {
                 currentSkill: student.workspace.skill,
                 peerAdvice,
                 peerEvidence: messages.flatMap((m) => m.evidence),
+                rejectionFeedback: options?.rejection
+                  ? {
+                      instruction:
+                        "This lesson failed its paired development test. Make ONE bounded revision: narrow the rule, improve the exception, or adjust only evidence-supported strategy parameters. Explain which failure you addressed. Scores include random spawns; do not assume every loss was caused by the advice. Cite original practice trace IDs, not verification snapshot IDs. The revision will face fresh boards with the SAME acceptance threshold. Do not request more retries or claim improvement.",
+                      rejectedLesson: options.rejection,
+                    }
+                  : undefined,
               }),
             },
           ],
@@ -584,7 +597,7 @@ export function modelPolicy(config: ModelConfig): Policy & {
             p.uncertain === true ? `(Uncertain) ${p.diagnosis}` : p.diagnosis,
           evidence: p.evidence,
         });
-        if (peerAdvice) {
+        if (peerAdvice && !options?.rejection) {
           const studentReply = await structured(
             "Student",
             [

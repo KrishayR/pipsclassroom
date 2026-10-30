@@ -151,6 +151,7 @@ export function liveBatchRunner(
         status.baseline = structuredClone(active.state.exams.at(-1)!.rows);
         save();
         for (let i = 0; i < count; i++) {
+          const ledgerStart = active.state.ledger.length;
           const student =
             active.state.students[i % active.state.students.length];
           const prefix = `cycle-${i + 1}`;
@@ -190,6 +191,7 @@ export function liveBatchRunner(
             cycle: i + 1,
             student: student.name,
             lesson: structuredClone(active.state.ledger.at(-1)!),
+            attempts: structuredClone(active.state.ledger.slice(ledgerStart)),
             rows: structuredClone(active.state.exams.at(-1)!.rows),
           });
           status.completed = i + 1;

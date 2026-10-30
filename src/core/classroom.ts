@@ -72,6 +72,7 @@ export interface ClassroomOptions {
   exerciseMoves?: number;
   concurrency?: number;
   verificationConcurrency?: number;
+  reviseRejected?: boolean;
 }
 const clone = <T>(v: T): T => structuredClone(v);
 const id = () => crypto.randomUUID();
@@ -555,59 +556,121 @@ export class Classroom {
     if (!this.state.candidate)
       throw new Error("Review an attempt before verification.");
     await this.task("verify", async () => {
-      const candidate = this.state.candidate!;
-      const student = this.state.students.find(
-        (s) => s.id === candidate.studentId,
-      )!;
-      const guardPolicy: Policy = {
-        ...this.policy,
-        decide: async (...args) => {
-          if (this.cancelled)
-            throw new Error(
-              "Verification stopped; candidate remains unverified.",
-            );
-          return this.policy.decide(...args);
-        },
-      };
-      const verification = await verifyCandidate(
-        guardPolicy,
-        student.workspace,
-        candidate.lesson,
-        this.state.trainingRound,
-        this.usage,
-        (n, total) => {
-          student.status = `Checking candidate · ${n}/${total} snapshots`;
-          this.emit();
-        },
-        this.verifyOptions,
-        this.verificationConcurrency,
-      );
-      const lesson = {
-        ...candidate.lesson,
-        verification,
-        status: verification.accepted
-          ? ("verified" as const)
-          : ("rejected" as const),
-      };
-      this.state.ledger.push(lesson);
-      this.state.trainingRound++;
-      if (verification.accepted) {
-        student.history.push(clone(student.workspace));
-        student.workspace = installLesson(student.workspace, lesson);
-        for (const old of student.history.at(-1)!.lessons)
-          if (!student.workspace.lessons.some((l) => l.id === old.id)) {
-            const ledger = this.state.ledger.find((x) => x.id === old.id);
-            if (ledger) ledger.status = "retired";
-          }
-        student.status = `Workspace v${student.workspace.version} · verified on practice set`;
-      } else student.status = "Candidate rejected · workspace unchanged";
-      this.message(
-        "system",
-        verification.accepted ? "Lesson accepted" : "Lesson rejected",
-        `The idea changed the practice score by ${verification.meanDelta.toFixed(1)} and the check-up score by ${verification.regressionDelta.toFixed(1)}. ${verification.accepted ? "It passed both checks, so we’ll keep it and try it in the next test." : "It didn’t pass both checks. Let’s keep the old notes and try another idea."}`,
-        lesson.evidence,
-      );
-      this.state.candidate = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const candidate = this.state.candidate!;
+        const student = this.state.students.find(
+          (s) => s.id === candidate.studentId,
+        )!;
+        const guardPolicy: Policy = {
+          ...this.policy,
+          decide: async (...args) => {
+            if (this.cancelled)
+              throw new Error(
+                "Verification stopped; candidate remains unverified.",
+              );
+            return this.policy.decide(...args);
+          },
+        };
+        const verification = await verifyCandidate(
+          guardPolicy,
+          student.workspace,
+          candidate.lesson,
+          this.state.trainingRound,
+          this.usage,
+          (n, total) => {
+            student.status = `Checking candidate · ${n}/${total} snapshots`;
+            this.emit();
+          },
+          this.verifyOptions,
+          this.verificationConcurrency,
+          !!candidate.lesson.revisionOf,
+          this.state.ledger.find((l) => l.id === candidate.lesson.revisionOf)
+            ?.verification,
+        );
+        const lesson = {
+          ...candidate.lesson,
+          verification,
+          status: verification.accepted
+            ? ("verified" as const)
+            : ("rejected" as const),
+        };
+        this.state.ledger.push(lesson);
+        this.state.trainingRound++;
+        if (verification.accepted) {
+          student.history.push(clone(student.workspace));
+          student.workspace = installLesson(student.workspace, lesson);
+          for (const old of student.history.at(-1)!.lessons)
+            if (!student.workspace.lessons.some((l) => l.id === old.id)) {
+              const ledger = this.state.ledger.find((x) => x.id === old.id);
+              if (ledger) ledger.status = "retired";
+            }
+          student.status = `Workspace v${student.workspace.version} · verified on practice set`;
+        } else student.status = "Candidate rejected · workspace unchanged";
+        this.message(
+          "system",
+          verification.accepted ? "Lesson accepted" : "Lesson rejected",
+          `The idea changed the practice score by ${verification.meanDelta.toFixed(1)} and the check-up score by ${verification.regressionDelta.toFixed(1)}. ${verification.accepted ? "It passed both checks, so we’ll keep it and try it in the next test." : "It didn’t pass both checks. Let’s keep the old notes and try another idea."}`,
+          lesson.evidence,
+        );
+        this.state.candidate = null;
+        if (
+          verification.accepted ||
+          !this.options.reviseRejected ||
+          candidate.lesson.revisionOf ||
+          attempt > 0
+        )
+          break;
+        if (this.cancelled) break;
+        this.message(
+          "system",
+          "Teacher revising rejected lesson",
+          "One revision may address the failed decisions. It will face fresh development boards with the same acceptance threshold; the rejected lesson remains in the record.",
+        );
+        student.status = "Teacher reviewing verification feedback";
+        this.emit();
+        const proposed = await this.policy.propose(
+          student,
+          this.state.arm,
+          undefined,
+          this.state.focus ?? undefined,
+          { rejection: clone(lesson) },
+        );
+        this.usage(proposed.tokens, proposed.calls, 0);
+        const draft = proposed.lesson;
+        validateSkill(draft.skill);
+        const known = new Set(
+          this.state.students.flatMap((s) => s.traces.map((t) => t.id)),
+        );
+        if (
+          !(LESSON_TRIGGERS as readonly string[]).includes(draft.trigger) ||
+          draft.title.length > 100 ||
+          draft.rule.length > 600 ||
+          draft.exception.length > 250 ||
+          !draft.evidence.length ||
+          draft.evidence.some((e) => !known.has(e))
+        )
+          throw new Error("Invalid revised lesson or evidence.");
+        this.state.candidate = {
+          studentId: student.id,
+          lesson: {
+            ...draft,
+            id: id(),
+            studentId: student.id,
+            focus: lesson.focus,
+            revisionOf: lesson.id,
+            status: "candidate",
+            createdAt: new Date().toISOString(),
+          },
+        };
+        for (const m of proposed.messages)
+          this.message(m.role, m.title, m.text, m.evidence);
+        this.message(
+          "system",
+          "Revised lesson ready",
+          "Checking the teacher’s one revision on fresh boards. It must pass the original acceptance standard.",
+        );
+        this.emit();
+      }
     });
   }
   rollback(studentId: string) {
@@ -830,6 +893,7 @@ export class Classroom {
       protocol: {
         concurrency: this.concurrency,
         verificationConcurrency: this.verificationConcurrency,
+        reviseRejected: this.options.reviseRejected ?? false,
         verify: this.verifyOptions,
         exerciseMoves: this.exerciseMoves,
       },

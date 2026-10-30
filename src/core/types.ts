@@ -60,6 +60,7 @@ export interface Lesson {
   focus?: Focus;
   // Sample boards (separate from verification) where this lesson changes the planned move.
   sensitivity?: { boards: number; changed: number };
+  revisionOf?: string;
   status: "candidate" | "verified" | "rejected" | "retired";
   skill: Skill;
   verification?: Verification;
@@ -128,6 +129,17 @@ export interface VerificationRow {
   delta: number;
   errors?: number;
   cited?: number;
+  trajectories?: {
+    baseline: VerificationMove[];
+    candidate: VerificationMove[];
+  };
+}
+export interface VerificationMove {
+  before: Observation;
+  after: Observation;
+  action: Direction;
+  summary: string;
+  lessonId?: string;
 }
 export interface Verification {
   rows: VerificationRow[];
@@ -148,6 +160,7 @@ export interface Message {
   time: string;
 }
 export interface ExamRow {
+  trajectory?: VerificationMove[];
   studentId: string;
   name: string;
   arm: Arm;
@@ -214,7 +227,13 @@ export interface LiveBatch {
   startedAt: string;
   completedAt?: string;
   baseline?: ExamRow[];
-  cycles: { cycle: number; student: string; lesson: Lesson; rows: ExamRow[] }[];
+  cycles: {
+    cycle: number;
+    student: string;
+    lesson: Lesson;
+    attempts?: Lesson[];
+    rows: ExamRow[];
+  }[];
 }
 export interface Policy {
   mode: Mode;
@@ -231,6 +250,7 @@ export interface Policy {
     peer?: Student,
     focus?: FocusChoice,
     options?: {
+      rejection?: Lesson;
       // Returns a problem when a draft lesson would change no planned move.
       check?: (
         draft: Pick<Lesson, "skill" | "trigger" | "focus">,

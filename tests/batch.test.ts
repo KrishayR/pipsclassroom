@@ -17,6 +17,7 @@ test("configurable batches validate counts and save baseline, each cycle, and fi
         keyPool({ keys: ["test-only"], limitUsd: 1, prices: null }),
       getPrices: () => ({ input: 0.1, output: 0.2 }),
       protocol: {
+        reviseRejected: false,
         verify: { practice: 1, regression: 1, moves: 1 },
         exerciseMoves: 1,
       },
@@ -50,6 +51,11 @@ test("configurable batches validate counts and save baseline, each cycle, and fi
     assert.equal(report.state.exams.length, count + 1);
     assert.equal(report.state.ledger.length, count);
     assert.equal(report.state.calls, 0);
+    assert.ok(
+      report.state.exams.every((e: any) =>
+        e.rows.every((r: any) => r.trajectory.length === r.moves),
+      ),
+    );
     assert.equal(report.protocol.concurrency, 3);
     assert.equal(report.protocol.verificationConcurrency, 6);
     assert.equal(

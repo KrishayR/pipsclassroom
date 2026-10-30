@@ -80,6 +80,7 @@ export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
         exerciseMoves: 4,
         concurrency: 1,
         verificationConcurrency: 1,
+        reviseRejected: false,
       }
     : {
         verify: {
@@ -90,6 +91,7 @@ export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
         exerciseMoves: num("EXERCISE_MOVES", 4),
         concurrency: 3,
         verificationConcurrency: 6,
+        reviseRejected: true,
       };
 }
 // USD per million tokens; unset means costs are reported in tokens only.
