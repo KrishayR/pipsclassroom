@@ -1,6 +1,6 @@
-# Handoff — October 29, 2026
+# Handoff — October 30, 2026
 
-## Latest working branch and next chat
+## Latest update (Oct 30): lessons can now change behaviour
 
 Latest addition: [configurable live batch runner](LIVE_BATCH.md), with 1–100
 cycles, an estimated $1 additional budget, automatic baseline/stage/cycle
@@ -9,7 +9,45 @@ learning stages. Includes shared request limits, in-flight budget reservations,
 and isolated operation usage. The earlier sequential batch was stopped and
 its archive preserved. No paid run was started to validate the optimization.
 
-Continue on `codex/consequencelab-work`. The October 29 update below takes
+Work on `main` (the `codex/consequencelab-work` branch is merged). See
+[Lesson influence](LESSON_INFLUENCE.md):
+
+- Lessons use a new trigger, `when the skill applies`. Students get per-move
+  facts (`moveFacts`) and follow an applicable verified lesson unless the move
+  is clearly dangerous. A free impact check before verification asks the
+  teacher once for a stronger change when a lesson would change nothing. The
+  gate is unchanged. Focused practice is unchanged and is the first step of
+  the tested flow.
+- Live result: Muse now follows the lesson (play changed on 3 of 6 targeted
+  boards), but the corner-pinning lesson lowered short-rollout utility and was
+  rejected. No lesson has been accepted live yet.
+- 41 tests and the build pass. Total live spend on the original key is about
+  $0.13.
+- Next: decide, before any study, whether 4-move model rollouts are too short
+  to value structure lessons (a protocol change, made in advance and never
+  after seeing exam results). Then freeze, seal new seeds, and run a small
+  matched study (for example adaptive vs classroom plus baseline, 2
+  repetitions). Report rejected and negative outcomes.
+
+## Recommended approach (proposed Oct 30, for the team to agree)
+
+Every live candidate so far has been rejected: −1.1, +0.42 (needs +1), 0.0 and −3.25 on the targeted boards. The mechanism works; the open question is whether the gate can recognise good advice.
+
+1. **A negative answer is acceptable.** The goal is a fair experiment and an honest result, not an accepted lesson. The plan already says to report mixed or negative results plainly.
+2. **Check the gate before the study (simulation, free).** Model-mode lesson tests play only 4 moves per board, with 2 general boards, while exams are 150 moves. Structure lessons pay off later, and one unlucky general board decides the general result. Using development data only, compare the short-test verdict with how the same lessons do over full-length development games. Choose the shortest rollout (and number of general boards) whose verdict agrees. The expectation is about 12 moves and 3 general boards, roughly $0.06 per lesson test. Then confirm once live (about $0.10).
+3. **Freeze, seal new seeds, publish the hash, and run a small study:** adaptive vs classroom plus the untrained baseline, 2 repetitions. That's a few hours and about $5–15. Report all outcomes, including acceptance counts per group.
+4. **Timeline to the Nov 4 deadline (6 PM PST; target 3 PM):**
+   - Oct 30: gate check.
+   - Oct 31: freeze and start the study.
+   - Nov 1–2: study runs, with buffer.
+   - Nov 3: write-up and demo video.
+   - Nov 4: final checks and submission.
+
+Avoid: lowering the acceptance bar, changing anything after seeing exam results, the full four-arm study (not enough time), and presenting a hand-picked accepted lesson as the result.
+
+## Earlier update (Oct 29)
+
+The `codex/consequencelab-work` branch referred to below has since been merged into `main`. The October 29 update below takes
 precedence over the historical October 28 plan retained later in this file.
 Do not launch that older large study as the next step: the current preference
 is to keep Muse spending very small.

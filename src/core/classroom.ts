@@ -7,8 +7,14 @@ import {
   snapshotPool,
   fromBoard,
 } from "./engine";
-import { emptyWorkspace, installLesson, validateSkill } from "./skills";
-import { decisionSeed } from "./policy";
+import {
+  emptyWorkspace,
+  installLesson,
+  LESSON_TRIGGERS,
+  mergeLessons,
+  validateSkill,
+} from "./skills";
+import { decisionSeed, lessonSensitivity } from "./policy";
 import { mapConcurrent } from "./concurrency";
 import {
   chooseFocus,
@@ -30,12 +36,36 @@ import type {
   Arm,
   FocusChoice,
   Game,
+  Lesson,
+  Workspace,
   LabState,
   Message,
   Policy,
   Student,
 } from "./types";
 export const ARMS: Arm[] = ["solo", "teacher", "adaptive", "classroom"];
+// The workspace a candidate lesson would produce, as verification tests it.
+export function candidateWorkspace(
+  current: Workspace,
+  draft: Pick<Lesson, "skill" | "trigger" | "focus">,
+): Workspace {
+  const lesson: Lesson = {
+    id: "draft",
+    title: "",
+    rule: "",
+    exception: "",
+    source: "",
+    evidence: [],
+    createdAt: "",
+    ...draft,
+    status: "verified",
+  };
+  return {
+    version: current.version + 1,
+    skill: draft.skill,
+    lessons: mergeLessons(current.lessons, lesson),
+  };
+}
 export interface ClassroomOptions {
   verify?: VerifyOptions;
   // Moves in the short targeted exercise that precedes each review (0 disables).
@@ -440,16 +470,50 @@ export class Classroom {
               a.workspace.lessons.filter((l) => l.focus === choice.focus)
                 .length || passed(b) - passed(a),
         )[0];
+      // Sample boards for the sensitivity check: reachable boards for this focus, drawn
+      // from their own pool so the candidate is never tuned on verification boards.
+      const samples = snapshotPool(
+        "sensitivity",
+        this.state.trainingRound,
+        {
+          key: `${choice.focus}:${student.id}`,
+          applies: (b) => focusApplies(choice.focus, b),
+        },
+        6,
+      );
+      const sensitivity = (
+        draft: Pick<Lesson, "skill" | "trigger" | "focus">,
+      ) =>
+        lessonSensitivity(
+          student.workspace,
+          candidateWorkspace(student.workspace, {
+            ...draft,
+            focus: choice.focus,
+          }),
+          samples,
+        );
       const proposed = await this.policy.propose(
         student,
         this.state.arm,
         peer,
         choice,
+        {
+          check: (draft) => {
+            try {
+              validateSkill(draft.skill);
+            } catch {
+              return null;
+            }
+            return sensitivity(draft).changed
+              ? null
+              : `This change would not alter the planned move on any of ${samples.length} sample boards for "${choice.name}", so it cannot change behaviour. Propose a larger change that the evidence supports, or a different parameter.`;
+          },
+        },
       );
       this.usage(proposed.tokens, proposed.calls, 0);
       const l = proposed.lesson;
       validateSkill(l.skill);
-      if (!["always", "crowded boards"].includes(l.trigger))
+      if (!(LESSON_TRIGGERS as readonly string[]).includes(l.trigger))
         throw new Error("Unsupported lesson trigger.");
       if (
         l.rule.length > 600 ||
@@ -466,6 +530,7 @@ export class Classroom {
         ...l,
         studentId: student.id,
         focus: choice.focus,
+        sensitivity: sensitivity(l),
         id: id(),
         status: "candidate" as const,
         createdAt: new Date().toISOString(),

@@ -230,6 +230,13 @@ function LessonCard({
         <b>When</b> {lesson.trigger}
         <br />
         <b>Exception</b> {lesson.exception}
+        {lesson.sensitivity && (
+          <>
+            <br />
+            <b>Changes the plan</b> on {lesson.sensitivity.changed} of{" "}
+            {lesson.sensitivity.boards} sample boards
+          </>
+        )}
       </div>
       <div className="skill-code">
         <Code2 size={15} />
@@ -268,6 +275,9 @@ function LessonCard({
                     <th>Before</th>
                     <th>Candidate</th>
                     <th>Change</th>
+                    <th title="Moves with the candidate where the student cited a saved lesson">
+                      Cited
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -277,6 +287,7 @@ function LessonCard({
                       <td>{r.baseline.toFixed(1)}</td>
                       <td>{r.candidate.toFixed(1)}</td>
                       <td>{r.delta.toFixed(1)}</td>
+                      <td>{r.cited ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>

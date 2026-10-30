@@ -72,7 +72,8 @@ export async function rollout(
   let tokens = 0,
     calls = 0,
     simulations = 0,
-    errors = 0;
+    errors = 0,
+    cited = 0;
   let recent: RecentMove[] = [];
   for (let i = 0; i < cap && !game.over; i++) {
     let d;
@@ -91,6 +92,7 @@ export async function rollout(
     tokens += d.tokens;
     calls += d.calls;
     simulations += d.simulations;
+    if (d.lessonId) cited++;
     onUsage?.(d.tokens, d.calls, d.simulations);
     const next = move(game, d.action);
     if (!next.changed) throw new Error("Policy chose an illegal move.");
@@ -108,6 +110,7 @@ export async function rollout(
     calls,
     simulations,
     errors,
+    cited,
   };
 }
 export async function verifyCandidate(
@@ -183,6 +186,7 @@ export async function verifyCandidate(
       candidate: proposed.utility,
       delta: proposed.utility - baseline.utility,
       errors: baseline.errors + proposed.errors,
+      cited: proposed.cited,
     };
   });
   const mean = (split: string) => {
