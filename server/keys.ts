@@ -6,7 +6,7 @@ import {
   renameSync,
   writeFileSync,
 } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 // Several API keys used in order. Each key's estimated spend is kept in a ledger so a
 // key is skipped before a request could take it past its limit; a provider billing or
 // authentication error also retires a key. Keys are identified by fingerprint only.
@@ -40,7 +40,15 @@ interface Entry {
   updatedAt: string;
 }
 type Ledger = Record<string, Entry>;
+export interface RequestReservation {
+  key: string;
+  label: string;
+  settle(usage: TokenUsage): void;
+  release(): void;
+}
+const pendingByLedger = new Map<string, number>();
 export interface KeyPool {
+  reserve?(worstCase: TokenUsage): RequestReservation;
   pick(worstCase: { promptTokens: number; completionTokens: number }): {
     key: string;
     label: string;
@@ -109,14 +117,23 @@ export function keyPool(options: {
     if (!k) throw new Error(`Unknown key ${label}.`);
     return k;
   };
-  return {
+  // Calls in this process share reservations even across provider instances.
+  const localPending = new Map<string, number>();
+  const pending = options.ledgerPath ? pendingByLedger : localPending;
+  const pendingKey = (fp: string) =>
+    `${options.ledgerPath ? resolve(options.ledgerPath) : "memory"}:${fp}`;
+  const pool: KeyPool = {
     pick(worstCase) {
       const ledger = load();
       const worst = cost(worstCase);
       for (const k of keys) {
         const e = ledger[k.fp];
         if (e?.retired) continue;
-        if ((e?.spentUsd ?? 0) + worst > options.limitUsd) continue;
+        if (
+          (e?.spentUsd ?? 0) + (pending.get(pendingKey(k.fp)) ?? 0) + worst >
+          options.limitUsd
+        )
+          continue;
         return { key: k.key, label: k.label };
       }
       const why = keys
@@ -128,6 +145,30 @@ export function keyPool(options: {
       throw new Error(
         `All ${keys.length} API keys are used up or rejected (${why}). No request was sent.`,
       );
+    },
+    reserve(worstCase) {
+      const picked = pool.pick(worstCase);
+      const key = pendingKey(find(picked.label).fp);
+      const worst = cost(worstCase);
+      pending.set(key, (pending.get(key) ?? 0) + worst);
+      let settled = false;
+      const release = () => {
+        if (settled) return;
+        settled = true;
+        pending.set(key, Math.max(0, (pending.get(key) ?? 0) - worst));
+      };
+      return {
+        ...picked,
+        release,
+        settle(usage) {
+          if (settled) return;
+          try {
+            pool.record(picked.label, usage);
+          } finally {
+            release();
+          }
+        },
+      };
     },
     record(label, usage) {
       const ledger = load();
@@ -155,6 +196,60 @@ export function keyPool(options: {
         completionTokens: ledger[k.fp]?.completionTokens ?? 0,
         retired: ledger[k.fp]?.retired,
       }));
+    },
+  };
+  return pool;
+}
+
+export function budgetedKeyPool(
+  pool: KeyPool,
+  rates: Prices,
+  limitUsd: number,
+): KeyPool {
+  const before = pool.status().reduce((n, key) => n + key.spentUsd, 0);
+  let held = 0;
+  const check = (usage: TokenUsage) => {
+    const spent =
+      pool.status().reduce((n, key) => n + key.spentUsd, 0) - before;
+    if (spent + held + tokenCost(usage, rates) > limitUsd)
+      throw new Error(
+        `The additional $${limitUsd} batch budget is exhausted; partial results saved.`,
+      );
+  };
+  return {
+    ...pool,
+    pick(worst) {
+      check(worst);
+      return pool.pick(worst);
+    },
+    reserve(worst) {
+      check(worst);
+      const lease = pool.reserve?.(worst);
+      const picked = lease ?? pool.pick(worst);
+      const cost = tokenCost(worst, rates);
+      held += cost;
+      let finished = false;
+      const release = () => {
+        if (!finished) {
+          finished = true;
+          held = Math.max(0, held - cost);
+          lease?.release();
+        }
+      };
+      return {
+        key: picked.key,
+        label: picked.label,
+        release,
+        settle(usage) {
+          if (finished) return;
+          try {
+            if (lease) lease.settle(usage);
+            else pool.record(picked.label, usage);
+          } finally {
+            release();
+          }
+        },
+      };
     },
   };
 }

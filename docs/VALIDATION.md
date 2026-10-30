@@ -1,5 +1,14 @@
 # Validation record
 
+## October 29, 2026 — Configurable concurrent live batches
+
+All 44 tests, TypeScript checking, and the production build pass. New coverage
+checks configurable batch archives, exact deterministic sequential/parallel
+equivalence, three overlapping requests, per-operation token accounting,
+stop/error draining, and reservations against batch and key spending limits.
+No paid model requests were used for these checks. See [Live batch guide](LIVE_BATCH.md).
+Live throughput and performance improvement remain unmeasured.
+
 ## October 29, 2026 — Focused practice
 
 See [Focused practice handoff](FOCUSED_PRACTICE_HANDOFF.md) for the diagnostic

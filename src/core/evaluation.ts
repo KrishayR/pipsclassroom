@@ -9,6 +9,7 @@ import {
 } from "./engine";
 import { focusApplies } from "./curriculum";
 import { mergeLessons } from "./skills";
+import { mapConcurrent } from "./concurrency";
 import type {
   Arm,
   ExamRow,
@@ -117,6 +118,7 @@ export async function verifyCandidate(
   onUsage?: (tokens: number, calls: number, simulations: number) => void,
   onProgress?: (done: number, total: number) => void,
   options: VerifyOptions = DEFAULT_VERIFY,
+  concurrency = 1,
 ): Promise<Verification> {
   const candidate: Workspace = {
     version: current.version + 1,
@@ -145,37 +147,44 @@ export async function verifyCandidate(
     ),
   };
   const total = options.practice + options.regression;
-  const rows: Verification["rows"] = [];
-  for (const split of ["practice", "regression"] as const)
-    for (const snapshot of pools[split]) {
-      // Paired action-independent seeds. Neither student sees the spawn seed.
-      const baseline = await rollout(
+  const snapshots = (["practice", "regression"] as const).flatMap((split) =>
+    pools[split].map((snapshot) => ({ split, snapshot })),
+  );
+  const jobs = snapshots.flatMap(({ snapshot }, pair) =>
+    [current, candidate].map((workspace) => ({ snapshot, pair, workspace })),
+  );
+  const finished = new Array<number>(total).fill(0);
+  let pairsDone = 0;
+  // Each rollout has its own game and recent context. Row order and seeds remain fixed.
+  const outcomes = await mapConcurrent(
+    jobs,
+    concurrency,
+    async ({ snapshot, pair, workspace }) => {
+      const result = await rollout(
         policy,
-        current,
+        workspace,
         snapshot.board,
         snapshot.seed,
         options.moves,
         onUsage,
       );
-      const proposed = await rollout(
-        policy,
-        candidate,
-        snapshot.board,
-        snapshot.seed,
-        options.moves,
-        onUsage,
-      );
-      rows.push({
-        snapshot: snapshot.id,
-        split,
-        seed: snapshot.seed,
-        baseline: baseline.utility,
-        candidate: proposed.utility,
-        delta: proposed.utility - baseline.utility,
-        errors: baseline.errors + proposed.errors,
-      });
-      onProgress?.(rows.length, total);
-    }
+      if (++finished[pair] === 2) onProgress?.(++pairsDone, total);
+      return result;
+    },
+  );
+  const rows: Verification["rows"] = snapshots.map(({ snapshot, split }, i) => {
+    const baseline = outcomes[i * 2],
+      proposed = outcomes[i * 2 + 1];
+    return {
+      snapshot: snapshot.id,
+      split,
+      seed: snapshot.seed,
+      baseline: baseline.utility,
+      candidate: proposed.utility,
+      delta: proposed.utility - baseline.utility,
+      errors: baseline.errors + proposed.errors,
+    };
+  });
   const mean = (split: string) => {
     const r = rows.filter((r) => r.split === split);
     return r.length ? r.reduce((s, r) => s + r.delta, 0) / r.length : 0;

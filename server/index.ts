@@ -6,6 +6,7 @@ import { ARMS, Classroom } from "../src/core/classroom";
 import { simulationPolicy } from "../src/core/policy";
 import { loadEnv, modelFromEnv, protocolFromEnv } from "./config";
 import type { Arm, LabState } from "../src/core/types";
+import { liveBatchRunner } from "./batch";
 loadEnv();
 mkdirSync("data", { recursive: true });
 const db = new DatabaseSync(resolve("data/classroom.sqlite"));
@@ -16,6 +17,7 @@ const real = modelFromEnv();
 const usageOffsets = new Map<string, { tokens: number; calls: number }>();
 const classes = new Map<string, Classroom>();
 const clients = new Map<string, Set<import("node:http").ServerResponse>>();
+const batch = liveBatchRunner(() => classes.get("model")?.emit());
 for (const policy of [simulationPolicy(), ...(real ? [real] : [])]) {
   const stored = db
     .prepare("SELECT state FROM sessions WHERE mode=?")
@@ -35,7 +37,17 @@ for (const policy of [simulationPolicy(), ...(real ? [real] : [])]) {
     const safe = publicState(state);
     db.prepare("INSERT OR REPLACE INTO sessions VALUES (?,?,?)").run(
       policy.mode,
-      JSON.stringify({ ...state, tokens: safe.tokens, calls: safe.calls }),
+      JSON.stringify({
+        ...state,
+        tokens:
+          state.mode === "model" && real
+            ? (usageOffsets.get("model")?.tokens ?? 0) + real.usage().tokens
+            : state.tokens,
+        calls:
+          state.mode === "model" && real
+            ? (usageOffsets.get("model")?.calls ?? 0) + real.usage().calls
+            : state.calls,
+      }),
       new Date().toISOString(),
     );
     for (const res of clients.get(policy.mode)!)
@@ -43,12 +55,14 @@ for (const policy of [simulationPolicy(), ...(real ? [real] : [])]) {
   });
 }
 function publicState(state: LabState) {
-  const safe = structuredClone(state);
+  const batchState = state.mode === "model" ? batch.state() : undefined;
+  const safe = structuredClone(batchState ?? state);
+  if (state.mode === "model") safe.liveBatch = batch.status();
   safe.students.forEach((s) => {
     s.game.rng = 0;
     s.game.seed = 0;
   });
-  if (state.mode === "model" && real) {
+  if (state.mode === "model" && real && !batchState) {
     const usage = real.usage();
     safe.tokens = (usageOffsets.get("model")?.tokens ?? 0) + usage.tokens;
     safe.calls = (usageOffsets.get("model")?.calls ?? 0) + usage.calls;
@@ -94,15 +108,20 @@ const server = createServer(async (req, res) => {
     });
   if (req.method === "GET" && url.pathname === "/api/state")
     return send(200, publicState(lab.state));
-  if (req.method === "GET" && url.pathname === "/api/export")
+  if (req.method === "GET" && url.pathname === "/api/export") {
+    const exported = lab.export();
+    const activeBatch = mode === "model" ? batch.state() : undefined;
+    if (activeBatch) exported.state = structuredClone(activeBatch);
     return send(200, {
-      ...lab.export(),
+      ...exported,
       state: {
-        ...lab.export().state,
+        ...exported.state,
+        ...(mode === "model" ? { liveBatch: batch.status() } : {}),
         tokens: publicState(lab.state).tokens,
         calls: publicState(lab.state).calls,
       },
     });
+  }
   if (req.method === "GET" && url.pathname === "/api/events") {
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
@@ -129,13 +148,31 @@ const server = createServer(async (req, res) => {
     const input = JSON.parse(body || "{}");
     const { action } = input;
     if (action === "stop") {
+      if (mode === "model" && batch.status()?.status === "running")
+        batch.stop();
       lab.stop();
       return send(200, { ok: true });
     }
     if (lab.state.busy)
       return send(409, { error: "An operation is already running." });
+    if (mode === "model" && batch.status()?.status === "running")
+      return send(409, {
+        error:
+          "The live batch is running. Stop it before starting other live actions.",
+      });
     let operation: Promise<void> | undefined;
-    if (action === "practice") operation = lab.practice(input.steps ?? 12);
+    if (action === "live-batch") {
+      if (mode !== "model")
+        throw new Error("Select live model mode for the Muse batch.");
+      if (
+        !Number.isInteger(input.cycles ?? 5) ||
+        (input.cycles ?? 5) < 1 ||
+        (input.cycles ?? 5) > 100
+      )
+        throw new Error("Choose a whole number of cycles from 1 to 100.");
+      operation = batch.start(input.cycles ?? 5);
+    } else if (action === "practice")
+      operation = lab.practice(input.steps ?? 12);
     else if (action === "diagnose") operation = lab.diagnose();
     else if (action === "review") operation = lab.review(input.studentId);
     else if (action === "verify") operation = lab.verify();
@@ -166,6 +203,7 @@ server.listen(port, "127.0.0.1", () =>
   ),
 );
 process.on("SIGINT", () => {
+  batch.stop();
   for (const lab of classes.values()) lab.stop();
   server.close();
   db.close();

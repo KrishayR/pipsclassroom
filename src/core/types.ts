@@ -175,6 +175,7 @@ export interface Exam {
   completedAt?: string;
 }
 export interface LabState {
+  liveBatch?: LiveBatch;
   schemaVersion: 1;
   id: string;
   mode: Mode;
@@ -195,6 +196,21 @@ export interface LabState {
   focus?: FocusChoice | null;
   modelId: string | null;
   comparisons: Comparison[];
+}
+export interface LiveBatch {
+  concurrency?: number;
+  timings?: { stage: string; elapsedMs: number }[];
+  status: "running" | "complete" | "stopped" | "error" | "interrupted";
+  stage: string;
+  completed: number;
+  total: number;
+  budgetUsd: number;
+  spentUsd: number;
+  directory: string;
+  startedAt: string;
+  completedAt?: string;
+  baseline?: ExamRow[];
+  cycles: { cycle: number; student: string; lesson: Lesson; rows: ExamRow[] }[];
 }
 export interface Policy {
   mode: Mode;

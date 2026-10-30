@@ -381,6 +381,7 @@ export default function App() {
     [traceId, setTraceId] = useState<string | null>(null),
     [cap, setCap] = useState(1500),
     [seedCount, setSeedCount] = useState(3),
+    [batchCycles, setBatchCycles] = useState("5"),
     [pending, setPending] = useState(false),
     [replaying, setReplaying] = useState(false);
   useEffect(() => {
@@ -415,7 +416,7 @@ export default function App() {
       setPending(false);
     }
   };
-  const busy = state.busy || pending;
+  const busy = state.busy || pending || state.liveBatch?.status === "running";
   const student =
     state.students.find((s) => s.id === selected) ?? state.students[0];
   const traces = state.students.flatMap((s) => s.traces);
@@ -749,6 +750,37 @@ export default function App() {
                         <Users size={15} />
                         Discuss
                       </button>
+                      {mode === "model" && connection?.kind === "server" && (
+                        <>
+                          <label>
+                            Cycles{" "}
+                            <input
+                              aria-label="Live learning cycles"
+                              type="number"
+                              min="1"
+                              max="100"
+                              step="1"
+                              value={batchCycles}
+                              onChange={(e) => setBatchCycles(e.target.value)}
+                              style={{ width: 72 }}
+                            />
+                          </label>
+                          <button
+                            className="primary"
+                            disabled={
+                              !Number.isInteger(Number(batchCycles)) ||
+                              Number(batchCycles) < 1 ||
+                              Number(batchCycles) > 100
+                            }
+                            onClick={() =>
+                              run("live-batch", { cycles: Number(batchCycles) })
+                            }
+                          >
+                            <Play size={14} />
+                            Run {batchCycles || "…"} live cycles · $1 max
+                          </button>
+                        </>
+                      )}
                       <button
                         className="secondary"
                         onClick={() => run("diagnose")}
@@ -770,11 +802,22 @@ export default function App() {
                 </div>
               </div>
               <p className="fine">
+                {mode === "model" &&
+                  "Choose 1–100 cycles. Students play side by side, with up to 3 Muse requests in flight. Cycles stay in order: focused practice, one rotating student review, verification, then a 25-move exam per student. The batch uses a fresh classroom; your manual classroom returns afterward. The $1 estimated budget stays fixed; it may stop early. Results save automatically; keep the server running. "}
                 Focused practice gives every student short exercises in all
                 three skills, so reviews have relevant examples to discuss.
                 Their regular games and saved notes stay in place.
                 {mode === "model" ? " These exercises use API credits." : ""}
               </p>
+              {mode === "model" && state.liveBatch && (
+                <p role="status" className="fine">
+                  <b>{state.liveBatch.stage}</b> · {state.liveBatch.completed}/
+                  {state.liveBatch.total}
+                  cycles saved · estimated $
+                  {state.liveBatch.spentUsd.toFixed(4)} used. Results:{" "}
+                  {state.liveBatch.directory}/status.json
+                </p>
+              )}
               <div className="classroom-grid">
                 <div className="students-grid">
                   {state.students.map((s) => (

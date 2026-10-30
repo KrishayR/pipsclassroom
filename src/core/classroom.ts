@@ -9,6 +9,7 @@ import {
 } from "./engine";
 import { emptyWorkspace, installLesson, validateSkill } from "./skills";
 import { decisionSeed } from "./policy";
+import { mapConcurrent } from "./concurrency";
 import {
   chooseFocus,
   FOCI,
@@ -39,6 +40,7 @@ export interface ClassroomOptions {
   verify?: VerifyOptions;
   // Moves in the short targeted exercise that precedes each review (0 disables).
   exerciseMoves?: number;
+  concurrency?: number;
 }
 const clone = <T>(v: T): T => structuredClone(v);
 const id = () => crypto.randomUUID();
@@ -84,6 +86,7 @@ export class Classroom {
   private cancelled = false;
   readonly verifyOptions: VerifyOptions;
   readonly exerciseMoves: number;
+  readonly concurrency: number;
   constructor(
     public policy: Policy,
     state?: LabState,
@@ -91,6 +94,13 @@ export class Classroom {
   ) {
     this.verifyOptions = options.verify ?? DEFAULT_VERIFY;
     this.exerciseMoves = options.exerciseMoves ?? 4;
+    this.concurrency = options.concurrency ?? 1;
+    if (
+      !Number.isInteger(this.concurrency) ||
+      this.concurrency < 1 ||
+      this.concurrency > 6
+    )
+      throw new Error("Classroom concurrency must be 1–6.");
     this.state = state ?? initialState(policy.mode);
     this.state.comparisons ??= [];
     this.state.focus ??= null;
@@ -310,21 +320,25 @@ export class Classroom {
           `Each student tries ${this.exerciseMoves} moves per skill on reachable boards. There is no feedback or memory update during these exercises.`,
         );
         for (const focus of FOCI) {
-          for (const student of this.state.students) {
-            if (this.cancelled) break;
-            const choice: FocusChoice = {
-              focus: focus.id,
-              name: focus.name,
-              reason:
-                "Diagnostic exercise: collect evidence for this skill before choosing feedback.",
-              adaptive: false,
-            };
-            this.state.focus = choice;
-            this.state.selectedSkill = choice.name;
-            student.status = `Diagnostic practice · ${choice.name}`;
-            this.emit();
-            await this.exercise(student, choice, true);
-          }
+          await mapConcurrent(
+            this.state.students,
+            this.concurrency,
+            async (student) => {
+              const choice: FocusChoice = {
+                focus: focus.id,
+                name: focus.name,
+                reason:
+                  "Diagnostic exercise: collect evidence for this skill before choosing feedback.",
+                adaptive: false,
+              };
+              this.state.focus = choice;
+              this.state.selectedSkill = choice.name;
+              student.status = `Diagnostic practice · ${choice.name}`;
+              this.emit();
+              await this.exercise(student, choice, true);
+            },
+            () => this.cancelled,
+          );
           if (this.cancelled) break;
         }
         this.message(
@@ -355,20 +369,24 @@ export class Classroom {
           student.game = createGame(hash(student.episodeId));
         }
       for (let k = 0; k < steps && !this.cancelled; k++) {
-        for (const student of this.state.students) {
-          if (this.cancelled) break;
-          if (student.game.over || student.game.won) {
-            student.episodes++;
-            student.episodeId = `practice:${student.id}:${student.episodes}`;
-            student.game = createGame(hash(student.episodeId));
-          }
-          if (!(await this.step(student))) {
-            student.episodes++;
-            student.episodeId = `practice:${student.id}:${student.episodes}`;
-            student.game = createGame(hash(student.episodeId));
-          }
-          this.emit();
-        }
+        await mapConcurrent(
+          this.state.students,
+          this.concurrency,
+          async (student) => {
+            if (student.game.over || student.game.won) {
+              student.episodes++;
+              student.episodeId = `practice:${student.id}:${student.episodes}`;
+              student.game = createGame(hash(student.episodeId));
+            }
+            if (!(await this.step(student))) {
+              student.episodes++;
+              student.episodeId = `practice:${student.id}:${student.episodes}`;
+              student.game = createGame(hash(student.episodeId));
+            }
+            this.emit();
+          },
+          () => this.cancelled,
+        );
         await new Promise((resolve) =>
           setTimeout(resolve, this.state.mode === "simulation" ? 35 : 0),
         );
@@ -487,6 +505,7 @@ export class Classroom {
           this.emit();
         },
         this.verifyOptions,
+        this.concurrency,
       );
       const lesson = {
         ...candidate.lesson,
@@ -568,39 +587,48 @@ export class Classroom {
         "Teacher and peers are disabled. Workspaces are frozen; every decision starts with fresh context. These are development seeds; the final study uses sealed seeds from the CLI.",
       );
       for (const seed of exam.seeds) {
-        for (const student of this.state.students) {
-          if (this.cancelled) break;
-          student.status = "Independent exam · frozen workspace";
-          const guarded: Policy = {
-            ...this.policy,
-            decide: async (...args) => {
-              if (this.cancelled) throw new Error("Exam stopped by user.");
-              const d = await this.policy.decide(...args);
-              this.usage(d.tokens, d.calls, d.simulations);
-              return d;
-            },
-          };
-          const row = await examEpisode(
-            guarded,
-            frozen[student.id],
-            seed,
-            cap,
-            student,
-            this.state.arm,
-            (game, n) => {
-              student.game = game;
-              if (n % 10 === 0) this.emit();
-            },
-          );
-          exam.rows.push(row);
-          student.status = row.reached
-            ? "Reached 2048"
-            : row.terminal === "error"
-              ? "Exam interrupted"
-              : `Exam finished · ${row.highest} tile`;
-          this.emit();
-          await new Promise((r) => setTimeout(r, 0));
-        }
+        await mapConcurrent(
+          this.state.students,
+          this.concurrency,
+          async (student) => {
+            student.status = "Independent exam · frozen workspace";
+            const guarded: Policy = {
+              ...this.policy,
+              decide: async (...args) => {
+                if (this.cancelled) throw new Error("Exam stopped by user.");
+                const d = await this.policy.decide(...args);
+                this.usage(d.tokens, d.calls, d.simulations);
+                return d;
+              },
+            };
+            const row = await examEpisode(
+              guarded,
+              frozen[student.id],
+              seed,
+              cap,
+              student,
+              this.state.arm,
+              (game, n) => {
+                student.game = game;
+                if (n % 10 === 0) this.emit();
+              },
+            );
+            exam.rows.push(row);
+            exam.rows.sort(
+              (a, b) =>
+                exam.seeds.indexOf(a.seed) - exam.seeds.indexOf(b.seed) ||
+                a.studentId.localeCompare(b.studentId),
+            );
+            student.status = row.reached
+              ? "Reached 2048"
+              : row.terminal === "error"
+                ? "Exam interrupted"
+                : `Exam finished · ${row.highest} tile`;
+            this.emit();
+            await new Promise((r) => setTimeout(r, 0));
+          },
+          () => this.cancelled,
+        );
         if (this.cancelled) break;
       }
       if (!this.cancelled) exam.completedAt = new Date().toISOString();
@@ -725,6 +753,7 @@ export class Classroom {
       engine: "cl-2048-1",
       rng: "mulberry32-1",
       protocol: {
+        concurrency: this.concurrency,
         verify: this.verifyOptions,
         exerciseMoves: this.exerciseMoves,
       },

@@ -2,6 +2,13 @@
 
 ## Latest working branch and next chat
 
+Latest addition: [configurable live batch runner](LIVE_BATCH.md), with 1–100
+cycles, an estimated $1 additional budget, automatic baseline/stage/cycle
+archives, three concurrent student/verification requests, and sequential
+learning stages. Includes shared request limits, in-flight budget reservations,
+and isolated operation usage. The earlier sequential batch was stopped and
+its archive preserved. No paid run was started to validate the optimization.
+
 Continue on `codex/consequencelab-work`. The October 29 update below takes
 precedence over the historical October 28 plan retained later in this file.
 Do not launch that older large study as the next step: the current preference

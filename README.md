@@ -124,6 +124,14 @@ The Node backend is loopback-only and not suitable for unauthenticated public de
 
 ## Guided first run
 
+For unattended live testing, the Classroom page has a **Cycles** field and
+**Run [count] live cycles · $1 max** button. Independent students and
+verification rollouts run with up to three concurrent model requests while
+learning cycles stay sequential. Baseline, stage checkpoints, cycle results,
+and timing records save locally without assistant supervision. See
+[Live batch guide](docs/LIVE_BATCH.md) for the fixed short-exam protocol,
+budget limits, stopping behavior, and analysis files.
+
 The walkthrough starts with **focused practice**: all three students try short
 exercises in preserving room, maintaining structure, and planning ahead. This
 collects relevant examples before review, using reachable boards that match

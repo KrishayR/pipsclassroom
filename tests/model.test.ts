@@ -3,11 +3,105 @@ import assert from "node:assert/strict";
 import { modelPolicy } from "../server/model";
 import { createGame, observe } from "../src/core/engine";
 import { emptyWorkspace } from "../src/core/skills";
+test("concurrent decisions report their own tokens and calls, without double counting", async () => {
+  let active = 0,
+    peak = 0;
+  const policy = modelPolicy({
+    key: "fixture",
+    baseUrl: "https://example.invalid/v1",
+    model: "fixture",
+    tokenBudget: 1000000,
+    fetch: (async (_url, init) => {
+      peak = Math.max(peak, ++active);
+      const request = JSON.parse(init!.body as string);
+      const observation = JSON.parse(request.messages[1].content).observation;
+      await new Promise<void>((r) => setImmediate(r));
+      active--;
+      return response({
+        role: "assistant",
+        tool_calls: [
+          {
+            id: "fixture",
+            type: "function",
+            function: {
+              name: "apply_move",
+              arguments: JSON.stringify({
+                direction: observation.legal[0],
+                summary: "fixture",
+              }),
+            },
+          },
+        ],
+      });
+    }) as typeof fetch,
+  });
+  const decisions = await Promise.all(
+    [1, 2, 3, 4, 5, 6].map((seed) =>
+      policy.decide(observe(createGame(seed)), emptyWorkspace(), seed),
+    ),
+  );
+  assert.equal(peak, 3);
+  assert.ok(decisions.every((d) => d.tokens === 50 && d.calls === 1));
+  assert.equal(policy.usage().tokens, 300);
+  assert.equal(policy.usage().calls, 6);
+});
 const response = (message: unknown) =>
   new Response(
     JSON.stringify({ choices: [{ message }], usage: { total_tokens: 50 } }),
     { status: 200, headers: { "Content-Type": "application/json" } },
   );
+test("stopping prevents queued model requests from being sent and drains active ones", async () => {
+  let stopped = false,
+    sent = 0;
+  let release!: () => void;
+  const barrier = new Promise<void>((r) => {
+    release = r;
+  });
+  const policy = modelPolicy({
+    key: "fixture",
+    baseUrl: "https://example.invalid/v1",
+    model: "fixture",
+    tokenBudget: 1000000,
+    beforeRequest: () => {
+      if (stopped) throw new Error("fixture stopped");
+    },
+    fetch: (async (_url, init) => {
+      sent++;
+      const request = JSON.parse(init!.body as string);
+      const obs = JSON.parse(request.messages[1].content).observation;
+      await barrier;
+      return response({
+        role: "assistant",
+        tool_calls: [
+          {
+            id: "fixture",
+            type: "function",
+            function: {
+              name: "apply_move",
+              arguments: JSON.stringify({
+                direction: obs.legal[0],
+                summary: "fixture",
+              }),
+            },
+          },
+        ],
+      });
+    }) as typeof fetch,
+  });
+  const jobs = [1, 2, 3, 4, 5, 6].map((seed) =>
+    policy.decide(observe(createGame(seed)), emptyWorkspace(), seed),
+  );
+  const finished = Promise.allSettled(jobs);
+  await new Promise<void>((r) => setImmediate(r));
+  assert.equal(sent, 3);
+  stopped = true;
+  release();
+  const results = await finished;
+  assert.equal(sent, 3);
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 3);
+  assert.equal(results.filter((r) => r.status === "rejected").length, 3);
+  assert.equal(policy.usage().calls, 3);
+});
 test("skill ranking is provided up front; a disallowed tool gets a matched error and the move is still validated", async () => {
   let calls = 0;
   const obs = observe(createGame(3));

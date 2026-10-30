@@ -4,6 +4,8 @@ import { rateLimiter } from "./ratelimit";
 import { keyPool, tokenCost, type Prices, type TokenUsage } from "./keys";
 import type { ClassroomOptions } from "../src/core/classroom";
 import type { Mode } from "../src/core/types";
+import { requestLimiter } from "../src/core/concurrency";
+const requestGate = requestLimiter(3);
 export function loadEnv(path = ".env") {
   if (existsSync(path))
     for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
@@ -64,6 +66,7 @@ export function modelFromEnv(
     maxCompletionTokens: num("MODEL_MAX_COMPLETION_TOKENS", 4000),
     reasoningEffort: process.env.MODEL_REASONING_EFFORT || "low",
     limiter: (limiter ??= rateLimiter(num("MODEL_RPM", 120))),
+    requestGate,
     ...overrides,
   });
 }
@@ -71,7 +74,11 @@ export function modelFromEnv(
 // smaller gate because every rollout move is a paid decision; see PROTOCOL.md.
 export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
   return mode === "simulation"
-    ? { verify: { practice: 6, regression: 3, moves: 8 }, exerciseMoves: 4 }
+    ? {
+        verify: { practice: 6, regression: 3, moves: 8 },
+        exerciseMoves: 4,
+        concurrency: 1,
+      }
     : {
         verify: {
           practice: num("VERIFY_PRACTICE", 6),
@@ -79,6 +86,7 @@ export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
           moves: num("VERIFY_MOVES", 4),
         },
         exerciseMoves: num("EXERCISE_MOVES", 4),
+        concurrency: 3,
       };
 }
 // USD per million tokens; unset means costs are reported in tokens only.
