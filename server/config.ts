@@ -5,7 +5,8 @@ import { keyPool, tokenCost, type Prices, type TokenUsage } from "./keys";
 import type { ClassroomOptions } from "../src/core/classroom";
 import type { Mode } from "../src/core/types";
 import { requestLimiter } from "../src/core/concurrency";
-const requestGate = requestLimiter(3);
+// Student stages dispatch three workers; verification may dispatch six.
+const requestGate = requestLimiter(6);
 export function loadEnv(path = ".env") {
   if (existsSync(path))
     for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
@@ -78,6 +79,7 @@ export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
         verify: { practice: 6, regression: 3, moves: 8 },
         exerciseMoves: 4,
         concurrency: 1,
+        verificationConcurrency: 1,
       }
     : {
         verify: {
@@ -87,6 +89,7 @@ export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
         },
         exerciseMoves: num("EXERCISE_MOVES", 4),
         concurrency: 3,
+        verificationConcurrency: 6,
       };
 }
 // USD per million tokens; unset means costs are reported in tokens only.

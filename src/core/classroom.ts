@@ -71,6 +71,7 @@ export interface ClassroomOptions {
   // Moves in the short targeted exercise that precedes each review (0 disables).
   exerciseMoves?: number;
   concurrency?: number;
+  verificationConcurrency?: number;
 }
 const clone = <T>(v: T): T => structuredClone(v);
 const id = () => crypto.randomUUID();
@@ -117,6 +118,7 @@ export class Classroom {
   readonly verifyOptions: VerifyOptions;
   readonly exerciseMoves: number;
   readonly concurrency: number;
+  readonly verificationConcurrency: number;
   constructor(
     public policy: Policy,
     state?: LabState,
@@ -125,12 +127,20 @@ export class Classroom {
     this.verifyOptions = options.verify ?? DEFAULT_VERIFY;
     this.exerciseMoves = options.exerciseMoves ?? 4;
     this.concurrency = options.concurrency ?? 1;
+    this.verificationConcurrency =
+      options.verificationConcurrency ?? this.concurrency;
     if (
       !Number.isInteger(this.concurrency) ||
       this.concurrency < 1 ||
       this.concurrency > 6
     )
       throw new Error("Classroom concurrency must be 1–6.");
+    if (
+      !Number.isInteger(this.verificationConcurrency) ||
+      this.verificationConcurrency < 1 ||
+      this.verificationConcurrency > 6
+    )
+      throw new Error("Verification concurrency must be 1–6.");
     this.state = state ?? initialState(policy.mode);
     this.state.comparisons ??= [];
     this.state.focus ??= null;
@@ -570,7 +580,7 @@ export class Classroom {
           this.emit();
         },
         this.verifyOptions,
-        this.concurrency,
+        this.verificationConcurrency,
       );
       const lesson = {
         ...candidate.lesson,
@@ -819,6 +829,7 @@ export class Classroom {
       rng: "mulberry32-1",
       protocol: {
         concurrency: this.concurrency,
+        verificationConcurrency: this.verificationConcurrency,
         verify: this.verifyOptions,
         exerciseMoves: this.exerciseMoves,
       },

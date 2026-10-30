@@ -7,7 +7,10 @@ import { budgetedKeyPool, keyPool } from "../server/keys";
 
 const pause = () => new Promise<void>((r) => setImmediate(r));
 test("parallel stages preserve seeded game trajectories, evidence, verification and exam outcomes", async () => {
-  const execute = async (concurrency: number) => {
+  const execute = async (
+    concurrency: number,
+    verificationConcurrency = concurrency,
+  ) => {
     const base = simulationPolicy();
     let active = 0,
       peak = 0;
@@ -25,7 +28,7 @@ test("parallel stages preserve seeded game trajectories, evidence, verification 
         },
       },
       undefined,
-      { concurrency },
+      { concurrency, verificationConcurrency },
     );
     await lab.practice(4);
     const practicePeak = peak;
@@ -76,6 +79,9 @@ test("parallel stages preserve seeded game trajectories, evidence, verification 
   const { peaks: a, ...expected } = serial;
   const { peaks: b, ...actual } = parallel;
   assert.deepEqual(actual, expected);
+  const { peaks: c, ...sixWay } = await execute(3, 6);
+  assert.deepEqual(c, [3, 3, 6, 3]);
+  assert.deepEqual(sixWay, expected);
 });
 
 test("a failed parallel stage drains in-flight work and starts no queued jobs", async () => {

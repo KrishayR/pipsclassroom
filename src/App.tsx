@@ -814,7 +814,7 @@ export default function App() {
               </div>
               <p className="fine">
                 {mode === "model" &&
-                  "Choose 1–100 cycles. Students play side by side, with up to 3 Muse requests in flight. Cycles stay in order: focused practice, one rotating student review, verification, then a 25-move exam per student. The batch uses a fresh classroom; your manual classroom returns afterward. The $1 estimated budget stays fixed; it may stop early. Results save automatically; keep the server running. "}
+                  "Choose 1–100 cycles. Three students play side by side; verification can run 6 independent rollouts at once. Cycles stay in order: focused practice, one rotating student review, verification, then a 25-move exam per student. The batch uses a fresh classroom; your manual classroom returns afterward. The $1 estimated budget stays fixed; it may stop early. Results save automatically; keep the server running. "}
                 Focused practice gives every student short exercises in all
                 three skills, so reviews have relevant examples to discuss.
                 Their regular games and saved notes stay in place.

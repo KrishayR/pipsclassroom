@@ -9,11 +9,12 @@ online, and the Node backend running. Closing the browser does not stop it.
 
 ## Parallel execution
 
-Live classrooms now use concurrency 3. Ada, Lin, and Sam practice and take
+Live classrooms use student concurrency 3 and verification concurrency 6.
+Ada, Lin, and Sam practice and take
 exams side by side. Each student's moves remain sequential; focused practice
 waits for all students before advancing to the next skill. Exams finish all
 students on a seed before advancing to the next seed. Verification schedules
-independent baseline/candidate rollouts with up to three workers and restores
+independent baseline/candidate rollouts with up to six workers and restores
 the original snapshot order in its results. Each rollout keeps its own board,
 spawn stream, recent-move context, and frozen workspace.
 
@@ -24,7 +25,7 @@ simulation tests match sequential and parallel outcomes exactly; live Muse
 outputs can still differ because model responses are stochastic. These
 changes require a new source freeze before a formal study.
 
-The model providers in the server share a three-request gate and the existing
+The model providers in the server share a six-request gate and the existing
 request-start rate limiter. Per-operation usage is isolated so simultaneous
 decisions do not double-count each other's tokens. Outstanding requests
 reserve estimated spend against both the key ceiling and batch budget.
@@ -38,7 +39,17 @@ active stage workers before releasing the operation lock. The stopped earlier
 run remains in its timestamped archive; new runs start a fresh classroom.
 During a batch, its student boards are displayed in the Classroom view;
 the manual classroom returns afterward. Exports include the concurrency
-setting and the batch summary records elapsed time for completed stages.
+settings and the batch summary records elapsed time for completed stages.
+
+Deterministic move rankings use a 512-entry in-memory LRU cache. Keys include
+the board, all defined skill fields, planning seed, normalized simulation
+budget, and legal-action order. Validation runs on cache hits, and cached
+results are defensively copied. Changed strategies or seeds cannot reuse an
+old ranking. Reported logical simulation transitions and limits stay the same
+on a hit, preserving experiment accounting. Model requests, responses, and
+lesson decisions are never cached. Cache state disappears on process restart.
+How much this helps depends on exact inputs recurring; no live speedup has
+yet been established for these two optimizations.
 
 This creates a separate fresh classroom and preserves the existing manual
 session. It runs a baseline exam for all three students, then five cumulative

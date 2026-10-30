@@ -1,5 +1,20 @@
 # Validation record
 
+## October 30, 2026 — Six-way verification and bounded planning cache
+
+All 55 tests, TypeScript checking, and the production build pass. Live
+configuration keeps three student workers and permits six independent
+verification workers, behind one shared six-request provider gate and the
+existing rate/budget controls. The deterministic end-to-end test compares
+one, three, and six verification workers and preserves moves, evidence,
+verification rows/verdicts, exam scores, and logical planning usage.
+
+A 512-entry LRU caches deterministic rankings only. Tests compare cache hits
+and misses with uncached results across boards, strategies, seeds, planning
+budgets and action orders, plus mutation isolation, validation and eviction.
+Recorded experiment history and fresh Muse calls are unchanged. No paid
+requests were made for validation; live speed improvement remains unmeasured.
+
 ## October 30, 2026 — Local gate calibration tool
 
 All 52 tests, TypeScript checking, and the production build pass. Calibration

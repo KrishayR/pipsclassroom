@@ -69,18 +69,65 @@ export interface Ranking {
   meanEmpty: number;
   samples: number;
 }
+// Cache only deterministic planning, never model replies. Logical transitions
+// still count toward the same planning budget when the answer is reused.
+const planningCache = new Map<
+  string,
+  { ranking: Ranking[]; transitions: number }
+>();
+const PLANNING_CACHE_LIMIT = 512;
+let cacheHits = 0,
+  cacheMisses = 0;
+export function clearPlanningCache() {
+  planningCache.clear();
+  cacheHits = 0;
+  cacheMisses = 0;
+}
+export const planningCacheStats = () => ({
+  hits: cacheHits,
+  misses: cacheMisses,
+  size: planningCache.size,
+  limit: PLANNING_CACHE_LIMIT,
+});
 export function simulate(
   board: Board,
   skill: Skill,
   seed: number,
   budget = SIMULATION_CAP,
   actions = legalMoves(board),
+  useCache = true,
 ): { ranking: Ranking[]; transitions: number } {
   validateSkill(skill);
   const legal = legalMoves(board);
   if (actions.some((a) => !legal.includes(a)))
     throw new Error("Simulation requires legal actions.");
   const cap = Math.min(SIMULATION_CAP, Math.max(0, Math.floor(budget)));
+  // Include the full skill and action order; seed and cap strings distinguish
+  // non-finite values instead of JSON's null coercion. Validation runs on hits too.
+  const cacheKey = JSON.stringify([
+    board,
+    [
+      skill.id,
+      skill.name,
+      skill.version,
+      skill.depth,
+      skill.spaceWeight,
+      skill.structureWeight,
+      skill.mergeWeight,
+      skill.riskWeight,
+    ],
+    String(seed),
+    String(cap),
+    actions,
+  ]);
+  const cached = useCache ? planningCache.get(cacheKey) : undefined;
+  if (cached) {
+    cacheHits++;
+    planningCache.delete(cacheKey);
+    planningCache.set(cacheKey, cached);
+    return structuredClone(cached);
+  }
+  if (useCache) cacheMisses++;
   let used = 0;
   const rows = new Map<
     Direction,
@@ -112,7 +159,7 @@ export function simulate(
       row.n++;
     }
   }
-  return {
+  const result = {
     ranking: Array.from(rows, ([action, v]) => ({
       action,
       value: v.n ? v.total / v.n : -Infinity,
@@ -122,6 +169,12 @@ export function simulate(
     })).sort((a, b) => b.value - a.value),
     transitions: used,
   };
+  if (useCache) {
+    if (planningCache.size >= PLANNING_CACHE_LIMIT)
+      planningCache.delete(planningCache.keys().next().value!);
+    planningCache.set(cacheKey, structuredClone(result));
+  }
+  return result;
 }
 export function emptyWorkspace(): Workspace {
   return { version: 1, lessons: [], skill: { ...DEFAULT_SKILL } };

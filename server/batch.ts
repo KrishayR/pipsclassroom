@@ -96,6 +96,7 @@ export function liveBatchRunner(
         startedAt: new Date().toISOString(),
         cycles: [],
         concurrency: protocol.concurrency,
+        verificationConcurrency: protocol.verificationConcurrency,
         timings: [],
       };
       lab = new Classroom(policy, undefined, protocol);

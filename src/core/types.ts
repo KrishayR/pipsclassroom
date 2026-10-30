@@ -202,6 +202,7 @@ export interface LabState {
 }
 export interface LiveBatch {
   concurrency?: number;
+  verificationConcurrency?: number;
   timings?: { stage: string; elapsedMs: number }[];
   status: "running" | "complete" | "stopped" | "error" | "interrupted";
   stage: string;

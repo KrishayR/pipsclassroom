@@ -30,6 +30,7 @@ test("configurable batches validate counts and save baseline, each cycle, and fi
     assert.equal(status.completed, count);
     assert.equal(status.total, count);
     assert.equal(status.concurrency, 3);
+    assert.equal(status.verificationConcurrency, 6);
     assert.equal(status.timings!.length, 1 + count * 4);
     assert.equal(status.baseline!.length, 3);
     assert.deepEqual(
@@ -50,6 +51,7 @@ test("configurable batches validate counts and save baseline, each cycle, and fi
     assert.equal(report.state.ledger.length, count);
     assert.equal(report.state.calls, 0);
     assert.equal(report.protocol.concurrency, 3);
+    assert.equal(report.protocol.verificationConcurrency, 6);
     assert.equal(
       liveBatchRunner(() => {}, { root }).status()!.completed,
       count,

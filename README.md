@@ -130,7 +130,7 @@ leaves the live gate unchanged. See [Gate calibration](docs/GATE_CALIBRATION.md)
 
 For unattended live testing, the Classroom page has a **Cycles** field and
 **Run [count] live cycles · $1 max** button. Independent students and
-verification rollouts run with up to three concurrent model requests while
+verification rollouts run with up to six concurrent model requests (three for student games) while
 learning cycles stay sequential. Baseline, stage checkpoints, cycle results,
 and timing records save locally without assistant supervision. See
 [Live batch guide](docs/LIVE_BATCH.md) for the fixed short-exam protocol,
