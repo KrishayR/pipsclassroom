@@ -281,6 +281,7 @@ export function modelPolicy(config: ModelConfig): Policy & {
         : null;
   return {
     mode: "model",
+    allowSkill: config.allowSkill !== false,
     modelId: config.model,
     keyStatus: () => pool.status(),
     usage: () => ({
@@ -537,7 +538,7 @@ export function modelPolicy(config: ModelConfig): Policy & {
           [
             {
               role: "system",
-              content: `You are ${arm === "solo" ? "a student reviewing your own work" : "a teacher reviewing a student"}. Write in friendly, plain language. Diagnose one likely weakness related to the practice focus. Tile spawns are random, so a bad outcome is not proof of a bad move: set uncertain=true when several explanations fit. Return JSON: {title,rule,trigger,exception,evidence,diagnosis,uncertain,skill}. Limits: title 100, rule 600, exception 250, diagnosis 700 characters. trigger must be exactly 'when the skill applies' (recommended: shown whenever the practice focus applies to a board), 'crowded boards' or 'always'. Students see moveFacts[direction].keeps[skill] for each move, so a rule about the focus skill is directly actionable. Your skill change must alter the planned move on at least one sample board, or it cannot change behaviour. evidence must contain IDs from supplied traces. skill uses exactly id='compare_escape_moves', name string, version=current+1, depth integer 1..4, spaceWeight 0..40, structureWeight 0..8, mergeWeight 0..8, riskWeight 20..300. Change only parameters justified by evidence. Advice is a hypothesis; an independent paired test decides acceptance.`,
+              content: `You are ${arm === "solo" ? "a student reviewing your own work" : "a teacher reviewing a student"}. Write in friendly, plain language. Diagnose one likely weakness related to the practice focus. Tile spawns are random, so a bad outcome is not proof of a bad move: set uncertain=true when several explanations fit. Return JSON: {title,rule,trigger,exception,evidence,diagnosis,uncertain,skill}. Limits: title 100, rule 600, exception 250, diagnosis 700 characters. trigger must be exactly 'when the skill applies' (recommended: shown whenever the practice focus applies to a board), 'crowded boards' or 'always'. Students see moveFacts[direction].keeps[skill] for each move, so a rule about the focus skill is directly actionable. ${config.allowSkill === false ? "The sampled planner is OFF for all decisions and tests. Teach through the written rule and exception only. Copy currentSkill unchanged into skill; parameter adjustments cannot help this experiment." : "Your skill change must alter the planned move on at least one sample board, or it cannot change behaviour. skill uses exactly id='compare_escape_moves', name string, version=current+1, depth integer 1..4, spaceWeight 0..40, structureWeight 0..8, mergeWeight 0..8, riskWeight 20..300. Change only parameters justified by evidence."} evidence must contain IDs from supplied traces. Advice is a hypothesis; an independent paired test decides acceptance.`,
             },
             {
               role: "user",
@@ -578,7 +579,7 @@ export function modelPolicy(config: ModelConfig): Policy & {
             }
             // Raised only while a correction is still available: a no-impact draft on
             // the last attempt goes to verification, with its sensitivity recorded.
-            return attempt === 0
+            return attempt === 0 && config.allowSkill !== false
               ? (options?.check?.({
                   skill: v.skill,
                   trigger: v.trigger,
@@ -627,7 +628,10 @@ export function modelPolicy(config: ModelConfig): Policy & {
           exception: p.exception,
           evidence: p.evidence,
           focus: choice?.focus,
-          skill: p.skill,
+          skill:
+            config.allowSkill === false
+              ? structuredClone(student.workspace.skill)
+              : p.skill,
           source:
             arm === "solo"
               ? "Self-review"

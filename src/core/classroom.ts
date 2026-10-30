@@ -148,6 +148,7 @@ export class Classroom {
     this.state.focus ??= null;
     this.state.mode = policy.mode;
     this.state.modelId = policy.modelId ?? null;
+    this.state.plannerEnabled = policy.allowSkill !== false;
     if (this.state.busy)
       this.state.error =
         "The previous operation was interrupted. Its recorded results are preserved.";
@@ -626,16 +627,19 @@ export class Classroom {
         peer,
         choice,
         {
-          check: (draft) => {
-            try {
-              validateSkill(draft.skill);
-            } catch {
-              return null;
-            }
-            return sensitivity(draft).changed
-              ? null
-              : `This change would not alter the planned move on any of ${samples.length} sample boards for "${choice.name}", so it cannot change behaviour. Propose a larger change that the evidence supports, or a different parameter.`;
-          },
+          check:
+            this.policy.allowSkill === false
+              ? undefined
+              : (draft) => {
+                  try {
+                    validateSkill(draft.skill);
+                  } catch {
+                    return null;
+                  }
+                  return sensitivity(draft).changed
+                    ? null
+                    : `This change would not alter the planned move on any of ${samples.length} sample boards for "${choice.name}", so it cannot change behaviour. Propose a larger change that the evidence supports, or a different parameter.`;
+                },
         },
       );
       this.usage(proposed.tokens, proposed.calls, 0);
@@ -658,7 +662,8 @@ export class Classroom {
         ...l,
         studentId: student.id,
         focus: choice.focus,
-        sensitivity: sensitivity(l),
+        sensitivity:
+          this.policy.allowSkill === false ? undefined : sensitivity(l),
         id: id(),
         status: "candidate" as const,
         createdAt: new Date().toISOString(),

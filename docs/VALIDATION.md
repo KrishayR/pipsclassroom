@@ -1,5 +1,14 @@
 # Validation record
 
+## October 30, 2026 — Planner-free browser runs
+
+All 65 tests, TypeScript checking and the production build pass. A fake-provider
+Classroom Session verifies that all decision stages omit sampled skill rankings,
+record zero planner transitions, preserve strategy weights and send planner-free
+instructions to original/revision teachers. Batch and classroom records identify
+the planner condition. Local ignored configuration disables the planner; no
+paid benchmark was started. See [planner-free runs](PLANNER_FREE.md).
+
 ## October 30, 2026 — Classroom Session and Individual Cycles
 
 All 64 tests, TypeScript checking and the production build pass. A frozen

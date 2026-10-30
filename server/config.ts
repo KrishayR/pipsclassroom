@@ -63,6 +63,7 @@ export function modelFromEnv(
     keys,
     baseUrl: process.env.MODEL_BASE_URL || "https://api.meta.ai/v1",
     model: modelId(),
+    allowSkill: process.env.MODEL_USE_PLANNER !== "false",
     tokenBudget: num("MODEL_TOKEN_BUDGET", 100000),
     maxCompletionTokens: num("MODEL_MAX_COMPLETION_TOKENS", 4000),
     reasoningEffort: process.env.MODEL_REASONING_EFFORT || "low",

@@ -91,6 +91,7 @@ const server = createServer(async (req, res) => {
       ok: true,
       modelAvailable: !!real,
       modelId: real?.modelId ?? null,
+      plannerEnabled: real?.allowSkill !== false,
       storage: "SQLite",
       tokenBudget: Number(process.env.MODEL_TOKEN_BUDGET || 100000),
       // Fingerprints and estimated spend only; keys never leave the server.

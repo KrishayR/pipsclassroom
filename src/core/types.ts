@@ -191,6 +191,7 @@ export interface Exam {
   completedAt?: string;
 }
 export interface LabState {
+  plannerEnabled?: boolean;
   pendingCandidates?: { studentId: string; lesson: Lesson }[];
   sessionTeaching?: {
     frozenWorkspaces: Record<string, Workspace>;
@@ -220,6 +221,7 @@ export interface LabState {
   comparisons: Comparison[];
 }
 export interface LiveBatch {
+  plannerEnabled?: boolean;
   kind?: "individual" | "classroom";
   concurrency?: number;
   verificationConcurrency?: number;
@@ -243,6 +245,7 @@ export interface LiveBatch {
   }[];
 }
 export interface Policy {
+  allowSkill?: boolean;
   mode: Mode;
   modelId?: string;
   decide(
