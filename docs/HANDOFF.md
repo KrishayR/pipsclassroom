@@ -1,8 +1,30 @@
-# Handoff — October 29, 2026
+# Handoff — October 30, 2026
 
-## Latest working branch and next chat
+## Latest update (Oct 30): lessons can now change behaviour
 
-Continue on `codex/consequencelab-work`. The October 29 update below takes
+Work on `main` (the `codex/consequencelab-work` branch is merged). See
+[Lesson influence](LESSON_INFLUENCE.md):
+
+- Lessons use a new trigger, `when the skill applies`. Students get per-move
+  facts (`moveFacts`) and follow an applicable verified lesson unless the move
+  is clearly dangerous. A free impact check before verification asks the
+  teacher once for a stronger change when a lesson would change nothing. The
+  gate is unchanged. Focused practice is unchanged and is the first step of
+  the tested flow.
+- Live result: Muse now follows the lesson (play changed on 3 of 6 targeted
+  boards), but the corner-pinning lesson lowered short-rollout utility and was
+  rejected. No lesson has been accepted live yet.
+- 41 tests and the build pass. Total live spend on the original key is about
+  $0.13.
+- Next: decide, before any study, whether 4-move model rollouts are too short
+  to value structure lessons (a protocol change, made in advance and never
+  after seeing exam results). Then freeze, seal new seeds, and run a small
+  matched study (for example adaptive vs classroom plus baseline, 2
+  repetitions). Report rejected and negative outcomes.
+
+## Earlier update (Oct 29)
+
+The `codex/consequencelab-work` branch referred to below has since been merged into `main`. The October 29 update below takes
 precedence over the historical October 28 plan retained later in this file.
 Do not launch that older large study as the next step: the current preference
 is to keep Muse spending very small.

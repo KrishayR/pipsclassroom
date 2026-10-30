@@ -1,7 +1,46 @@
 import { analyze, hash } from "./engine";
 import { activeLessons, simulate } from "./skills";
-import { focusName, focusOutcome } from "./curriculum";
-import type { Policy, ToolEvent } from "./types";
+import { focusName, focusOutcome, moveFacts } from "./curriculum";
+import type { Board, Policy, ToolEvent, Workspace } from "./types";
+// The move a student plans without a model: the best-ranked move that keeps the skill
+// of every applicable saved lesson, or the top-ranked move when none does.
+export function plannedMove(board: Board, workspace: Workspace, seed: number) {
+  const result = simulate(board, workspace.skill, seed);
+  const lessons = activeLessons(workspace, board).filter((l) => l.focus);
+  const facts = moveFacts(board);
+  // Same exception the model is given: never follow a lesson into a clearly dangerous
+  // move (very few options left, or a clearly higher sampled loss rate).
+  const topLoss = result.ranking[0]?.lossRate ?? 0;
+  const kept = result.ranking.find(
+    (r) =>
+      lessons.every((l) => facts[r.action]?.keeps[l.focus!]) &&
+      (facts[r.action]?.legalMovesAfterSlide ?? 0) >= 2 &&
+      r.lossRate <= topLoss + 0.25,
+  );
+  const best = kept ?? result.ranking[0];
+  return {
+    action: best?.action,
+    lessonId: kept && lessons.length ? lessons[0].id : undefined,
+    result,
+    lessons,
+  };
+}
+// How many sample boards a candidate workspace plans a different move on. Used before
+// verification to catch candidates that cannot change behaviour.
+export function lessonSensitivity(
+  current: Workspace,
+  candidate: Workspace,
+  boards: { board: Board; seed: number }[],
+) {
+  return {
+    boards: boards.length,
+    changed: boards.filter(
+      (b) =>
+        plannedMove(b.board, current, b.seed).action !==
+        plannedMove(b.board, candidate, b.seed).action,
+    ).length,
+  };
+}
 export function simulationPolicy(): Policy {
   return {
     mode: "simulation",
@@ -14,37 +53,38 @@ export function simulationPolicy(): Policy {
         return result;
       };
       tool("observe_board", {}, () => observation);
-      const lessons = tool(
-        "retrieve_lessons",
-        { context: observation.empty <= 6 ? "crowded" : "open" },
-        () =>
-          activeLessons(workspace, observation.board).map((l) => ({
-            id: l.id,
-            rule: l.rule,
-          })),
-      );
       tool("analyze_board", {}, () => analyze(observation.board));
-      const result = tool(
+      const plan = tool(
         "run_skill",
         {
           skill_id: workspace.skill.id,
           version: workspace.skill.version,
           depth: workspace.skill.depth,
         },
-        () => simulate(observation.board, workspace.skill, seed),
+        () => plannedMove(observation.board, workspace, seed),
       );
-      const best = result.ranking[0];
-      if (!best) throw new Error("No legal moves.");
+      tool(
+        "retrieve_lessons",
+        { context: observation.empty <= 6 ? "crowded" : "open" },
+        () => plan.lessons.map((l) => ({ id: l.id, rule: l.rule })),
+      );
+      if (!plan.action) throw new Error("No legal moves.");
+      const top = plan.result.ranking[0].action;
+      const name = (d: string) => d[0].toUpperCase() + d.slice(1);
       return {
-        action: best.action,
-        summary: `I tried ${result.ranking.length} possible directions. ${best.action[0].toUpperCase() + best.action.slice(1)} looked most promising${lessons.length ? " with my saved lessons in mind" : ""}. You can open the tool results to see what I checked.`,
+        action: plan.action,
+        lessonId: plan.lessonId,
+        summary:
+          plan.action !== top
+            ? `${name(top)} ranked highest, but my saved lesson points to ${plan.action}, so I followed the lesson.`
+            : `I tried ${plan.result.ranking.length} possible directions. ${name(plan.action)} looked most promising${plan.lessons.length ? " and fits my saved lessons" : ""}. You can open the tool results to see what I checked.`,
         tools,
         tokens: 0,
         calls: 0,
-        simulations: result.transitions,
+        simulations: plan.result.transitions,
       };
     },
-    async propose(student, arm, peer, choice) {
+    async propose(student, arm, peer, choice, options) {
       const traces = student.traces.slice(-100);
       if (!traces.length)
         throw new Error("Practice first so there is evidence to review.");
@@ -98,6 +138,15 @@ export function simulationPolicy(): Policy {
                 : (skill[key] + peerLesson.skill[key]) / 2;
         else nudge(Math.max(1, peerTrace.after.empty - peerTrace.before.empty));
       }
+      // If the change would not alter any planned move on the sample boards, strengthen
+      // it (within bounds) up to three times; verification still decides.
+      for (
+        let n = 0;
+        n < 3 &&
+        options?.check?.({ skill, trigger: "when the skill applies", focus });
+        n++
+      )
+        nudge(2 ** (n + 1));
       const name = focusName(focus);
       const source =
         arm === "solo"
@@ -128,7 +177,7 @@ export function simulationPolicy(): Policy {
       return {
         lesson: {
           ...lesson,
-          trigger: focus === "space" ? "crowded boards" : "always",
+          trigger: "when the skill applies",
           exception:
             "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
           source,

@@ -1,7 +1,8 @@
-import { analyze, draw, hash } from "./engine";
+import { analyze, draw, hash, legalMoves, slide } from "./engine";
 import type {
   Arm,
   Board,
+  Direction,
   Focus,
   FocusChoice,
   Observation,
@@ -49,6 +50,43 @@ export function focusOutcome(
   if (focus === "space") return after.empty >= before.empty;
   if (focus === "structure") return corner(after.board);
   return after.legal.length >= 3;
+}
+// The same checks applied to a candidate move before the tile spawn, so a student
+// (or a lesson) can see which moves would keep a skill. Spawns are never revealed.
+export function moveFacts(board: Board) {
+  const empty = board.filter((v) => !v).length;
+  return Object.fromEntries(
+    legalMoves(board).map((d) => {
+      const s = slide(board, d);
+      const emptyAfterSlide = s.board.filter((v) => !v).length;
+      return [
+        d,
+        {
+          scoreGain: s.gain,
+          emptyAfterSlide,
+          largestStaysInCorner: corner(s.board),
+          legalMovesAfterSlide: legalMoves(s.board).length,
+          keeps: {
+            // A spawn fills one cell, so room is kept only if the slide merged.
+            space: emptyAfterSlide - 1 >= empty,
+            structure: corner(s.board),
+            planning: legalMoves(s.board).length >= 3,
+          } as Record<Focus, boolean>,
+        },
+      ];
+    }),
+  ) as Partial<
+    Record<
+      Direction,
+      {
+        scoreGain: number;
+        emptyAfterSlide: number;
+        largestStaysInCorner: boolean;
+        legalMovesAfterSlide: number;
+        keeps: Record<Focus, boolean>;
+      }
+    >
+  >;
 }
 export type SkillEstimates = Record<
   Focus,

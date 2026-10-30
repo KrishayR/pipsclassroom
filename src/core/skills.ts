@@ -1,5 +1,6 @@
 import { analyze, fromBoard, legalMoves, move, draw, hash } from "./engine";
-import type { Board, Direction, Skill, Workspace } from "./types";
+import { focusApplies } from "./curriculum";
+import type { Board, Direction, Lesson, Skill, Workspace } from "./types";
 export const DEFAULT_SKILL: Skill = {
   id: "compare_escape_moves",
   name: "Compare possible moves",
@@ -34,12 +35,21 @@ export function validateSkill(value: unknown): Skill {
     throw new Error("Depth and version must be integers.");
   return { ...s };
 }
+export const LESSON_TRIGGERS = [
+  "always",
+  "crowded boards",
+  // Uses the same definition as the curriculum's skill checks for the lesson's focus.
+  "when the skill applies",
+] as const;
+export function lessonApplies(lesson: Lesson, board: Board) {
+  if (lesson.trigger === "always") return true;
+  if (lesson.trigger === "when the skill applies")
+    return !!lesson.focus && focusApplies(lesson.focus, board);
+  return analyze(board).empty <= 6;
+}
 export function activeLessons(workspace: Workspace, board: Board) {
-  const crowded = analyze(board).empty <= 6;
   return workspace.lessons
-    .filter(
-      (l) => l.status === "verified" && (l.trigger === "always" || crowded),
-    )
+    .filter((l) => l.status === "verified" && lessonApplies(l, board))
     .slice(-3);
 }
 function utility(board: Board, gain: number, s: Skill) {

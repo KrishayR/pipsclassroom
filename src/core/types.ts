@@ -58,6 +58,8 @@ export interface Lesson {
   source: string;
   evidence: string[];
   focus?: Focus;
+  // Sample boards (separate from verification) where this lesson changes the planned move.
+  sensitivity?: { boards: number; changed: number };
   status: "candidate" | "verified" | "rejected" | "retired";
   skill: Skill;
   verification?: Verification;
@@ -125,6 +127,7 @@ export interface VerificationRow {
   candidate: number;
   delta: number;
   errors?: number;
+  cited?: number;
 }
 export interface Verification {
   rows: VerificationRow[];
@@ -210,6 +213,12 @@ export interface Policy {
     arm: Arm,
     peer?: Student,
     focus?: FocusChoice,
+    options?: {
+      // Returns a problem when a draft lesson would change no planned move.
+      check?: (
+        draft: Pick<Lesson, "skill" | "trigger" | "focus">,
+      ) => string | null;
+    },
   ): Promise<{
     lesson: Omit<Lesson, "id" | "status" | "createdAt">;
     messages: {
