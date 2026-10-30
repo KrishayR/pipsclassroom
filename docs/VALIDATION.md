@@ -1,5 +1,13 @@
 # Validation record
 
+## October 30, 2026 — Lesson versus chance button
+
+All 70 tests, TypeScript checking and the production build pass. Offline checks
+cover frozen historical workspaces, the matched two-control design, fresh seeds,
+18 saved games, complete move trajectories, planner-free policy enforcement,
+the six-game limit and stopped partial records without a complete summary.
+No paid check was started. See [experiment design](LESSON_CHANCE_CHECK.md).
+
 ## October 30, 2026 — Integrate conditional lessons with Classroom Sessions
 
 Merged main's conditional lesson limits, recommendation logic, calibration probes

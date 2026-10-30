@@ -12,6 +12,7 @@ import {
 } from "./config";
 import type { Arm, LabState } from "../src/core/types";
 import { liveBatchRunner } from "./batch";
+import { lessonCheckRunner } from "./lesson-check";
 loadEnv();
 mkdirSync("data", { recursive: true });
 const db = new DatabaseSync(resolve("data/classroom.sqlite"));
@@ -23,6 +24,7 @@ const usageOffsets = new Map<string, { tokens: number; calls: number }>();
 const classes = new Map<string, Classroom>();
 const clients = new Map<string, Set<import("node:http").ServerResponse>>();
 const batch = liveBatchRunner(() => classes.get("model")?.emit());
+const lessonCheck = lessonCheckRunner(() => classes.get("model")?.emit());
 for (const policy of [simulationPolicy(), ...(real ? [real] : [])]) {
   const stored = db
     .prepare("SELECT state FROM sessions WHERE mode=?")
@@ -63,6 +65,7 @@ function publicState(state: LabState) {
   const batchState = state.mode === "model" ? batch.state() : undefined;
   const safe = structuredClone(batchState ?? state);
   if (state.mode === "model") safe.liveBatch = batch.status();
+  if (state.mode === "model") safe.lessonCheck = lessonCheck.status();
   safe.students.forEach((s) => {
     s.game.rng = 0;
     s.game.seed = 0;
@@ -124,6 +127,7 @@ const server = createServer(async (req, res) => {
       state: {
         ...exported.state,
         ...(mode === "model" ? { liveBatch: batch.status() } : {}),
+        ...(mode === "model" ? { lessonCheck: lessonCheck.status() } : {}),
         tokens: publicState(lab.state).tokens,
         calls: publicState(lab.state).calls,
       },
@@ -155,6 +159,7 @@ const server = createServer(async (req, res) => {
     const input = JSON.parse(body || "{}");
     const { action } = input;
     if (action === "stop") {
+      if (mode === "model") lessonCheck.stop();
       if (mode === "model" && batch.status()?.status === "running")
         batch.stop();
       lab.stop();
@@ -162,13 +167,29 @@ const server = createServer(async (req, res) => {
     }
     if (lab.state.busy)
       return send(409, { error: "An operation is already running." });
+    if (mode === "model" && lessonCheck.status()?.status === "running")
+      return send(409, {
+        error:
+          "The lesson test is running. Stop it before starting other live actions.",
+      });
     if (mode === "model" && batch.status()?.status === "running")
       return send(409, {
         error:
           "The live batch is running. Stop it before starting other live actions.",
       });
     let operation: Promise<void> | undefined;
-    if (action === "live-batch") {
+    if (action === "lesson-check") {
+      if (mode !== "model")
+        throw new Error("Select Muse mode for the lesson comparison.");
+      operation = lessonCheck.start().catch((error) => {
+        lab.state.error =
+          error instanceof Error
+            ? error.message
+            : "Lesson check failed to start.";
+        lab.emit();
+        throw error;
+      });
+    } else if (action === "live-batch") {
       if (mode !== "model")
         throw new Error("Select live model mode for the Muse batch.");
       if (
@@ -210,6 +231,7 @@ server.listen(port, "127.0.0.1", () =>
   ),
 );
 process.on("SIGINT", () => {
+  lessonCheck.stop();
   batch.stop();
   for (const lab of classes.values()) lab.stop();
   server.close();

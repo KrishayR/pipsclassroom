@@ -482,7 +482,11 @@ export default function App() {
       setPending(false);
     }
   };
-  const busy = state.busy || pending || state.liveBatch?.status === "running";
+  const busy =
+    state.busy ||
+    pending ||
+    state.liveBatch?.status === "running" ||
+    state.lessonCheck?.status === "running";
   const student =
     state.students.find((s) => s.id === selected) ?? state.students[0];
   const traces = state.students.flatMap((s) => s.traces);
@@ -867,6 +871,12 @@ export default function App() {
                           >
                             Individual Cycles · {batchCycles || "…"} · $1 max
                           </button>
+                          <button
+                            className="secondary session-launch"
+                            onClick={() => run("lesson-check")}
+                          >
+                            Test lesson vs chance · $1 max
+                          </button>
                         </>
                       )}
                       <button
@@ -905,6 +915,55 @@ export default function App() {
                   {state.liveBatch.spentUsd.toFixed(4)} used. Results:{" "}
                   {state.liveBatch.directory}/status.json
                 </p>
+              )}
+              {mode === "model" && state.lessonCheck && (
+                <details open={state.lessonCheck.status === "running"}>
+                  <summary>
+                    {state.lessonCheck.stage} · $
+                    {state.lessonCheck.spentUsd.toFixed(4)} used
+                  </summary>
+                  <p className="fine">
+                    Lin’s retained lesson versus two unchanged controls. Planner
+                    OFF · 3 fresh seeds × 2 repeats × 3 conditions · up to 50
+                    moves/game. Results save automatically. This is an
+                    exploratory check, not proof of learning.
+                  </p>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Seed</th>
+                        <th>Repeat</th>
+                        <th>Condition</th>
+                        <th>Score</th>
+                        <th>Moves</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {state.lessonCheck.trials.map((t) => (
+                        <tr
+                          key={`${t.row.seed}:${t.repetition}:${t.condition}`}
+                        >
+                          <td>{t.row.seed}</td>
+                          <td>{t.repetition + 1}</td>
+                          <td>{t.condition}</td>
+                          <td>{t.row.score}</td>
+                          <td>{t.row.moves}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {state.lessonCheck.summary && (
+                    <p>
+                      Lesson minus controls:{" "}
+                      {state.lessonCheck.summary.lessonMeanDelta.toFixed(1)}{" "}
+                      points. Unchanged-control mean absolute difference:{" "}
+                      {state.lessonCheck.summary.controlMeanAbsoluteDelta.toFixed(
+                        1,
+                      )}{" "}
+                      points.
+                    </p>
+                  )}
+                </details>
               )}
               {mode === "model" && !!state.liveBatch?.cycles.length && (
                 <details>

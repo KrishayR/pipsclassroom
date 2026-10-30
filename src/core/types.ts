@@ -199,6 +199,7 @@ export interface Exam {
   completedAt?: string;
 }
 export interface LabState {
+  lessonCheck?: LessonCheck;
   plannerEnabled?: boolean;
   pendingCandidates?: { studentId: string; lesson: Lesson }[];
   sessionTeaching?: {
@@ -227,6 +228,38 @@ export interface LabState {
   focus?: FocusChoice | null;
   modelId: string | null;
   comparisons: Comparison[];
+}
+export interface LessonCheck {
+  status: "running" | "complete" | "stopped" | "error" | "interrupted";
+  stage: string;
+  directory: string;
+  completed: number;
+  total: number;
+  budgetUsd: number;
+  spentUsd: number;
+  startedAt: string;
+  completedAt?: string;
+  protocol: {
+    plannerEnabled: false;
+    seeds: number[];
+    repeats: number;
+    cap: number;
+    source: string;
+    student: string;
+    baseline: Workspace;
+    candidate: Workspace;
+    primary: string;
+  };
+  trials: {
+    condition: "control-a" | "control-b" | "lesson";
+    repetition: number;
+    row: ExamRow;
+  }[];
+  summary?: {
+    lessonMeanDelta: number;
+    controlMeanDelta: number;
+    controlMeanAbsoluteDelta: number;
+  };
 }
 export interface LiveBatch {
   plannerEnabled?: boolean;
