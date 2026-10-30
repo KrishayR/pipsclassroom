@@ -106,7 +106,7 @@ test("lesson comparison freezes the source, saves paired controls and full traje
       );
       assert.ok(
         rows.every(
-          (t) => t.row.trajectory!.length === t.row.moves && t.row.moves <= 50,
+          (t) => t.row.trajectory!.length === t.row.moves && t.row.moves <= 100,
         ),
       );
     }

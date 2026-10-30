@@ -86,6 +86,8 @@ test("planner-free live sessions omit all sampled rankings, preserve strategy an
   const root = mkdtempSync(join(tmpdir(), "cl-no-planner-"));
   const batch = liveBatchRunner(() => {}, {
     root,
+    practiceMoves: 0,
+    examMoves: 25,
     createPolicy: () => policy,
     createPool: () => keyPool({ keys: ["fixture"], limitUsd: 1, prices: null }),
     getPrices: () => ({ input: 0.1, output: 0.2 }),

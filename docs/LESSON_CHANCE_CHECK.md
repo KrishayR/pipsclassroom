@@ -1,5 +1,9 @@
 # Test lesson vs chance
 
+Current version uses 100 moves/game, source-specific fresh seeds, a retained
+student notebook (Lin preferred), and a six-million-token ceiling. The $1 cap
+and matched-control design remain. See [current protocol](CONTEXTUAL_REVIEW.md).
+
 The live Classroom button runs a fixed, exploratory diagnostic for Lin's retained
 lesson from the latest completed planner-free batch. It does not teach new lessons
 or replace the classroom. It refuses to start without a retained lesson and empty

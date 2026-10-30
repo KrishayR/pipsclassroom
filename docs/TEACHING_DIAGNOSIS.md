@@ -1,5 +1,8 @@
 # Conservative teaching diagnosis
 
+Historical design: the automatic cutoff and two-correction requirement below
+have been removed. See [contextual review](CONTEXTUAL_REVIEW.md) for current live behavior.
+
 Live browser/batch protocols enable evidenceBasedTeaching. Existing directly
 constructed/CLI study protocols keep the previous behavior unless explicitly
 enabled; compare results only after declaring this protocol change.

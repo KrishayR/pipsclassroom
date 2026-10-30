@@ -56,6 +56,7 @@ export interface LessonLimits {
   maxGainLoss?: number;
 }
 export interface Lesson {
+  intervention?: "preserve-focus" | "contextual";
   rejectionReason?: string;
   id: string;
   studentId?: string;
@@ -264,6 +265,7 @@ export interface LessonCheck {
   };
 }
 export interface LiveBatch {
+  design?: { practiceMoves: number; examMoves: number };
   plannerEnabled?: boolean;
   kind?: "individual" | "classroom";
   concurrency?: number;

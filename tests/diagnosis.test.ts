@@ -117,7 +117,7 @@ test("unavoidable space loss is not a correctable failure and duplicate boards d
       }
   assert.ok(found);
 });
-test("review without recurring corrections abstains before paid teacher calls", async () => {
+test("review without recurring corrections still reaches the teacher and recorded peer", async () => {
   let proposed = 0;
   const base = simulationPolicy();
   const lab = new Classroom(
@@ -125,6 +125,7 @@ test("review without recurring corrections abstains before paid teacher calls", 
       ...base,
       async propose(...args) {
         proposed++;
+        assert.ok(args[2], "a recorded classmate must reach the review");
         return base.propose(...args);
       },
     },
@@ -133,12 +134,11 @@ test("review without recurring corrections abstains before paid teacher calls", 
   );
   await lab.diagnose();
   await lab.review("student-1");
-  assert.equal(proposed, 0);
-  assert.equal(lab.state.candidate, null);
-  assert.ok(lab.state.students[0].teachingNote);
-  assert.equal(lab.state.trainingRound, 1);
+  assert.equal(proposed, 1);
+  assert.ok(lab.state.candidate);
+  assert.equal(lab.state.students[0].teachingNote, undefined);
 });
-test("supported corrections can queue a lesson, but unsupported evidence cannot", async () => {
+test("valid advice can be tested without a minimum correction count", async () => {
   for (const supported of [true, false]) {
     const base = simulationPolicy();
     const lab = labWith({
@@ -166,10 +166,8 @@ test("supported corrections can queue a lesson, but unsupported evidence cannot"
       },
     });
     await lab.review("student-1");
-    assert.equal(!!lab.state.candidate, supported);
+    assert.ok(lab.state.candidate);
     assert.equal(lab.state.error, null);
-    if (!supported)
-      assert.match(lab.state.ledger[0].rejectionReason!, /not rollout-tested/);
   }
 });
 test("teacher sees verified alternatives and may return no lesson without skill parameters", async () => {
@@ -219,6 +217,8 @@ test("both batch modes finish exams and save abstention notes when no candidate 
     const base = simulationPolicy();
     const batch = liveBatchRunner(() => {}, {
       root,
+      practiceMoves: 0,
+      examMoves: 25,
       createPolicy: () => ({
         ...base,
         async propose() {

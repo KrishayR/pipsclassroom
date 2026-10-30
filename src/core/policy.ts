@@ -14,7 +14,9 @@ import type {
 // 0.25 above the top move's. Otherwise the top-ranked move stands.
 export function plannedMove(board: Board, workspace: Workspace, seed: number) {
   const result = simulate(board, workspace.skill, seed);
-  const lessons = activeLessons(workspace, board).filter((l) => l.focus);
+  const lessons = activeLessons(workspace, board).filter(
+    (l) => l.focus && l.intervention !== "contextual",
+  );
   const top = result.ranking[0];
   const objecting = top
     ? lessons.filter((l) => lessonObjects(l, board, top.action))

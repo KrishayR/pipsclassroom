@@ -236,7 +236,13 @@ function LessonCard({
         <b>When</b> {lesson.trigger}
         <br />
         <b>Exception</b> {lesson.exception}
-        {lesson.limits && (
+        {lesson.intervention === "contextual" && (
+          <p className="fine">
+            Contextual advice · Muse weighs the rule and exception; a passed
+            skill check does not block it.
+          </p>
+        )}
+        {lesson.limits && lesson.intervention !== "contextual" && (
           <>
             <br />
             <b>Only steps in</b> when a move breaks the skill; recommends moves
@@ -904,7 +910,7 @@ export default function App() {
               </div>
               <p className="fine">
                 {mode === "model" &&
-                  "Classroom Session teaches Ada, Lin and Sam together: shared focused practice, separate feedback and checks, then one exam per student. Peer evidence is frozen before teaching; new lessons can help classmates next session. Individual Cycles teaches one student at a time in Ada → Lin → Sam order, with practice and exams each cycle. Count sets how many sessions or individual cycles to run (1–100). Both use live Muse, at most six requests at once, one revision per rejected lesson, and the same verification thresholds. All exam moves save automatically. Each batch starts a fresh classroom and has a $1 estimated cap; keep the server running. "}
+                  "Classroom Session teaches Ada, Lin and Sam together: up to 100 normal practice moves per student, focused exercises, separate peer/teacher reviews and checks, then up to 100 exam moves per student. Peer evidence is frozen before teaching; new lessons can help classmates next session. Individual Cycles teaches one student at a time in Ada → Lin → Sam order, with practice and exams each cycle. Count sets how many sessions or individual cycles to run (1–100). Both use live Muse, at most six requests at once, one revision per rejected lesson, and the same verification thresholds. All exam moves save automatically. Each batch starts a fresh classroom and has a $1 estimated cap; keep the server running. "}
                 Focused practice gives every student short exercises in all
                 three skills, so reviews have relevant examples to discuss.
                 Their regular games and saved notes stay in place.
@@ -926,10 +932,11 @@ export default function App() {
                     {state.lessonCheck.spentUsd.toFixed(4)} used
                   </summary>
                   <p className="fine">
-                    Lin’s retained lesson versus two unchanged controls. Planner
-                    OFF · 3 fresh seeds × 2 repeats × 3 conditions · up to 50
-                    moves/game. Results save automatically. This is an
-                    exploratory check, not proof of learning.
+                    {state.lessonCheck.protocol.student}’s saved advice versus
+                    two unchanged controls. Planner OFF · 3 fresh seeds × 2
+                    repeats × 3 conditions · up to 50 moves/game. Results save
+                    automatically. This is an exploratory check, not proof of
+                    learning.
                   </p>
                   <table>
                     <thead>

@@ -12,6 +12,8 @@ test("configurable batches validate counts and save baseline, each cycle, and fi
     const root = mkdtempSync(join(tmpdir(), "cl-batch-"));
     const batch = liveBatchRunner(() => {}, {
       root,
+      practiceMoves: 0,
+      examMoves: 25,
       createPolicy: simulationPolicy,
       createPool: () =>
         keyPool({ keys: ["test-only"], limitUsd: 1, prices: null }),

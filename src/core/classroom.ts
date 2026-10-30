@@ -13,9 +13,6 @@ import {
   LESSON_TRIGGERS,
   mergeLessons,
   validateLimits,
-  lessonMoves,
-  lessonObjects,
-  lessonApplies,
   validateSkill,
 } from "./skills";
 import { decisionSeed, lessonSensitivity } from "./policy";
@@ -27,7 +24,6 @@ import {
   focusOutcome,
   skillEstimates,
   diagnoseMove,
-  correctionEvidence,
 } from "./curriculum";
 import {
   DEFAULT_MOVE_CAP,
@@ -83,23 +79,6 @@ export interface ClassroomOptions {
 }
 const clone = <T>(v: T): T => structuredClone(v);
 const id = () => crypto.randomUUID();
-function supportsCorrections(
-  draft: Pick<Lesson, "skill" | "trigger" | "focus" | "limits">,
-  traces: Student["traces"],
-  focus: FocusChoice["focus"],
-  evidence?: string[],
-) {
-  const lesson = { ...draft, focus, status: "verified" } as Lesson;
-  return (
-    correctionEvidence(traces, focus).filter(
-      (t) =>
-        (!evidence || evidence.includes(t.id)) &&
-        lessonApplies(lesson, t.before.board) &&
-        lessonObjects(lesson, t.before.board, t.action) &&
-        lessonMoves(lesson, t.before.board).length,
-    ).length >= 2
-  );
-}
 export function initialState(mode: Policy["mode"] = "simulation"): LabState {
   const students = ["Ada", "Lin", "Sam"].map((name, i): Student => ({
     id: `student-${i + 1}`,
@@ -604,7 +583,13 @@ export class Classroom {
             (t) => diagnoseMove(focus, t.before, t.action).kind === "kept",
           ).length;
           estimates[focus] = {
-            attempts: kept + correctionEvidence(student.traces, focus).length,
+            attempts:
+              kept +
+              student.traces.filter((t) =>
+                ["tradeoff", "potential-correction"].includes(
+                  diagnoseMove(focus, t.before, t.action).kind,
+                ),
+              ).length,
             successes: kept,
           };
         }
@@ -624,7 +609,6 @@ export class Classroom {
       );
       this.emit();
       await this.exercise(student, choice);
-      const corrections = correctionEvidence(student.traces, choice.focus);
       const skip = (reason: string) => {
         this.state.trainingRound++;
         student.teachingNote = reason;
@@ -635,25 +619,24 @@ export class Classroom {
           reason,
         );
       };
-      if (this.options.evidenceBasedTeaching && corrections.length < 2) {
-        skip(
-          `Only ${corrections.length} distinct practice boards show a potentially correctable ${choice.name.toLowerCase()} choice. Two are required before proposing advice; passed checks, unavoidable outcomes and tradeoffs do not establish a recurring weakness.`,
-        );
-        return;
-      }
       // A peer is chosen for relevant recorded evidence on this focus, not for score.
       const passed = (s: Student) =>
         s.traces.filter(
           (t) => focusOutcome(choice.focus, t.before, t.after) === true,
         ).length;
-      const peer = eligible
-        .filter((s) => s.id !== student.id && passed(s) > 0)
-        .sort(
-          (a, b) =>
-            b.workspace.lessons.filter((l) => l.focus === choice.focus).length -
-              a.workspace.lessons.filter((l) => l.focus === choice.focus)
-                .length || passed(b) - passed(a),
-        )[0];
+      const peer =
+        eligible
+          .filter((s) => s.id !== student.id && passed(s) > 0)
+          .sort(
+            (a, b) =>
+              b.workspace.lessons.filter((l) => l.focus === choice.focus)
+                .length -
+                a.workspace.lessons.filter((l) => l.focus === choice.focus)
+                  .length || passed(b) - passed(a),
+          )[0] ??
+        (this.options.evidenceBasedTeaching
+          ? eligible.find((s) => s.id !== student.id)
+          : undefined);
       // Sample boards for the sensitivity check: reachable boards for this focus, drawn
       // from their own pool so the candidate is never tuned on verification boards.
       const samples = snapshotPool(
@@ -684,11 +667,7 @@ export class Classroom {
         {
           evidenceBased: this.options.evidenceBasedTeaching,
           check: this.options.evidenceBasedTeaching
-            ? (draft) => {
-                return supportsCorrections(draft, student.traces, choice.focus)
-                  ? null
-                  : "This lesson cannot intervene on two demonstrated practice choices within its trigger and limits. Narrow to supported focus-preservation corrections, or return noLessonReason. Tie-breaking among already-kept moves is unsupported.";
-              }
+            ? () => null
             : this.policy.usesHelper === false
               ? () => null
               : (draft) => {
@@ -716,25 +695,6 @@ export class Classroom {
       }
       validateSkill(l.skill);
       l.limits = validateLimits(l.limits);
-      if (
-        this.options.evidenceBasedTeaching &&
-        !supportsCorrections(l, student.traces, choice.focus, l.evidence)
-      ) {
-        this.state.ledger.push({
-          ...l,
-          id: id(),
-          studentId: student.id,
-          focus: choice.focus,
-          status: "rejected",
-          createdAt: new Date().toISOString(),
-          rejectionReason:
-            "Unsupported intervention or insufficient cited correction evidence; not rollout-tested.",
-        });
-        skip(
-          "The proposed trigger, limits or cited evidence do not support intervention on two distinct practice choices. No lesson was queued.",
-        );
-        return;
-      }
       if (!(LESSON_TRIGGERS as readonly string[]).includes(l.trigger))
         throw new Error("Unsupported lesson trigger.");
       if (
@@ -865,36 +825,6 @@ export class Classroom {
         }
         validateSkill(draft.skill);
         draft.limits = validateLimits(draft.limits);
-        if (
-          this.options.evidenceBasedTeaching &&
-          lesson.focus &&
-          !supportsCorrections(
-            draft,
-            student.traces,
-            lesson.focus,
-            draft.evidence,
-          )
-        ) {
-          student.teachingNote =
-            "No supported revision: its trigger, limits and evidence do not cover two practice corrections.";
-          this.state.ledger.push({
-            ...draft,
-            id: id(),
-            studentId: student.id,
-            focus: lesson.focus,
-            revisionOf: lesson.id,
-            status: "rejected",
-            createdAt: new Date().toISOString(),
-            rejectionReason: student.teachingNote,
-          });
-          student.status = "No supported revision · workspace unchanged";
-          this.message(
-            "teacher",
-            `No revision for ${student.name}`,
-            student.teachingNote,
-          );
-          break;
-        }
         const known = new Set(
           this.state.students.flatMap((s) => s.traces.map((t) => t.id)),
         );

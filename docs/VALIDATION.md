@@ -1,5 +1,15 @@
 # Validation record
 
+## October 30, 2026 — Contextual review and longer games
+
+All 79 tests, TypeScript and the production build pass. Tests assert that sparse
+evidence still reaches a recorded peer and teacher, observed continuations remain
+within the evidence episode, contextual lessons bypass the legacy recommendation
+filter, longer practice reaches review, and exams remain separate. The automatic
+correction-count and proposal-coverage cutoffs are removed. Source-specific fresh
+controlled exams use 100 moves. No live benchmark was started; usefulness and
+longer-run cost remain unmeasured. See [current design](CONTEXTUAL_REVIEW.md).
+
 ## October 30, 2026 — Conservative teaching diagnosis
 
 All 76 tests passed, with the affected diagnosis/session checks rerun after final

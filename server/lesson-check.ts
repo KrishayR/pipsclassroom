@@ -63,9 +63,15 @@ export function lessonCheckRunner(
       const source = `${batch.directory}/final.json`,
         sourceText = readFileSync(source, "utf8"),
         state = JSON.parse(sourceText).state;
-      const student = state.students.find(
-        (s: { name: string }) => s.name === "Lin",
+      const preferred = state.students.find(
+        (s: { name: string; workspace: Workspace }) =>
+          s.name === "Lin" && s.workspace.lessons.length,
       );
+      const student =
+        preferred ??
+        state.students.find(
+          (s: { workspace: Workspace }) => s.workspace.lessons.length,
+        );
       const baseline: Workspace = state.exams[0]?.frozen[student?.id];
       const candidate: Workspace = student?.workspace;
       if (
@@ -75,7 +81,7 @@ export function lessonCheckRunner(
         candidate.lessons.some((l) => l.status !== "verified")
       )
         throw new Error(
-          "Lin needs an empty baseline and a retained lesson in the saved batch.",
+          "A student needs an empty baseline and retained advice in the saved batch.",
         );
       validateSkill(baseline.skill);
       validateSkill(candidate.skill);
@@ -90,7 +96,9 @@ export function lessonCheckRunner(
       ]);
       const seeds: number[] = [];
       for (let i = 0; seeds.length < 3; i++) {
-        const seed = hash(`lesson-chance-check-v1:${i}`);
+        const seed = hash(
+          `lesson-chance-check-v2:${createHash("sha256").update(sourceText).digest("hex")}:${i}`,
+        );
         if (!forbidden.has(seed) && !seeds.includes(seed)) seeds.push(seed);
       }
       const pool = (options.createPool ?? keysFromEnv)(),
@@ -108,7 +116,7 @@ export function lessonCheckRunner(
         options.createPolicy?.() ??
         modelFromEnv({
           allowSkill: false,
-          tokenBudget: 4000000,
+          tokenBudget: 6000000,
           keys: budgetedKeyPool(pool, rates, 1),
           beforeRequest: () => {
             if (stopped)
@@ -121,7 +129,7 @@ export function lessonCheckRunner(
       mkdirSync(directory, { recursive: true });
       status = {
         status: "running",
-        stage: "Testing Lin’s lesson against two unchanged controls",
+        stage: "Testing saved advice against two unchanged controls",
         directory,
         completed: 0,
         total: 18,
@@ -132,13 +140,13 @@ export function lessonCheckRunner(
           plannerEnabled: false,
           seeds,
           repeats: 2,
-          cap: 50,
+          cap: 100,
           source,
           student: student.name,
           baseline: structuredClone(baseline),
           candidate: structuredClone(candidate),
           primary:
-            "Exploratory mean 50-move score: lesson minus average of controls A/B, paired by seed and repetition. Also report control B minus A and its mean absolute difference. Three unique seeds, repeated twice; no acceptance threshold or claim of proven learning.",
+            "Exploratory mean 100-move score: lesson minus average of controls A/B, paired by seed and repetition. Also report control B minus A and its mean absolute difference. Three unique seeds, repeated twice; no acceptance threshold or claim of proven learning.",
         },
         trials: [],
       };
@@ -188,7 +196,7 @@ export function lessonCheckRunner(
                 job.condition === "lesson" ? candidate : baseline,
               ),
               job.seed,
-              50,
+              100,
               { id: student.id, name: student.name },
               "classroom",
             );

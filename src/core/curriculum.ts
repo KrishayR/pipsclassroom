@@ -203,7 +203,7 @@ export function chooseFocus(
     focus: weakest.id,
     name: weakest.name,
     reason: evidenceBased
-      ? `Recurring potential corrections: ${e.attempts - e.successes} distinct choices had a focus-preserving alternative with no immediate score sacrifice. This is evidence to investigate, not an optimality grade.`
+      ? `Review focus: ${e.attempts - e.successes} observed choices involved a tradeoff or potential correction. These are discussion opportunities, not optimality grades.`
       : `Weakest measured skill: ${e.successes}/${e.attempts} recent checks passed.`,
     adaptive: true,
   };

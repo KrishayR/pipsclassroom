@@ -20,6 +20,8 @@ export function liveBatchRunner(
     createPool?: typeof keysFromEnv;
     getPrices?: typeof prices;
     protocol?: ClassroomOptions;
+    practiceMoves?: number;
+    examMoves?: number;
   } = {},
 ) {
   let status: LiveBatch | undefined;
@@ -62,6 +64,17 @@ export function liveBatchRunner(
       if (status?.status === "running")
         throw new Error("A live batch is already running.");
       stopping = false;
+      const practiceMoves = options.practiceMoves ?? 100,
+        examMoves = options.examMoves ?? 100;
+      if (
+        !Number.isInteger(practiceMoves) ||
+        practiceMoves < 0 ||
+        practiceMoves > 100 ||
+        !Number.isInteger(examMoves) ||
+        examMoves < 1 ||
+        examMoves > 5000
+      )
+        throw new Error("Invalid practice or exam length.");
       const pool = (options.createPool ?? keysFromEnv)();
       const rates = (options.getPrices ?? prices)();
       if (!pool || !rates)
@@ -88,6 +101,7 @@ export function liveBatchRunner(
       const protocol = { ...protocolFromEnv("model"), ...options.protocol };
       mkdirSync(directory, { recursive: true });
       status = {
+        design: { practiceMoves, examMoves },
         plannerEnabled: policy.usesHelper !== false,
         kind,
         status: "running",
@@ -147,8 +161,10 @@ export function liveBatchRunner(
       save();
       try {
         if (
-          !(await stage("Baseline: 3 students, 25 moves each", "baseline", () =>
-            active.exam(1, 25),
+          !(await stage(
+            `Baseline: 3 students, up to ${examMoves} moves each`,
+            "baseline",
+            () => active.exam(1, examMoves),
           ))
         )
           return;
@@ -159,6 +175,15 @@ export function liveBatchRunner(
           const student =
             active.state.students[i % active.state.students.length];
           const prefix = `cycle-${i + 1}`;
+          if (
+            practiceMoves &&
+            !(await stage(
+              `Cycle ${i + 1}/${count}: extended practice · up to ${practiceMoves} moves each`,
+              `${prefix}-extended-practice`,
+              () => active.practice(practiceMoves),
+            ))
+          )
+            break;
           if (
             !(await stage(
               `Cycle ${i + 1}/${count}: focused practice`,
@@ -200,7 +225,7 @@ export function liveBatchRunner(
             !(await stage(
               `Cycle ${i + 1}/${count}: independent exam`,
               `${prefix}-exam`,
-              () => active.exam(1, 25),
+              () => active.exam(1, examMoves),
             ))
           )
             break;

@@ -117,6 +117,8 @@ test("classroom batch shares practice and exams while individual cycles rotate A
     const root = mkdtempSync(join(tmpdir(), "cl-session-"));
     const batch = liveBatchRunner(() => {}, {
       root,
+      practiceMoves: 0,
+      examMoves: 25,
       createPolicy: simulationPolicy,
       createPool: () =>
         keyPool({ keys: ["fixture"], limitUsd: 1, prices: null }),
@@ -191,6 +193,8 @@ test("a failed session preserves partial evidence and never starts the final exa
   const root = mkdtempSync(join(tmpdir(), "cl-session-error-"));
   const batch = liveBatchRunner(() => {}, {
     root,
+    practiceMoves: 0,
+    examMoves: 25,
     createPolicy: () => ({
       ...base,
       async propose(...args) {
