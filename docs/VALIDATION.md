@@ -1,5 +1,15 @@
 # Validation record
 
+## October 30, 2026 — Classroom Session and Individual Cycles
+
+All 64 tests, TypeScript checking and the production build pass. A frozen
+Classroom Session executed serially and concurrently preserves deterministic
+student moves, lesson outcomes, verification trajectories and logical usage.
+Tests check frozen peer traces/notebooks, separate student memory, the shared
+six-slot teaching limit, cumulative sessions, individual Ada/Lin/Sam rotation,
+exam trajectories, stopped work and failed-session partial records. No live
+Muse speed or learning benchmark was started. See [session modes](CLASSROOM_SESSION.md).
+
 ## October 30, 2026 — Rejection feedback, one revision, and exam trajectories
 
 All 60 tests pass (59 in the full suite, plus the final successful-revision

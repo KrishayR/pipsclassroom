@@ -191,6 +191,12 @@ export interface Exam {
   completedAt?: string;
 }
 export interface LabState {
+  pendingCandidates?: { studentId: string; lesson: Lesson }[];
+  sessionTeaching?: {
+    frozenWorkspaces: Record<string, Workspace>;
+    peerTraceIds: Record<string, string[]>;
+    rounds: Record<string, number>;
+  };
   liveBatch?: LiveBatch;
   schemaVersion: 1;
   id: string;
@@ -214,6 +220,7 @@ export interface LabState {
   comparisons: Comparison[];
 }
 export interface LiveBatch {
+  kind?: "individual" | "classroom";
   concurrency?: number;
   verificationConcurrency?: number;
   timings?: { stage: string; elapsedMs: number }[];

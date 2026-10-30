@@ -499,6 +499,14 @@ main {
   display: flex;
   gap: 8px;
 }
+.classroom-actions,
+.classroom-actions .controls {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.classroom-actions .controls .session-launch {
+  font-size: 11px;
+}
 .classroom-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 247px;

@@ -437,7 +437,7 @@ export default function App() {
     [traceId, setTraceId] = useState<string | null>(null),
     [cap, setCap] = useState(1500),
     [seedCount, setSeedCount] = useState(3),
-    [batchCycles, setBatchCycles] = useState("3"),
+    [batchCycles, setBatchCycles] = useState("1"),
     [pending, setPending] = useState(false),
     [replaying, setReplaying] = useState(false);
   useEffect(() => {
@@ -779,7 +779,7 @@ export default function App() {
                   </div>
                 ))}
               </div>
-              <div className="section-bar">
+              <div className="section-bar classroom-actions">
                 <div>
                   <h2>
                     The classroom <span>3 students</span>
@@ -809,7 +809,7 @@ export default function App() {
                       {mode === "model" && connection?.kind === "server" && (
                         <>
                           <label>
-                            Cycles{" "}
+                            Count{" "}
                             <input
                               aria-label="Live learning cycles"
                               type="number"
@@ -829,11 +829,30 @@ export default function App() {
                               Number(batchCycles) > 100
                             }
                             onClick={() =>
-                              run("live-batch", { cycles: Number(batchCycles) })
+                              run("live-batch", {
+                                cycles: Number(batchCycles),
+                                kind: "classroom",
+                              })
                             }
                           >
                             <Play size={14} />
-                            Run {batchCycles || "…"} live cycles · $1 max
+                            Classroom Session · {batchCycles || "…"} · $1 max
+                          </button>
+                          <button
+                            className="secondary session-launch"
+                            disabled={
+                              !Number.isInteger(Number(batchCycles)) ||
+                              Number(batchCycles) < 1 ||
+                              Number(batchCycles) > 100
+                            }
+                            onClick={() =>
+                              run("live-batch", {
+                                cycles: Number(batchCycles),
+                                kind: "individual",
+                              })
+                            }
+                          >
+                            Individual Cycles · {batchCycles || "…"} · $1 max
                           </button>
                         </>
                       )}
@@ -859,7 +878,7 @@ export default function App() {
               </div>
               <p className="fine">
                 {mode === "model" &&
-                  "Choose 1–100 cycles. Three cycles give Ada, Lin and Sam one teaching attempt each. Three students play side by side; verification can run 6 independent rollouts at once. Each rejected lesson gets at most one teacher revision, tested on fresh boards. Each cycle ends with a 25-move exam per student; exam moves are saved. The batch uses a fresh classroom; your manual classroom returns afterward. The $1 estimated budget stays fixed; it may stop early. Results save automatically; keep the server running. "}
+                  "Classroom Session teaches Ada, Lin and Sam together: shared focused practice, separate feedback and checks, then one exam per student. Peer evidence is frozen before teaching; new lessons can help classmates next session. Individual Cycles teaches one student at a time in Ada → Lin → Sam order, with practice and exams each cycle. Count sets how many sessions or individual cycles to run (1–100). Both use live Muse, at most six requests at once, one revision per rejected lesson, and the same verification thresholds. All exam moves save automatically. Each batch starts a fresh classroom and has a $1 estimated cap; keep the server running. "}
                 Focused practice gives every student short exercises in all
                 three skills, so reviews have relevant examples to discuss.
                 Their regular games and saved notes stay in place.

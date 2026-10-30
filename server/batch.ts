@@ -54,7 +54,9 @@ export function liveBatchRunner(
         save();
       }
     },
-    async start(count = 5) {
+    async start(count = 5, kind: "individual" | "classroom" = "individual") {
+      if (kind !== "individual" && kind !== "classroom")
+        throw new Error("Choose Individual Cycles or Classroom Session.");
       if (!Number.isInteger(count) || count < 1 || count > 100)
         throw new Error("Choose a whole number of cycles from 1 to 100.");
       if (status?.status === "running")
@@ -86,6 +88,7 @@ export function liveBatchRunner(
       const protocol = { ...protocolFromEnv("model"), ...options.protocol };
       mkdirSync(directory, { recursive: true });
       status = {
+        kind,
         status: "running",
         stage: "Starting baseline",
         completed: 0,
@@ -151,7 +154,7 @@ export function liveBatchRunner(
         status.baseline = structuredClone(active.state.exams.at(-1)!.rows);
         save();
         for (let i = 0; i < count; i++) {
-          const ledgerStart = active.state.ledger.length;
+          const previousLessons = new Set(active.state.ledger.map((l) => l.id));
           const student =
             active.state.students[i % active.state.students.length];
           const prefix = `cycle-${i + 1}`;
@@ -163,22 +166,33 @@ export function liveBatchRunner(
             ))
           )
             break;
-          if (
-            !(await stage(
-              `Cycle ${i + 1}/${count}: review ${student.name}`,
-              `${prefix}-review`,
-              () => active.review(student.id),
-            ))
-          )
-            break;
-          if (
-            !(await stage(
-              `Cycle ${i + 1}/${count}: verification`,
-              `${prefix}-verification`,
-              () => active.verify(),
-            ))
-          )
-            break;
+          if (kind === "classroom") {
+            if (
+              !(await stage(
+                `Classroom Session ${i + 1}/${count}: teaching all students`,
+                `${prefix}-teaching`,
+                () => active.teachClassroom(),
+              ))
+            )
+              break;
+          } else {
+            if (
+              !(await stage(
+                `Cycle ${i + 1}/${count}: review ${student.name}`,
+                `${prefix}-review`,
+                () => active.review(student.id),
+              ))
+            )
+              break;
+            if (
+              !(await stage(
+                `Cycle ${i + 1}/${count}: verification`,
+                `${prefix}-verification`,
+                () => active.verify(),
+              ))
+            )
+              break;
+          }
           if (
             !(await stage(
               `Cycle ${i + 1}/${count}: independent exam`,
@@ -189,9 +203,11 @@ export function liveBatchRunner(
             break;
           status.cycles.push({
             cycle: i + 1,
-            student: student.name,
+            student: kind === "classroom" ? "Ada, Lin, Sam" : student.name,
             lesson: structuredClone(active.state.ledger.at(-1)!),
-            attempts: structuredClone(active.state.ledger.slice(ledgerStart)),
+            attempts: structuredClone(
+              active.state.ledger.filter((l) => !previousLessons.has(l.id)),
+            ),
             rows: structuredClone(active.state.exams.at(-1)!.rows),
           });
           status.completed = i + 1;
@@ -199,7 +215,7 @@ export function liveBatchRunner(
         }
         if (!stopping) {
           status.status = "complete";
-          status.stage = `${count} cycles finished — results ready`;
+          status.stage = `${count} ${kind === "classroom" ? "Classroom Sessions" : "Individual Cycles"} finished — results ready`;
         }
       } catch (e) {
         status.status = "error";

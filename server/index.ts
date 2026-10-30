@@ -170,7 +170,7 @@ const server = createServer(async (req, res) => {
         (input.cycles ?? 5) > 100
       )
         throw new Error("Choose a whole number of cycles from 1 to 100.");
-      operation = batch.start(input.cycles ?? 5);
+      operation = batch.start(input.cycles ?? 5, input.kind ?? "individual");
     } else if (action === "practice")
       operation = lab.practice(input.steps ?? 12);
     else if (action === "diagnose") operation = lab.diagnose();

@@ -15,7 +15,7 @@ import {
   validateSkill,
 } from "./skills";
 import { decisionSeed, lessonSensitivity } from "./policy";
-import { mapConcurrent } from "./concurrency";
+import { mapConcurrent, requestLimiter } from "./concurrency";
 import {
   chooseFocus,
   FOCI,
@@ -116,6 +116,7 @@ export class Classroom {
   state: LabState;
   private listeners = new Set<(state: LabState) => void>();
   private cancelled = false;
+  private teachingChildren: Classroom[] = [];
   readonly verifyOptions: VerifyOptions;
   readonly exerciseMoves: number;
   readonly concurrency: number;
@@ -202,6 +203,7 @@ export class Classroom {
   }
   stop() {
     this.cancelled = true;
+    for (const child of this.teachingChildren) child.stop();
     this.message(
       "system",
       "Stopping",
@@ -437,6 +439,121 @@ export class Classroom {
         "Practice finished",
         "We saved every move, the tools each student used, and what happened next. Pick a student to talk through an attempt.",
       );
+    });
+  }
+  async teachClassroom() {
+    if (this.state.candidate)
+      throw new Error("Test the pending idea before a Classroom Session.");
+    await this.task("review", async () => {
+      // All learners see the same pre-teaching peers, regardless of completion order.
+      const frozen = clone(this.state);
+      const startRound = this.state.trainingRound;
+      this.state.sessionTeaching = {
+        frozenWorkspaces: Object.fromEntries(
+          frozen.students.map((s) => [s.id, clone(s.workspace)]),
+        ),
+        peerTraceIds: Object.fromEntries(
+          frozen.students.map((s) => [s.id, s.traces.map((t) => t.id)]),
+        ),
+        rounds: Object.fromEntries(
+          frozen.students.map((s, i) => [s.id, startRound + 2 * i]),
+        ),
+      };
+      this.state.pendingCandidates = [];
+      // Reserve one original and one revision round per learner, even on partial failure.
+      this.state.trainingRound += frozen.students.length * 2;
+      const gate = requestLimiter(this.verificationConcurrency);
+      let failed = false;
+      const guarded: Policy = {
+        ...this.policy,
+        decide: (...args) =>
+          gate(() => {
+            if (this.cancelled || failed)
+              throw new Error(
+                "Classroom teaching stopped before next decision.",
+              );
+            return this.policy.decide(...args);
+          }),
+        propose: (...args) =>
+          gate(() => {
+            if (this.cancelled || failed)
+              throw new Error("Classroom teaching stopped before next review.");
+            return this.policy.propose(...args);
+          }),
+      };
+      const children = frozen.students.map((student, i) => {
+        const state = clone(frozen);
+        state.busy = false;
+        state.error = null;
+        state.messages = [];
+        state.tokens = 0;
+        state.calls = 0;
+        state.simulations = 0;
+        state.trainingRound = startRound + 2 * i;
+        const child = new Classroom(guarded, state, this.options);
+        let tokens = 0,
+          calls = 0,
+          simulations = 0;
+        child.subscribe(() => {
+          this.usage(
+            child.state.tokens - tokens,
+            child.state.calls - calls,
+            child.state.simulations - simulations,
+          );
+          tokens = child.state.tokens;
+          calls = child.state.calls;
+          simulations = child.state.simulations;
+          const target = child.state.students.find((s) => s.id === student.id)!;
+          const index = this.state.students.findIndex(
+            (s) => s.id === student.id,
+          );
+          this.state.students[index] = clone(target);
+          this.state.ledger = this.state.ledger
+            .filter((l) => l.studentId !== student.id)
+            .concat(
+              clone(
+                child.state.ledger.filter((l) => l.studentId === student.id),
+              ),
+            );
+          this.state.pendingCandidates = this.state.pendingCandidates!.filter(
+            (c) => c.studentId !== student.id,
+          );
+          if (child.state.candidate)
+            this.state.pendingCandidates.push(clone(child.state.candidate));
+          this.emit();
+        });
+        return { child, student };
+      });
+      this.teachingChildren = children.map((c) => c.child);
+      try {
+        await mapConcurrent(
+          children,
+          this.concurrency,
+          async ({ child, student }) => {
+            try {
+              await child.review(student.id);
+              if (!this.cancelled && !failed) await child.verify();
+            } catch (error) {
+              failed = true;
+              for (const other of this.teachingChildren) other.stop();
+              throw error;
+            }
+          },
+          () => this.cancelled || failed,
+        );
+      } finally {
+        // Stable record ordering does not depend on which request finished first.
+        this.state.ledger.sort(
+          (a, b) =>
+            frozen.students.findIndex((s) => s.id === a.studentId) -
+              frozen.students.findIndex((s) => s.id === b.studentId) ||
+            a.createdAt.localeCompare(b.createdAt),
+        );
+        for (const { child } of children)
+          this.state.messages.push(...clone(child.state.messages));
+        this.teachingChildren = [];
+        this.emit();
+      }
     });
   }
   async review(studentId?: string) {
