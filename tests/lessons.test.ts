@@ -185,6 +185,9 @@ test("students see per-move facts and lesson skills; a no-impact teacher draft i
   const provided = JSON.parse(sent[0].messages[1].content);
   assert.ok(provided.moveFacts[obs.legal[0]].keeps);
   assert.equal(provided.lessons[0].skill, "structure");
+  const expectedPlan = plannedMove(obs.board, workspace, 1);
+  assert.equal(provided.lessonPlan.action, expectedPlan.action);
+  assert.equal(provided.lessonPlan.lessonId, expectedPlan.lessonId);
   assert.equal(d.lessonId, "lesson-structure");
   sent.length = 0;
   let checks = 0;
