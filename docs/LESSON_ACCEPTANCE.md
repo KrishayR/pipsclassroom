@@ -94,3 +94,14 @@ All three students saved a lesson in session 1. In session 2 the teacher mostly 
 | Sam     | depth 2, space 6, merge 8 |         +578 ± 992 |
 
 The gains from the accepted lessons show up in long games, which the cheap exams do not reach. A study exam needs full games, about 1,000 calls per game with Muse, or this simulation check reported alongside the live results.
+
+**Full-game check on fresh seeds** (`npm run full-game-check`, 40 games per student, seeds disjoint from the development seeds used to screen the probes, which the table above used):
+
+| Student   | Strategy                  | Full-game change vs untrained (95% CI) |
+| --------- | ------------------------- | -------------------------------------: |
+| Ada       | depth 3, space 6, merge 8 |              **+3,359** [1,409, 5,362] |
+| Lin       | depth 2, space 6, merge 8 |                   −109 [−1,851, 1,511] |
+| Sam       | depth 2, space 6, merge 8 |                   +1,012 [−815, 2,801] |
+| All three |                           |                **+1,420** [317, 2,500] |
+
+On fresh seeds, the exact depth-3 experiment (Ada) is clearly better and the depth-2 variants are not. The study runner now reports this check for every condition (`report.fullGameCheck`, `--full-game-games`, default 40). Saved check: `data/full-game-check-sessions.json` (ignored by Git).

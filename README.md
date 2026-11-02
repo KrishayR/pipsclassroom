@@ -44,7 +44,7 @@ Each request uses the first key whose estimated spend plus the request's worst-c
 
 ### Lessons, helper mode and command-line batches
 
-Lessons are conditional: they step in only when a move breaks their skill, within `limits` (minimum options left, maximum points given up). `MODEL_STUDENT_HELPER=off` removes the move ranking so students decide from the board, per-move facts and lessons alone; use the same setting for every study arm. `npm run live-batch -- --cycles 3` runs the budgeted live batch ($1 cap) without the server. See [Conditional lessons](docs/CONDITIONAL_LESSONS.md).
+Lessons are conditional: they step in only when a move breaks their skill, within `limits` (minimum options left, maximum points given up). `MODEL_STUDENT_HELPER=off` removes the move ranking so students decide from the board, per-move facts and lessons alone; use the same setting for every study arm. `npm run live-batch -- --cycles 3 [--kind classroom]` runs the budgeted live batch (`BATCH_BUDGET_USD`, default $1) without the server. `npm run full-game-check -- <final.json>` plays the saved notes from a batch or export through whole simulated games, for free, against untrained notes (see [Lesson acceptance](docs/LESSON_ACCEPTANCE.md)). See [Conditional lessons](docs/CONDITIONAL_LESSONS.md).
 
 ## Walk through the prototype
 

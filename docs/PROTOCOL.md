@@ -41,6 +41,7 @@ Model-mode cap: 150 valid moves (simulation: 1,500). Games that hit the cap are 
 ## Outcomes (fixed before results)
 
 - **Primary:** mean exam score under the cap.
+- **Full-game check (secondary, free):** every condition's saved notes are played to the end of the game (5,000-move cap) by the simulation student, the same plan live students are shown as `lessonPlan`, on 40 fresh seeds (`full-game-check-v1`, disjoint from the development seeds used to screen strategy probes). It is reported with paired intervals against untrained notes and between arms (`report.fullGameCheck`). It measures what the saved notes do over whole games, not how live Muse plays them. Reason: at a 150-move cap every game survives and scores similarly, so lessons whose gains come from surviving longer cannot show. Set with `--full-game-games` (0 turns it off). A live exam that can show such gains needs full games (`--cap 1500` or more, about 1,000 decisions per game).
 - Supporting: median score; fraction reaching 256 / 512 / 1024 / 2048; moves; losses vs cap truncations; errors; invalid tool requests; p50/p95 decision latency; tokens, calls and simulated transitions; dollars when prices are configured.
 - Efficiency: (arm mean − untrained mean) per 1k training tokens and per training dollar.
 

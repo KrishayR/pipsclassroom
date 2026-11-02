@@ -35,6 +35,11 @@ import {
   summarize,
 } from "../src/core/evaluation";
 import { DEFAULT_SKILL, emptyWorkspace } from "../src/core/skills";
+import {
+  FULL_GAME_NOTE,
+  fullGameRows,
+  fullGameSummary,
+} from "./lib/full-game-check";
 import type { Arm, Mode, Policy, Workspace, ExamRow } from "../src/core/types";
 loadEnv();
 const args = process.argv.slice(2);
@@ -76,6 +81,8 @@ const repetitions = integer("repetitions", 1, 1, 10),
   examTokenBudget = integer("exam-token-budget", 30000000, 1000, 100000000),
   concurrency = integer("concurrency", mode === "model" ? 16 : 1, 1, 64),
   ablationReps = integer("ablation-reps", 1, 0, 10),
+  // Free full-game check of every condition's saved notes (0 turns it off).
+  fullGames = integer("full-game-games", 40, 0, 200),
   verify = {
     practice: integer("verify-practice", protocol.verify.practice, 1, 12),
     regression: integer("verify-regression", protocol.verify.regression, 0, 6),
@@ -140,6 +147,7 @@ const config = {
   tokenBudget,
   examTokenBudget,
   ablationReps,
+  fullGames,
   verify,
   exerciseMoves,
   model: mode === "model" ? modelId() : null,
@@ -196,6 +204,7 @@ const fresh = {
   summaries: {} as Record<string, unknown>,
   contrasts: {} as Record<string, unknown>,
   efficiency: {} as Record<string, unknown>,
+  fullGameCheck: null as Record<string, unknown> | null,
 };
 // --resume continues an interrupted run with the same frozen code and configuration.
 const report: typeof fresh =
@@ -435,6 +444,60 @@ await Promise.all(
     }
   }),
 );
+// Free full-game check: each condition's saved notes played to the end of the game by
+// the simulation student. Deterministic, so it is recomputed on resume. The no-skill-tool
+// ablation changes only what Muse sees, so it has no simulation counterpart.
+if (fullGames) {
+  console.log(`Full-game check: ${fullGames} simulated games per student`);
+  const sim = new Map<string, ExamRow[]>();
+  for (const c of conditions.filter(
+    (c) => c.condition !== "classroom:no-skill-tool",
+  )) {
+    const rows = await fullGameRows(
+      c.workspaces(),
+      c.arm,
+      fullGames,
+      c.repetition,
+    );
+    sim.set(c.condition, [...(sim.get(c.condition) ?? []), ...rows]);
+  }
+  const untrained = sim.get("baseline") ?? [];
+  const expand = (rows: ExamRow[], reps: number[]) =>
+    reps.flatMap((repetition) => rows.map((r) => ({ ...r, repetition })));
+  const simContrast = (a: string, b: string) => {
+    const t = sim.get(a),
+      base = sim.get(b);
+    if (!t?.length || !base?.length) return null;
+    const reps = [...new Set(t.map((r) => r.repetition ?? 0))];
+    return {
+      treatment: a,
+      baseline: b,
+      ...pairedContrast(t, b === "baseline" ? expand(base, reps) : base),
+    };
+  };
+  report.fullGameCheck = {
+    note: FULL_GAME_NOTE,
+    games: fullGames,
+    summaries: Object.fromEntries(
+      [...sim].map(([c, rows]) => [
+        c,
+        c === "baseline"
+          ? fullGameSummary(rows, rows)
+          : fullGameSummary(rows, untrained),
+      ]),
+    ),
+    contrasts: {
+      primary: simContrast("classroom", "adaptive"),
+      adaptation: simContrast("adaptive", "teacher"),
+      teacher: simContrast("teacher", "solo"),
+      classroomVsSolo: simContrast("classroom", "solo"),
+      ...Object.fromEntries(
+        arms.map((a) => [`${a}VsUntrained`, simContrast(a, "baseline")]),
+      ),
+    },
+  };
+  save();
+}
 // Analysis. The untrained baseline is paired with every repetition.
 const rowsFor = (condition: string) =>
   condition === "baseline"
@@ -542,4 +605,14 @@ if (primary)
   console.log(
     `Primary (classroom − adaptive): ${primary.meanDiff.toFixed(1)} points, 95% CI [${primary.ci95.map((v) => v?.toFixed(1)).join(", ")}], ${primary.pairs} pairs, ${primary.clusters} repetitions; planning target ${primary.target.met ? "met" : "not met"}. ${primary.target.note}`,
   );
+if (report.fullGameCheck)
+  for (const [c, s] of Object.entries(
+    report.fullGameCheck.summaries as Record<
+      string,
+      ReturnType<typeof fullGameSummary>
+    >,
+  ))
+    console.log(
+      `Full games (simulation) ${c}: mean ${s.meanScore.toFixed(0)}${c === "baseline" ? "" : `, vs untrained ${s.vsUntrained.meanDiff.toFixed(0)} [${s.vsUntrained.ci95.map((v) => v?.toFixed(0)).join(", ")}]`}`,
+    );
 console.log(`Report: ${out}`);

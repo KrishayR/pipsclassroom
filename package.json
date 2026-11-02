@@ -14,7 +14,8 @@
     "pilot": "tsx scripts/pilot.ts",
     "seal-seeds": "tsx scripts/seal-seeds.ts",
     "calibrate-gate": "tsx scripts/calibrate-gate.ts",
-    "live-batch": "tsx scripts/live-batch.ts"
+    "live-batch": "tsx scripts/live-batch.ts",
+    "full-game-check": "tsx scripts/full-game-check.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
