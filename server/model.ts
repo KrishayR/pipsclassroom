@@ -19,6 +19,15 @@ import {
 import { AsyncLocalStorage } from "node:async_hooks";
 import { requestLimiter } from "../src/core/concurrency";
 import { backoffMs, RETRIES } from "./ratelimit";
+// Connection errors that mean the request never reached the provider.
+const NOT_SENT = new Set([
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "ECONNREFUSED",
+  "ENETUNREACH",
+  "EHOSTUNREACH",
+  "ENETDOWN",
+]);
 interface ModelConfig {
   // One key, or a pool that switches keys at a spend limit or on billing errors.
   key?: string;
@@ -35,6 +44,8 @@ interface ModelConfig {
   limiter?: () => Promise<void>;
   fetch?: typeof fetch;
   beforeRequest?: () => void;
+  // How long a lost connection is waited out before the call fails (default 10 minutes).
+  outageWaitMs?: number;
   requestGate?: <T>(work: () => Promise<T>) => Promise<T>;
 }
 type ChatMessage = {
@@ -149,6 +160,7 @@ export function modelPolicy(config: ModelConfig): Policy & {
       // A key that is out of credit or rejected is retired and the same request goes to
       // the next key. Rate limits, server errors and timeouts get capped backoff retries;
       // other errors fail the call. A retry is not a new model call.
+      let offlineSince: number | undefined;
       for (let attempt = 0; ;) {
         await config.limiter?.();
         config.beforeRequest?.();
@@ -169,13 +181,28 @@ export function modelPolicy(config: ModelConfig): Policy & {
             },
           );
         } catch (e) {
-          // A transport failure may have reached the provider: retain a conservative charge.
-          lease?.settle(worst);
+          // A request that never connected is not charged; any other transport failure
+          // may have reached the provider, so a conservative charge is kept.
+          const code = (e as { cause?: { code?: string } })?.cause?.code;
+          if (code && NOT_SENT.has(code)) lease?.release();
+          else lease?.settle(worst);
           lease = undefined;
+          // A lost connection is waited out instead of failing the run.
+          if (e instanceof TypeError) {
+            offlineSince ??= Date.now();
+            const window = config.outageWaitMs ?? 600000;
+            if (Date.now() - offlineSince < window) {
+              await new Promise((r) =>
+                setTimeout(r, Math.min(window / 20, backoffMs(attempt++))),
+              );
+              continue;
+            }
+          }
           if (attempt >= RETRIES) throw e;
           await new Promise((r) => setTimeout(r, backoffMs(attempt++)));
           continue;
         }
+        offlineSince = undefined;
         if (response.ok) break;
         let errorBody: string;
         try {
@@ -348,7 +375,9 @@ export function modelPolicy(config: ModelConfig): Policy & {
           // that lessons are about; no future spawns are revealed.
           moveFacts: moveFacts(observation.board),
           recentMoves: context?.recent ?? [],
-          ...(skillRanking ? { skill: workspace.skill, skillRanking, lessonPlan } : {}),
+          ...(skillRanking
+            ? { skill: workspace.skill, skillRanking, lessonPlan }
+            : {}),
           workspaceVersion: workspace.version,
         };
         events.unshift({

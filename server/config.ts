@@ -72,6 +72,7 @@ export function modelFromEnv(
     maxCompletionTokens: num("MODEL_MAX_COMPLETION_TOKENS", 4000),
     reasoningEffort: process.env.MODEL_REASONING_EFFORT || "low",
     limiter: (limiter ??= rateLimiter(num("MODEL_RPM", 120))),
+    outageWaitMs: num("MODEL_OUTAGE_WAIT_MS", 600000),
     allowSkill: studentHelper(),
     requestGate,
     ...overrides,

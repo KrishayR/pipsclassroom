@@ -1,3 +1,22 @@
+# Handoff — November 2, 2026
+
+## Latest update (Nov 2): lessons pass, study running
+
+- **Lessons are accepted.** Teachers get free strategy experiments, and the lesson test is unchanged. In live runs, every student saved a lesson in its first Classroom Session. See [Lesson acceptance](LESSON_ACCEPTANCE.md).
+- **The gains show up in full games.** Short exams cannot show them, so `npm run full-game-check` and the study's `report.fullGameCheck` play the saved notes through whole simulated games on fresh seeds.
+- **Study started Nov 2, about 3 PM PST, on this commit.** Helper on, 1 repetition, revisions on, full-game live exams on 2 sealed seeds:
+
+  ```
+  npm run evaluate -- --mode model --split exam --seeds 2 --cap 1500 \
+    --arms solo,teacher,adaptive,classroom --repetitions 1 --training-rounds 3 \
+    --token-budget 1200000 --simulation-budget 150000 --concurrency 24 \
+    --full-game-games 40 --out data/study/study.json
+  ```
+
+  Sealed seeds: `data/sealed-exam-seeds.json` (12 seeds, not in Git), SHA-256 `a32dd87c39a95725b0cb8aebdfd3fffe03a7e320931eb2f94d304f9c2e6f6dd0`. The Oct 28 seed file was never used in an exam and is kept as `data/sealed-exam-seeds.2026-10-28.unused.json`. Estimated cost about $10, about 6 hours. If it stops, rerun the same command with `--resume`. **Do not start other paid runs while it runs**: they share the key and the rate limit.
+
+- **Connection drops are waited out** (up to `MODEL_OUTAGE_WAIT_MS`, default 10 minutes). Requests that never connected are not charged.
+
 # Handoff — October 30, 2026
 
 ## Latest update (Oct 30, evening): conditional lessons, calibration, live batches, no-helper option

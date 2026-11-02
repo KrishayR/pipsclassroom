@@ -83,6 +83,8 @@ const repetitions = integer("repetitions", 1, 1, 10),
   ablationReps = integer("ablation-reps", 1, 0, 10),
   // Free full-game check of every condition's saved notes (0 turns it off).
   fullGames = integer("full-game-games", 40, 0, 200),
+  // One bounded teacher revision after a rejected lesson, as in live batches.
+  revisions = !flag("no-revisions"),
   verify = {
     practice: integer("verify-practice", protocol.verify.practice, 1, 12),
     regression: integer("verify-regression", protocol.verify.regression, 0, 6),
@@ -148,6 +150,7 @@ const config = {
   examTokenBudget,
   ablationReps,
   fullGames,
+  revisions,
   verify,
   exerciseMoves,
   model: mode === "model" ? modelId() : null,
@@ -253,7 +256,14 @@ async function train(arm: Arm, repetition: number): Promise<TrainingRecord> {
     s.episodeId = `practice:rep-${repetition}:student-${i}`;
     s.game = createGame(hash(s.episodeId));
   });
-  const lab = new Classroom(bounded, state, { verify, exerciseMoves });
+  // Same request overlap as live batches; results do not depend on it.
+  const lab = new Classroom(bounded, state, {
+    verify,
+    exerciseMoves,
+    reviseRejected: revisions,
+    concurrency: protocol.concurrency,
+    verificationConcurrency: protocol.verificationConcurrency,
+  });
   let error: string | undefined;
   console.log(`Training ${arm}, repetition ${repetition + 1} (${mode})`);
   try {
