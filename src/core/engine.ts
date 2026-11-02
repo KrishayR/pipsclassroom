@@ -169,7 +169,9 @@ export function snapshotPool(
     | "exercise"
     | "sensitivity"
     | "revision-practice"
-    | "revision-regression",
+    | "revision-regression"
+    | "experiment-practice"
+    | "experiment-regression",
   round = 0,
   filter?: { key: string; applies: (board: Board) => boolean },
   count = split === "regression" ? 3 : 6,

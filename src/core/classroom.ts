@@ -15,7 +15,7 @@ import {
   validateLimits,
   validateSkill,
 } from "./skills";
-import { decisionSeed, lessonSensitivity } from "./policy";
+import { decisionSeed, lessonSensitivity, strategyExperiments } from "./policy";
 import { mapConcurrent, requestLimiter } from "./concurrency";
 import {
   chooseFocus,
@@ -35,6 +35,7 @@ import {
 } from "./evaluation";
 import type {
   Arm,
+  Focus,
   FocusChoice,
   Game,
   Lesson,
@@ -185,6 +186,32 @@ export class Classroom {
     this.state.calls += calls;
     this.state.simulations += simulations;
   };
+  // Free offline strategy trials for the teacher, recorded in the conversation. Skipped
+  // without the planner, where strategy parameters do not affect moves.
+  private experiments(student: Student, focus: Focus, stage: string) {
+    if (this.policy.usesHelper === false) return undefined;
+    const results = strategyExperiments(
+      student.workspace,
+      focus,
+      `${student.id}:${stage}`,
+      this.state.trainingRound,
+    );
+    if (results.length)
+      this.message(
+        "system",
+        "Free strategy experiments",
+        `Before the review, ${results.length} strategy changes were tried on separate practice boards (no model calls). Best: ${results
+          .slice(0, 3)
+          .map(
+            (e) =>
+              `${e.change} (targeted ${e.targeted >= 0 ? "+" : ""}${e.targeted.toFixed(1)}, general ${e.general >= 0 ? "+" : ""}${e.general.toFixed(1)})`,
+          )
+          .join(
+            "; ",
+          )}. These are noisy estimates; the lesson test uses different boards.`,
+      );
+    return results;
+  }
   private async task(phase: LabState["phase"], fn: () => Promise<void>) {
     if (this.state.busy)
       throw new Error("A classroom operation is already running.");
@@ -622,12 +649,14 @@ export class Classroom {
           }),
           samples,
         );
+      const experiments = this.experiments(student, choice.focus, "review");
       const proposed = await this.policy.propose(
         student,
         this.state.arm,
         peer,
         choice,
         {
+          experiments,
           check:
             this.policy.usesHelper === false
               ? () => null
@@ -758,7 +787,12 @@ export class Classroom {
           this.state.arm,
           undefined,
           this.state.focus ?? undefined,
-          { rejection: clone(lesson) },
+          {
+            rejection: clone(lesson),
+            experiments: this.state.focus
+              ? this.experiments(student, this.state.focus.focus, "revision")
+              : undefined,
+          },
         );
         this.usage(proposed.tokens, proposed.calls, 0);
         const draft = proposed.lesson;

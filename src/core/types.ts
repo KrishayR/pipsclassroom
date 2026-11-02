@@ -252,6 +252,14 @@ export interface LiveBatch {
     rows: ExamRow[];
   }[];
 }
+export interface StrategyExperiment {
+  change: string;
+  skill: Skill;
+  // Mean paired utility change on separate experiment boards (never verification boards).
+  targeted: number;
+  general: number;
+  boards: { practice: number; regression: number; moves: number };
+}
 export interface Policy {
   allowSkill?: boolean;
   mode: Mode;
@@ -271,6 +279,8 @@ export interface Policy {
     focus?: FocusChoice,
     options?: {
       rejection?: Lesson;
+      // Free offline trials of fixed strategy changes the teacher may cite.
+      experiments?: StrategyExperiment[];
       // Returns a problem when a draft lesson would change no planned move.
       check?: (
         draft: Pick<Lesson, "skill" | "trigger" | "focus" | "limits">,
