@@ -39,6 +39,13 @@ export default function ComparisonPanel({
   onRun: () => void;
   onStop: () => void;
 }) {
+  const solo = comparison?.runs.find((r) => r.arm === "solo");
+  const group = comparison?.runs.find((r) => r.arm === "classroom");
+  const complete = solo?.status === "complete" && group?.status === "complete"
+    && solo.rows.length > 0 && group.rows.length > 0;
+  const soloScore = complete ? summarize(solo.rows, comparison!.cap).meanScore : 0;
+  const groupScore = complete ? summarize(group.rows, comparison!.cap).meanScore : 0;
+  const delta = groupScore - soloScore;
   return (
     <>
       <div className="comparison-intro">
@@ -64,6 +71,17 @@ export default function ComparisonPanel({
           </button>
         )}
       </div>
+      <section className="panel" aria-live="polite">
+        <span className="eyebrow">LEARNING TOGETHER VS LEARNING ALONE</span>
+        <h2>{complete
+          ? delta > 0 ? `Group-trained agents scored ${Math.round(delta).toLocaleString()} points higher`
+            : delta < 0 ? `Solo agents scored ${Math.round(-delta).toLocaleString()} points higher`
+            : "Both approaches earned the same average score"
+          : "Watch shared experiments become tested lessons"}</h2>
+        <p>{complete
+          ? `Group average: ${Math.round(groupScore).toLocaleString()} · Solo average: ${Math.round(soloScore).toLocaleString()}. Saved lessons: ${group!.accepted} in the group, ${solo!.accepted} solo. These are this run’s results; more runs are needed to establish a reliable advantage.`
+          : "Agents practice, share recorded examples, test advice, and keep lessons that pass. The final comparison shows how they perform independently on the same exam seeds."}</p>
+      </section>
       <div className="comparison-groups">
         {ARMS.map((arm, i) => {
           const run = comparison?.runs.find((r) => r.arm === arm);

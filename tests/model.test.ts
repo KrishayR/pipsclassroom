@@ -327,6 +327,7 @@ test("context is provided up front, lesson_id is validated, and the no-skill abl
         assert.equal(provided.lessons[0].id, "lesson-1");
         assert.equal(provided.recentMoves[0].action, "left");
         assert.equal("skill" in provided, false);
+        assert.equal("lessonPlan" in provided, false);
         assert.equal(request.messages[1].content.includes("rng"), false);
       }
       const lesson_id = calls === 1 ? "made-up" : "lesson-1";
