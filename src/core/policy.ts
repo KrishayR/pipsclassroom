@@ -330,6 +330,7 @@ export function simulationPolicy(): Policy {
           ...lesson,
           trigger: "when the skill applies",
           limits,
+          ...(tried ? { experiment: tried.change } : {}),
           exception:
             "A large merge may still be best when it opens space. Simulation is a noisy estimate.",
           source,

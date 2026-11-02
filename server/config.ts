@@ -79,6 +79,13 @@ export function modelFromEnv(
 }
 // Simulation keeps the v0.1 gate (6 + 3 snapshots × 8 moves). Model mode defaults to a
 // smaller gate because every rollout move is a paid decision; see PROTOCOL.md.
+// Live batch sizes. Longer exams cost more but can show a difference: at 25 moves
+// every game reaches the cap with similar scores.
+export const batchFromEnv = () => ({
+  budgetUsd: num("BATCH_BUDGET_USD", 1),
+  examMoves: num("BATCH_EXAM_MOVES", 25),
+  examSeeds: num("BATCH_EXAM_SEEDS", 1),
+});
 export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
   return mode === "simulation"
     ? {

@@ -329,3 +329,93 @@ test("free strategy experiments are deterministic, skip unchanged probes and are
     [best.skill.depth, best.skill.spaceWeight, best.skill.mergeWeight],
   );
 });
+test("a Muse teacher that adopts an experiment gets its exact strategy; unknown names are corrected", async () => {
+  const obs = observe(createGame(4));
+  const experiments = strategyExperiments(
+    emptyWorkspace(),
+    "structure",
+    "s1:review",
+    0,
+  );
+  const chosen = experiments[1];
+  const sent: { messages: { content: string }[] }[] = [];
+  const draft = (experiment: string) => ({
+    title: "Anchor",
+    rule: "Keep the big tile cornered.",
+    trigger: "when the skill applies",
+    exception: "Unless no move keeps it.",
+    evidence: ["trace-1"],
+    diagnosis: "It slid out.",
+    uncertain: false,
+    limits: { minOptions: 3, maxGainLoss: 8 },
+    // Blended edits that must not survive adoption.
+    skill: { ...chosen.skill, structureWeight: 4, depth: 2 },
+    experiment,
+  });
+  const policy = modelPolicy({
+    key: "test",
+    baseUrl: "https://example.invalid/v1",
+    model: "m",
+    tokenBudget: 1e6,
+    fetch: (async (_u, init) => {
+      sent.push(JSON.parse(init!.body as string));
+      const content = JSON.stringify(
+        draft(sent.length === 1 ? "made-up change" : chosen.change),
+      );
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { role: "assistant", content } }],
+          usage: { total_tokens: 10 },
+        }),
+        { status: 200 },
+      );
+    }) as typeof fetch,
+  });
+  const p = await policy.propose(
+    {
+      id: "student-1",
+      name: "Ada",
+      color: "sage",
+      game: createGame(4),
+      episodeId: "e",
+      workspace: emptyWorkspace(),
+      history: [],
+      traces: [
+        {
+          id: "trace-1",
+          studentId: "student-1",
+          episodeId: "e",
+          before: obs,
+          after: obs,
+          action: obs.legal[0],
+          summary: "s",
+          tools: [],
+          spawn: null,
+          scoreDelta: 0,
+          workspaceVersion: 1,
+          mode: "model",
+          tokens: 0,
+          calls: 0,
+          simulations: 0,
+          durationMs: 0,
+        },
+      ],
+      episodes: 1,
+      status: "",
+    },
+    "adaptive",
+    undefined,
+    {
+      focus: "structure",
+      name: "Maintain useful structure",
+      reason: "t",
+      adaptive: true,
+    },
+    { experiments },
+  );
+  assert.equal(sent.length, 2);
+  assert.match(sent[1].messages.at(-1)!.content, /experiment must be null/);
+  assert.ok(JSON.parse(sent[0].messages[1].content).strategyExperiments.length);
+  assert.deepEqual(p.lesson.skill, chosen.skill);
+  assert.equal(p.lesson.experiment, chosen.change);
+});

@@ -6,7 +6,13 @@ import {
   readFileSync,
 } from "node:fs";
 import { Classroom } from "../src/core/classroom";
-import { modelFromEnv, keysFromEnv, prices, protocolFromEnv } from "./config";
+import {
+  batchFromEnv,
+  modelFromEnv,
+  keysFromEnv,
+  prices,
+  protocolFromEnv,
+} from "./config";
 import { budgetedKeyPool } from "./keys";
 import type { LiveBatch, Policy } from "../src/core/types";
 import type { ClassroomOptions } from "../src/core/classroom";
@@ -62,11 +68,12 @@ export function liveBatchRunner(
       if (status?.status === "running")
         throw new Error("A live batch is already running.");
       stopping = false;
+      const sizes = batchFromEnv();
       const pool = (options.createPool ?? keysFromEnv)();
       const rates = (options.getPrices ?? prices)();
       if (!pool || !rates)
         throw new Error(
-          "A model key and token prices are required for the $1 batch budget.",
+          `A model key and token prices are required for the $${sizes.budgetUsd} batch budget.`,
         );
       const initialSpend = pool.status().reduce((n, k) => n + k.spentUsd, 0);
       const spent = () =>
@@ -77,8 +84,10 @@ export function liveBatchRunner(
       const policy =
         options.createPolicy?.() ??
         modelFromEnv({
-          tokenBudget: 4000000,
-          keys: budgetedKeyPool(pool, rates, 1),
+          // A backstop only: about 10M tokens cost $1 at Contributor prices, so the
+          // dollar cap binds first.
+          tokenBudget: 15000000 * Math.max(1, sizes.budgetUsd),
+          keys: budgetedKeyPool(pool, rates, sizes.budgetUsd),
           beforeRequest: () => {
             if (stopping)
               throw new Error("Batch stopped before the next request.");
@@ -94,7 +103,7 @@ export function liveBatchRunner(
         stage: "Starting baseline",
         completed: 0,
         total: count,
-        budgetUsd: 1,
+        budgetUsd: sizes.budgetUsd,
         spentUsd: 0,
         directory,
         startedAt: new Date().toISOString(),
@@ -147,8 +156,10 @@ export function liveBatchRunner(
       save();
       try {
         if (
-          !(await stage("Baseline: 3 students, 25 moves each", "baseline", () =>
-            active.exam(1, 25),
+          !(await stage(
+            `Baseline: 3 students, ${sizes.examMoves} moves each`,
+            "baseline",
+            () => active.exam(sizes.examSeeds, sizes.examMoves),
           ))
         )
           return;
@@ -198,7 +209,7 @@ export function liveBatchRunner(
             !(await stage(
               `Cycle ${i + 1}/${count}: independent exam`,
               `${prefix}-exam`,
-              () => active.exam(1, 25),
+              () => active.exam(sizes.examSeeds, sizes.examMoves),
             ))
           )
             break;

@@ -62,3 +62,35 @@ $0.151, 752 calls, 0 invalid moves. Raw results (ignored by Git): `data/batch-ex
 - The probe list was chosen offline using development seeds. It is fixed in code before any study and contains no sealed seeds.
 - The teacher now mostly chooses among tested strategies instead of inventing them. That is learning from experiments, not free-form insight; describe it that way.
 - Acceptance is about 40–60% per attempt, so some lessons will still be rejected.
+
+## Update — November 2: exact adoption, longer exams, Classroom Sessions
+
+**Changes**
+
+- The teacher may name an experiment (`experiment` field). Its strategy is then used **exactly as tested**; blended edits are discarded. An unknown name gets one correction. The lesson records `experiment`.
+- Batch sizes are configurable: `BATCH_BUDGET_USD` (default 1), `BATCH_EXAM_MOVES` (default 25), `BATCH_EXAM_SEEDS` (default 1). `npm run live-batch` takes `--kind classroom`.
+- The batch token ceiling is now a backstop (15M tokens per dollar of budget). The old fixed 4M ceiling stopped the run below the $1 cap.
+
+**Live run: 2 Classroom Sessions, 200-move exams, helper on**
+
+Cost $0.379, 1,909 calls, 0 invalid moves. The run stopped during session 2's teaching on the old 4M-token ceiling (since fixed). Raw results: `data/batch-sessions/live-batch-1793606943665/final.json`.
+
+| Session     | Ada                                                                           | Lin                                                                   | Sam                                                                                |
+| ----------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| 1           | **accepted** first try (experiment "depth 3, space 6, merge 8"; +1.00 / 0.00) | rejected, then **revision accepted** (space 6, merge 8; +6.33 / 0.00) | rejected, then **revision accepted** (experiment "space 6, merge 8"; +1.08 / 0.00) |
+| 2 (partial) | rejected (−1.33 / −16.00)                                                     | rejected (−2.08 / 0.00)                                               | rejected (−0.75 / +6.00)                                                           |
+
+All three students saved a lesson in session 1. In session 2 the teacher mostly proposed its own changes instead of the remaining experiments, and these failed.
+
+**Did play improve?**
+
+- **200-move exams: no visible change.** Means were 2,612 at baseline and 2,547 after session 1. Every game reached the 200-move cap with a 256 tile, so score mostly counts moves played.
+- **Free full-game check** (each student's notes after session 1 against the starting notes, 40 paired simulated full games):
+
+| Student | Strategy                  |   Full-game change |
+| ------- | ------------------------- | -----------------: |
+| Ada     | depth 3, space 6, merge 8 | **+2,184 ± 1,027** |
+| Lin     | depth 2, space 6, merge 8 |       +867 ± 1,061 |
+| Sam     | depth 2, space 6, merge 8 |         +578 ± 992 |
+
+The gains from the accepted lessons show up in long games, which the cheap exams do not reach. A study exam needs full games, about 1,000 calls per game with Muse, or this simulation check reported alongside the live results.

@@ -58,6 +58,8 @@ export interface LessonLimits {
 export interface Lesson {
   id: string;
   studentId?: string;
+  // The free strategy experiment the lesson adopted exactly, if any.
+  experiment?: string;
   title: string;
   rule: string;
   trigger: string;
