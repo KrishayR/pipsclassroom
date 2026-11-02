@@ -13,6 +13,8 @@ import {
   lessonSensitivity,
   plannedMove,
   simulationPolicy,
+  STRATEGY_PROBES,
+  strategyExperiments,
 } from "../src/core/policy";
 import { Classroom, candidateWorkspace } from "../src/core/classroom";
 import { modelPolicy } from "../server/model";
@@ -265,4 +267,65 @@ test("without the helper, the impact check is skipped and the teacher is told pa
     ),
   );
   assert.match(prompt, /without the skill ranking/);
+});
+test("free strategy experiments are deterministic, skip unchanged probes and are adopted by the simulation teacher", async () => {
+  const current = emptyWorkspace();
+  const a = strategyExperiments(current, "structure", "s1:review", 0);
+  assert.deepEqual(
+    a,
+    strategyExperiments(current, "structure", "s1:review", 0),
+  );
+  assert.equal(a.length, STRATEGY_PROBES.length);
+  assert.ok(a.every((e) => e.skill.version === current.skill.version + 1));
+  // Probes that would leave the adopted strategy unchanged are skipped.
+  const adopted = { ...current, skill: a[0].skill };
+  const next = strategyExperiments(adopted, "structure", "s1:review", 0);
+  assert.ok(next.length < a.length);
+  assert.ok(
+    next.every((e) =>
+      (
+        ["depth", "spaceWeight", "structureWeight", "mergeWeight"] as const
+      ).some((k) => e.skill[k] !== adopted.skill[k]),
+    ),
+  );
+  const lab = new Classroom(simulationPolicy());
+  await lab.diagnose();
+  const student = lab.state.students[0];
+  const best = { ...a[0], targeted: 2, general: 1 };
+  const p = await simulationPolicy().propose(
+    student,
+    "teacher",
+    undefined,
+    undefined,
+    {
+      experiments: [best],
+    },
+  );
+  assert.equal(p.lesson.skill.mergeWeight, best.skill.mergeWeight);
+  assert.equal(p.lesson.skill.depth, best.skill.depth);
+  assert.deepEqual(p.lesson.limits, { minOptions: 4, maxGainLoss: 0 });
+  // A revision does not retry the strategy that was just rejected.
+  const revised = await simulationPolicy().propose(
+    student,
+    "teacher",
+    undefined,
+    undefined,
+    {
+      experiments: [best],
+      rejection: {
+        ...(p.lesson as Lesson),
+        id: "r",
+        status: "rejected",
+        createdAt: "x",
+      },
+    },
+  );
+  assert.notDeepEqual(
+    [
+      revised.lesson.skill.depth,
+      revised.lesson.skill.spaceWeight,
+      revised.lesson.skill.mergeWeight,
+    ],
+    [best.skill.depth, best.skill.spaceWeight, best.skill.mergeWeight],
+  );
 });
