@@ -45,14 +45,28 @@ export interface VerifyOptions {
   practice: number;
   regression: number;
   moves: number;
+  // Paired rollouts per board and workspace, averaged. Above 1, the targeted gain must
+  // also exceed NOISE_GUARD_SE standard errors across boards (for stochastic students).
+  repeats?: number;
 }
 export const DEFAULT_VERIFY: VerifyOptions = {
   practice: 6,
   regression: 3,
   moves: 8,
 };
+// Chosen on simulated noisy students (docs/STURDY_GATE.md): with 6 + 4 boards and 3
+// repeats, a pure-noise lesson passed 12.5% of the time at 1 SE, 8.0% at 1.65 SE and
+// 5.0% at 2 SE; 5 repeats did not improve on 3.
+export const NOISE_GUARD_SE = 2;
 export const verificationRule = (o: VerifyOptions) =>
-  `Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. ${o.practice} targeted practice and ${o.regression} general regression snapshots; ${o.moves} moves each.`;
+  `Mean practice utility improves by ≥ 1; mean regression utility declines by no more than 2. Utility = rollout score gain / 8 + surviving moves + 2 × final empty cells. ${o.practice} targeted practice and ${o.regression} general regression snapshots; ${o.moves} moves each.${(o.repeats ?? 1) > 1 ? ` Each pair is repeated ${o.repeats} times and averaged; the targeted gain must also exceed ${NOISE_GUARD_SE} standard errors across boards.` : ""}`;
+// Standard error of the mean across boards; 0 for fewer than two boards.
+const standardError = (values: number[]) => {
+  if (values.length < 2) return 0;
+  const m = values.reduce((a, b) => a + b, 0) / values.length;
+  const v = values.reduce((a, b) => a + (b - m) ** 2, 0) / (values.length - 1);
+  return Math.sqrt(v / values.length);
+};
 export const VERIFICATION_RULE = verificationRule(DEFAULT_VERIFY);
 // Agent-level failures (no legal move within the call budget) end an episode; API,
 // budget and stop errors abort the operation. This rule is fixed before evaluation.
@@ -210,8 +224,11 @@ export async function verifyCandidate(
   const snapshots = (["practice", "regression"] as const).flatMap((split) =>
     pools[split].map((snapshot) => ({ split, snapshot })),
   );
+  const repeats = Math.max(1, options.repeats ?? 1);
   const jobs = snapshots.flatMap(({ snapshot }, pair) =>
-    [current, candidate].map((workspace) => ({ snapshot, pair, workspace })),
+    [current, candidate].flatMap((workspace) =>
+      Array.from({ length: repeats }, () => ({ snapshot, pair, workspace })),
+    ),
   );
   const finished = new Array<number>(total).fill(0);
   let pairsDone = 0;
@@ -231,22 +248,34 @@ export async function verifyCandidate(
         undefined,
         trajectory,
       );
-      if (++finished[pair] === 2) onProgress?.(++pairsDone, total);
+      if (++finished[pair] === 2 * repeats) onProgress?.(++pairsDone, total);
       return { ...result, trajectory };
     },
   );
   const rows: Verification["rows"] = snapshots.map(({ snapshot, split }, i) => {
-    const baseline = outcomes[i * 2],
-      proposed = outcomes[i * 2 + 1];
+    const runs = (w: number) =>
+      outcomes.slice((i * 2 + w) * repeats, (i * 2 + w + 1) * repeats);
+    const average = (w: number) =>
+      runs(w).reduce((n, o) => n + o.utility, 0) / repeats;
+    const [baseline, proposed] = [runs(0)[0], runs(1)[0]];
+    const sum = (w: number, key: "errors" | "cited") =>
+      runs(w).reduce((n, o) => n + o[key], 0);
     return {
       snapshot: snapshot.id,
       split,
       seed: snapshot.seed,
-      baseline: baseline.utility,
-      candidate: proposed.utility,
-      delta: proposed.utility - baseline.utility,
-      errors: baseline.errors + proposed.errors,
-      cited: proposed.cited,
+      baseline: average(0),
+      candidate: average(1),
+      delta: average(1) - average(0),
+      ...(repeats > 1
+        ? {
+            baselineRuns: runs(0).map((o) => o.utility),
+            candidateRuns: runs(1).map((o) => o.utility),
+          }
+        : {}),
+      errors: sum(0, "errors") + sum(1, "errors"),
+      cited: sum(1, "cited"),
+      // The first repeat's moves, kept for inspection.
       trajectories: {
         baseline: baseline.trajectory,
         candidate: proposed.trajectory,
@@ -259,11 +288,19 @@ export async function verifyCandidate(
   };
   const meanDelta = mean("practice"),
     regressionDelta = mean("regression");
+  const se = (split: string) =>
+    standardError(rows.filter((r) => r.split === split).map((r) => r.delta));
+  const noise = { targetedSE: se("practice"), generalSE: se("regression") };
   return {
     rows,
     meanDelta,
     regressionDelta,
-    accepted: meanDelta >= 1 && regressionDelta >= -2,
+    // Repeated checks are only ever stricter: the general limit is unchanged.
+    accepted:
+      meanDelta >= 1 &&
+      regressionDelta >= -2 &&
+      (repeats === 1 || meanDelta - NOISE_GUARD_SE * noise.targetedSE > 0),
+    ...(repeats > 1 ? { noise } : {}),
     rule: verificationRule(options),
     mode: policy.mode,
     focus,

@@ -97,9 +97,13 @@ export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
       }
     : {
         verify: {
-          practice: num("VERIFY_PRACTICE", 6),
-          regression: num("VERIFY_REGRESSION", 2),
+          practice: num("VERIFY_PRACTICE", studentHelper() ? 6 : 10),
+          // Without the helper, student moves are stochastic: more boards, two averaged
+          // repeats and the noise guard keep one random swing from deciding the verdict
+          // (docs/STURDY_GATE.md).
+          regression: num("VERIFY_REGRESSION", studentHelper() ? 2 : 4),
           moves: num("VERIFY_MOVES", 4),
+          repeats: num("VERIFY_REPEATS", studentHelper() ? 1 : 2),
         },
         exerciseMoves: num("EXERCISE_MOVES", 4),
         concurrency: 3,

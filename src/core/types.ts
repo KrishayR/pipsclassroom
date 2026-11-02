@@ -137,6 +137,8 @@ export interface VerificationRow {
   baseline: number;
   candidate: number;
   delta: number;
+  baselineRuns?: number[];
+  candidateRuns?: number[];
   errors?: number;
   cited?: number;
   trajectories?: {
@@ -159,7 +161,13 @@ export interface Verification {
   rule: string;
   mode: Mode;
   focus?: Focus;
-  sizes?: { practice: number; regression: number; moves: number };
+  sizes?: {
+    practice: number;
+    regression: number;
+    moves: number;
+    repeats?: number;
+  };
+  noise?: { targetedSE: number; generalSE: number };
 }
 export interface Message {
   id: string;

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { snapshotPool, createGame, observe } from "../src/core/engine";
+import { snapshotPool, createGame, observe, draw } from "../src/core/engine";
+import { verifyCandidate, type VerifyOptions } from "../src/core/evaluation";
 import { focusApplies, moveFacts } from "../src/core/curriculum";
 import {
   activeLessons,
@@ -18,7 +19,7 @@ import {
 } from "../src/core/policy";
 import { Classroom, candidateWorkspace } from "../src/core/classroom";
 import { modelPolicy } from "../server/model";
-import type { Lesson } from "../src/core/types";
+import type { Lesson, Policy } from "../src/core/types";
 const structureLesson = (): Lesson => ({
   id: "lesson-structure",
   title: "Keep the largest tile anchored",
@@ -418,4 +419,85 @@ test("a Muse teacher that adopts an experiment gets its exact strategy; unknown 
   assert.ok(JSON.parse(sent[0].messages[1].content).strategyExperiments.length);
   assert.deepEqual(p.lesson.skill, chosen.skill);
   assert.equal(p.lesson.experiment, chosen.change);
+});
+test("repeated verification is identical for a deterministic student and only ever stricter", async () => {
+  const lesson = { ...structureLesson(), status: "candidate" as const };
+  const one = await verifyCandidate(
+    simulationPolicy(),
+    emptyWorkspace(),
+    lesson,
+    3,
+    undefined,
+    undefined,
+    { practice: 6, regression: 4, moves: 4 },
+  );
+  const three = await verifyCandidate(
+    simulationPolicy(),
+    emptyWorkspace(),
+    lesson,
+    3,
+    undefined,
+    undefined,
+    { practice: 6, regression: 4, moves: 4, repeats: 3 },
+  );
+  assert.deepEqual(
+    three.rows.map((r) => r.delta),
+    one.rows.map((r) => r.delta),
+  );
+  assert.equal(three.rows[0].candidateRuns!.length, 3);
+  assert.ok(three.noise!.targetedSE >= 0);
+  if (three.accepted) assert.ok(one.accepted);
+  assert.match(three.rule, /repeated 3 times/);
+});
+test("with a random student, the sturdier gate is fooled by pure noise less often", async () => {
+  // A student whose moves are random and ignore memory: any measured gain is noise.
+  let state = 12345;
+  const random: Policy = {
+    ...simulationPolicy(),
+    async decide(observation) {
+      const [u, next] = draw(state);
+      state = next;
+      return {
+        action: observation.legal[Math.floor(u * observation.legal.length)],
+        summary: "random",
+        tools: [],
+        tokens: 0,
+        calls: 0,
+        simulations: 0,
+      };
+    },
+  };
+  const noOp = {
+    ...structureLesson(),
+    focus: undefined,
+    status: "candidate" as const,
+  };
+  const trial = async (round: number, options: VerifyOptions) => {
+    const v = await verifyCandidate(
+      random,
+      emptyWorkspace(),
+      noOp,
+      round,
+      undefined,
+      undefined,
+      options,
+    );
+    return { accepted: v.accepted, general: Math.abs(v.regressionDelta) };
+  };
+  const old = { practice: 6, regression: 2, moves: 4 };
+  const sturdy = { practice: 6, regression: 4, moves: 4, repeats: 3 };
+  let oldAccepts = 0,
+    newAccepts = 0,
+    oldSwing = 0,
+    newSwing = 0;
+  for (let round = 0; round < 40; round++) {
+    const a = await trial(round, old),
+      b = await trial(round, sturdy);
+    oldAccepts += +a.accepted;
+    newAccepts += +b.accepted;
+    oldSwing += a.general;
+    newSwing += b.general;
+  }
+  assert.ok(newAccepts <= oldAccepts, `${newAccepts} > ${oldAccepts}`);
+  assert.ok(newSwing < oldSwing, `${newSwing} >= ${oldSwing}`);
 });
