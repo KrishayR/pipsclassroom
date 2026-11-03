@@ -97,12 +97,15 @@ export default function LearningRecord({
               ? "These are moves where the model explicitly cited an active lesson. A citation shows reported use, not proof that the lesson caused success."
               : "Simulation executes the current strategy parameters. It does not claim that a language model understood a lesson."}
           </p>
-          {latest && (
+          {student.traces.length > 0 && (
             <button
               className="text-button"
-              onClick={() => onInspect(latest.id)}
+              onClick={() => onInspect((latest ?? student.traces.at(-1)!).id)}
             >
-              Inspect the latest linked move →
+              {latest
+                ? "Inspect the latest lesson-linked decision"
+                : "Inspect a recorded decision"}{" "}
+              →
             </button>
           )}
           <p className="fine">

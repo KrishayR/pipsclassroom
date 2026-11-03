@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import LearningRecord from "./components/LearningRecord";
+import SessionProgress from "./components/SessionProgress";
 import LearningGuide from "./components/LearningGuide";
 import Pip from "./components/Pip";
 import ComparisonPanel, { armNames } from "./components/ComparisonPanel";
@@ -55,10 +56,8 @@ const format = (n: number) =>
   new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
 const pages = [
   { id: "classroom", name: "Classroom", icon: Users },
-  { id: "lessons", name: "Saved lessons", icon: BookOpen },
-  { id: "compare", name: "Classroom vs solo", icon: Users },
-  { id: "results", name: "Test results", icon: GraduationCap },
-  { id: "traces", name: "Watch a decision", icon: Activity },
+  { id: "lessons", name: "Lessons", icon: BookOpen },
+  { id: "results", name: "Results", icon: GraduationCap },
 ];
 function BoardView({
   board,
@@ -441,6 +440,8 @@ export default function App() {
     [mode, setMode] = useState<Mode>("simulation"),
     [state, setState] = useState<LabState>(() => initialState()),
     [page, setPage] = useState("classroom"),
+    [resultsView, setResultsView] = useState("exams"),
+    [traceOrigin, setTraceOrigin] = useState("classroom"),
     [selected, setSelected] = useState("student-1"),
     [intro, setIntro] = useState(false),
     [error, setError] = useState(""),
@@ -483,6 +484,43 @@ export default function App() {
     }
   };
   const busy = state.busy || pending || state.liveBatch?.status === "running";
+  const batch = mode === "model" ? state.liveBatch : undefined;
+  const batchStage =
+    batch?.status === "running" ? batch.stage.toLowerCase() : "";
+  const sessionComplete = batch?.status === "complete" && !state.busy;
+  const pipelineState = (phase: string) => {
+    if (!batchStage)
+      return sessionComplete
+        ? "done"
+        : state.busy && state.phase === phase
+          ? "current"
+          : "";
+    if (batchStage.includes("baseline") || batchStage.includes("stopping"))
+      return "";
+    if (batchStage.includes("practice"))
+      return phase === "practice" ? "current" : "";
+    if (batchStage.includes("teaching"))
+      return phase === "practice"
+        ? "done"
+        : ["review", "verify"].includes(phase)
+          ? "current"
+          : "";
+    if (batchStage.includes("review"))
+      return phase === "practice"
+        ? "done"
+        : phase === "review"
+          ? "current"
+          : "";
+    if (batchStage.includes("verification"))
+      return ["practice", "review"].includes(phase)
+        ? "done"
+        : phase === "verify"
+          ? "current"
+          : "";
+    if (batchStage.includes("exam"))
+      return phase === "exam" ? "current" : "done";
+    return "";
+  };
   const student =
     state.students.find((s) => s.id === selected) ?? state.students[0];
   const traces = state.students.flatMap((s) => s.traces);
@@ -507,8 +545,20 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [replaying, page, replayIndex, replayTraces]);
   const inspect = (id: string) => {
+    if (page !== "traces") setTraceOrigin(page);
+    setReplaying(false);
     setTraceId(id);
     setPage("traces");
+  };
+  const navigate = (next: string) => {
+    if (next === "compare") {
+      setResultsView("comparison");
+      setPage("results");
+    } else {
+      if (next === "results") setResultsView("exams");
+      if (next === "traces" && page !== "traces") setTraceOrigin(page);
+      setPage(next);
+    }
   };
   const download = async () => {
     if (!connection) return;
@@ -551,7 +601,9 @@ export default function App() {
             <button
               key={id}
               onClick={() => setPage(id)}
-              className={page === id ? "active" : ""}
+              className={
+                (page === "traces" ? traceOrigin : page) === id ? "active" : ""
+              }
             >
               <Icon size={18} />
               {name}
@@ -587,7 +639,7 @@ export default function App() {
             className={page === "settings" ? "active" : ""}
           >
             <Settings2 size={18} />
-            Lab configuration
+            Settings
           </button>
           <div className="connection">
             <span className="dot" />
@@ -603,7 +655,11 @@ export default function App() {
           <div>
             <span>Pip’s Classroom</span>
             <ChevronRight size={14} />
-            <b>{pages.find((p) => p.id === page)?.name ?? "Configuration"}</b>
+            <b>
+              {page === "traces"
+                ? "Decision details"
+                : (pages.find((p) => p.id === page)?.name ?? "Settings")}
+            </b>
           </div>
           <div className="top-actions">
             <span className={`mode-badge ${mode}`}>
@@ -627,7 +683,9 @@ export default function App() {
           ].map(({ id, name, icon: Icon }) => (
             <button
               key={id}
-              className={page === id ? "active" : ""}
+              className={
+                (page === "traces" ? traceOrigin : page) === id ? "active" : ""
+              }
               onClick={() => setPage(id)}
             >
               <Icon size={17} />
@@ -644,7 +702,7 @@ export default function App() {
                   ? "Watch agents turn practice into tested lessons."
                   : page === "lessons"
                     ? "Good ideas have to prove themselves."
-                    : page === "compare"
+                    : page === "results" && resultsView === "comparison"
                       ? "Better together? Let’s find out."
                       : page === "results"
                         ? "What can they do on their own?"
@@ -657,7 +715,7 @@ export default function App() {
                   ? "Watch AI students try, share ideas, and find out what actually helps."
                   : page === "lessons"
                     ? "Students keep the advice that helps on new boards. The rest stays here too."
-                    : page === "compare"
+                    : page === "results" && resultsView === "comparison"
                       ? "Same starting point. Different ways to learn. One fair question."
                       : page === "results"
                         ? "Fresh games, saved lessons, and no hints from the teacher or classmates."
@@ -690,7 +748,7 @@ export default function App() {
               <p>
                 {state.busy
                   ? "They’re working on it. You can watch the steps or stop after the current move."
-                  : page === "compare"
+                  : page === "results" && resultsView === "comparison"
                     ? "Here’s our little experiment: four fresh study groups, then the same test with no hints."
                     : state.candidate
                       ? `${state.students.find((s) => s.id === state.candidate?.studentId)?.name ?? "A student"} has an idea to try. Let’s test it before calling it a lesson.`
@@ -726,7 +784,7 @@ export default function App() {
           </div>
           <LearningGuide
             selected={selected}
-            navigate={setPage}
+            navigate={navigate}
             state={state}
             busy={busy}
             ready={!!connection}
@@ -774,7 +832,10 @@ export default function App() {
                 ].map(({ name, desc, icon: Icon, phase }, i) => (
                   <div
                     key={name}
-                    className={state.phase === phase ? "current" : ""}
+                    className={pipelineState(phase)}
+                    aria-current={
+                      pipelineState(phase) === "current" ? "step" : undefined
+                    }
                   >
                     <span className="pipeline-icon">
                       <Icon size={17} />
@@ -792,120 +853,164 @@ export default function App() {
                   </div>
                 ))}
               </div>
-              <div className="section-bar classroom-actions">
+              <section className="panel session-launcher">
+                <div className="section-bar">
+                  <div>
+                    <h2>Run a learning session</h2>
+                    <p>
+                      Baseline exam → focused practice → teacher and peer
+                      discussion → verification → independent exam.
+                    </p>
+                  </div>
+                  {busy ? (
+                    <button className="secondary" onClick={() => run("stop")}>
+                      <Square size={14} /> Stop after current action
+                    </button>
+                  ) : (
+                    <button
+                      className="primary"
+                      disabled={
+                        mode !== "model" ||
+                        connection?.kind !== "server" ||
+                        !Number.isInteger(Number(batchCycles)) ||
+                        Number(batchCycles) < 1 ||
+                        Number(batchCycles) > 100
+                      }
+                      onClick={() =>
+                        run("live-batch", {
+                          cycles: Number(batchCycles),
+                          kind: "classroom",
+                        })
+                      }
+                    >
+                      <Play size={15} /> Run Learning Session
+                    </button>
+                  )}
+                </div>
+                <label>
+                  Number of sessions{" "}
+                  <input
+                    aria-label="Number of learning sessions"
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={batchCycles}
+                    disabled={busy}
+                    onChange={(e) => setBatchCycles(e.target.value)}
+                  />
+                </label>
+                <p className="fine">
+                  Teaches Ada, Lin and Sam. Starts a fresh classroom; previous
+                  run data stays saved. Uses Muse credits within the server’s
+                  configured budget. Keep the backend running.
+                </p>
+                {mode !== "model" && (
+                  <p className="fine">
+                    You’re in local simulation.{" "}
+                    <button
+                      className="text-button"
+                      onClick={() => setPage("settings")}
+                    >
+                      Select Muse in Settings
+                    </button>{" "}
+                    to run an automated learning session, or try the individual
+                    steps below.
+                  </p>
+                )}
+              </section>
+              {!batch && (
+                <section
+                  className="session-progress panel"
+                  aria-label="Learning session progress"
+                >
+                  <strong>Ready to start a learning session</strong>
+                  <progress
+                    aria-label="Completed learning stages"
+                    max={1}
+                    value={0}
+                  />
+                  <p className="fine">
+                    The current step and completed stage checkpoints will appear
+                    here. Baseline runs before Practice; Discuss and Verify can
+                    overlap.
+                  </p>
+                </section>
+              )}
+              {batch && (!state.busy || batch.status === "running") && (
+                <SessionProgress batch={batch} />
+              )}
+              <details className="individual-steps panel">
+                <summary>Run Individual steps</summary>
+                <p className="fine">
+                  Continue the current classroom one step at a time. These
+                  actions don’t automatically run the complete session.
+                </p>
+                <div className="controls">
+                  <button
+                    className="secondary"
+                    disabled={busy || !connection}
+                    onClick={() => run("practice", { steps: 12 })}
+                  >
+                    <Play size={14} /> Play 12 more moves
+                  </button>
+                  <button
+                    className="secondary"
+                    disabled={busy || !connection || !!state.candidate}
+                    onClick={() => run("diagnose")}
+                  >
+                    <FlaskConical size={14} /> Focused practice
+                  </button>
+                  <button
+                    className="secondary"
+                    disabled={
+                      busy || !student.traces.length || !!state.candidate
+                    }
+                    onClick={() => run("review", { studentId: student.id })}
+                  >
+                    <Users size={14} /> Discuss {student.name}’s attempt
+                  </button>
+                  {state.candidate && (
+                    <button
+                      className="secondary"
+                      disabled={busy}
+                      onClick={() => run("verify")}
+                    >
+                      <ShieldCheck size={14} /> Test pending lesson
+                    </button>
+                  )}
+                  {mode === "model" && connection?.kind === "server" && (
+                    <button
+                      className="secondary"
+                      disabled={
+                        busy ||
+                        !Number.isInteger(Number(batchCycles)) ||
+                        Number(batchCycles) < 1 ||
+                        Number(batchCycles) > 100
+                      }
+                      onClick={() =>
+                        run("live-batch", {
+                          cycles: Number(batchCycles),
+                          kind: "individual",
+                        })
+                      }
+                    >
+                      Run individual cycles · {batchCycles || "…"}
+                    </button>
+                  )}
+                </div>
+              </details>
+              <div className="section-bar">
                 <div>
                   <h2>
                     The classroom <span>3 students</span>
                   </h2>
                   <p>
-                    {state.busy
-                      ? `${state.phase[0].toUpperCase() + state.phase.slice(1)} in progress…`
-                      : "Everyone gets the same tools and keeps their own notes."}
+                    Shared tools, separate notes. Select a student to inspect
+                    their learning record.
                   </p>
                 </div>
-                <div className="controls">
-                  {busy ? (
-                    <button className="secondary" onClick={() => run("stop")}>
-                      <Square size={14} />
-                      Stop
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        className="secondary"
-                        disabled={!traces.length || !!state.candidate}
-                        onClick={() => run("review", { studentId: selected })}
-                      >
-                        <Users size={15} />
-                        Discuss
-                      </button>
-                      {mode === "model" && connection?.kind === "server" && (
-                        <>
-                          <label>
-                            Count{" "}
-                            <input
-                              aria-label="Live learning cycles"
-                              type="number"
-                              min="1"
-                              max="100"
-                              step="1"
-                              value={batchCycles}
-                              onChange={(e) => setBatchCycles(e.target.value)}
-                              style={{ width: 72 }}
-                            />
-                          </label>
-                          <button
-                            className="primary"
-                            disabled={
-                              !Number.isInteger(Number(batchCycles)) ||
-                              Number(batchCycles) < 1 ||
-                              Number(batchCycles) > 100
-                            }
-                            onClick={() =>
-                              run("live-batch", {
-                                cycles: Number(batchCycles),
-                                kind: "classroom",
-                              })
-                            }
-                          >
-                            <Play size={14} />
-                            Classroom Session · {batchCycles || "…"} · $1 max
-                          </button>
-                          <button
-                            className="secondary session-launch"
-                            disabled={
-                              !Number.isInteger(Number(batchCycles)) ||
-                              Number(batchCycles) < 1 ||
-                              Number(batchCycles) > 100
-                            }
-                            onClick={() =>
-                              run("live-batch", {
-                                cycles: Number(batchCycles),
-                                kind: "individual",
-                              })
-                            }
-                          >
-                            Individual Cycles · {batchCycles || "…"} · $1 max
-                          </button>
-                        </>
-                      )}
-                      <button
-                        className="secondary"
-                        onClick={() => run("diagnose")}
-                        disabled={!connection || !!state.candidate}
-                      >
-                        <FlaskConical size={14} />
-                        Focused practice
-                      </button>
-                      <button
-                        className="primary"
-                        onClick={() => run("practice", { steps: 12 })}
-                        disabled={!connection}
-                      >
-                        <Play size={14} />
-                        Start practice
-                      </button>
-                    </>
-                  )}
-                </div>
               </div>
-              <p className="fine">
-                {mode === "model" &&
-                  "Classroom Session teaches Ada, Lin and Sam together: shared focused practice, separate feedback and checks, then one exam per student. Peer evidence is frozen before teaching; new lessons can help classmates next session. Individual Cycles teaches one student at a time in Ada → Lin → Sam order, with practice and exams each cycle. Count sets how many sessions or individual cycles to run (1–100). Both use live Muse, at most six requests at once, one revision per rejected lesson, and the same verification thresholds. All exam moves save automatically. Each batch starts a fresh classroom and has a $1 estimated cap; keep the server running. "}
-                Focused practice gives every student short exercises in all
-                three skills, so reviews have relevant examples to discuss.
-                Their regular games and saved notes stay in place.
-                {mode === "model" ? " These exercises use API credits." : ""}
-              </p>
-              {mode === "model" && state.liveBatch && (
-                <p role="status" className="fine">
-                  <b>{state.liveBatch.stage}</b> · {state.liveBatch.completed}/
-                  {state.liveBatch.total}
-                  cycles saved · estimated $
-                  {state.liveBatch.spentUsd.toFixed(4)} used. Results:{" "}
-                  {state.liveBatch.directory}/status.json
-                </p>
-              )}
               {mode === "model" && !!state.liveBatch?.cycles.length && (
                 <details>
                   <summary>Inspect completed teaching attempts</summary>
@@ -993,12 +1098,10 @@ export default function App() {
                         : "AI feedback · still needs to pass a test"}
                     </span>
                   </div>
-                  <button
-                    disabled={busy || !traces.length || !!state.candidate}
-                    onClick={() => run("review", { studentId: selected })}
-                  >
-                    Review {student.name}’s attempt <ArrowRight size={15} />
-                  </button>
+                  <p className="fine">
+                    Use Run Individual steps above to discuss {student.name}’s
+                    attempt.
+                  </p>
                 </aside>
               </div>
               <LearningRecord
@@ -1026,8 +1129,9 @@ export default function App() {
                       <div>
                         <b>Everyone’s here. Let’s begin.</b>
                         <p>
-                          Press Start practice. You’ll see each student check
-                          the board, try out moves, and make a choice.
+                          Choose Play 12 more moves under Run Individual steps.
+                          You’ll see each student check the board, try out
+                          moves, and make a choice.
                         </p>
                       </div>
                     </div>
@@ -1091,17 +1195,11 @@ export default function App() {
                           {state.candidate.lesson.skill.spaceWeight}
                         </code>
                       </div>
-                      <button
-                        className="primary full"
-                        disabled={busy}
-                        onClick={() => run("verify")}
-                      >
-                        <ShieldCheck size={15} />
-                        Test this idea
-                      </button>
                       <p className="fine">
-                        We’ll compare old and new notes on fresh boards chosen
-                        for this skill, plus a few general check-up boards.
+                        Open “Run Individual steps” and choose “Test pending
+                        lesson” to compare old and new notes on fresh boards
+                        chosen for this skill, plus a few general check-up
+                        boards.
                       </p>
                     </>
                   ) : (
@@ -1147,7 +1245,38 @@ export default function App() {
               </div>
             </>
           )}
-          {page === "compare" && (
+          {page === "results" && (
+            <div className="section-bar">
+              <div
+                className="student-tabs"
+                role="group"
+                aria-label="Results view"
+              >
+                <button
+                  className={resultsView === "exams" ? "active" : ""}
+                  aria-pressed={resultsView === "exams"}
+                  onClick={() => setResultsView("exams")}
+                >
+                  Student exams
+                </button>
+                <button
+                  className={resultsView === "comparison" ? "active" : ""}
+                  aria-pressed={resultsView === "comparison"}
+                  onClick={() => setResultsView("comparison")}
+                >
+                  Classroom vs solo
+                </button>
+              </div>
+              <button
+                className="secondary"
+                disabled={!student.traces.length}
+                onClick={() => inspect(student.traces.at(-1)!.id)}
+              >
+                <Activity size={15} /> Inspect recorded decisions
+              </button>
+            </div>
+          )}
+          {page === "results" && resultsView === "comparison" && (
             <ComparisonPanel
               comparison={state.comparisons?.at(-1)}
               busy={busy}
@@ -1236,7 +1365,7 @@ export default function App() {
               )}
             </>
           )}
-          {page === "results" && (
+          {page === "results" && resultsView === "exams" && (
             <>
               <div className="exam-banner">
                 <span className="exam-icon">
@@ -1407,6 +1536,16 @@ export default function App() {
           )}
           {page === "traces" && (
             <>
+              <button
+                className="text-button"
+                onClick={() => {
+                  setReplaying(false);
+                  setPage(traceOrigin);
+                }}
+              >
+                <ArrowLeft size={15} /> Back to{" "}
+                {pages.find((p) => p.id === traceOrigin)?.name ?? "Classroom"}
+              </button>
               <div className="section-bar">
                 <div>
                   <h2>Inside a move</h2>
@@ -1491,8 +1630,8 @@ export default function App() {
                 </>
               ) : (
                 <Empty icon={Activity} title="First, let’s make a move.">
-                  Start practice, then come back to replay a move and open the
-                  tool results.
+                  Play 12 more moves under Run Individual steps, then come back
+                  to replay a move and open the tool results.
                 </Empty>
               )}
             </>
