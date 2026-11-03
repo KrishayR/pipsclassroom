@@ -54,7 +54,7 @@ interface ModelConfig {
   limiter?: () => Promise<void>;
   fetch?: typeof fetch;
   beforeRequest?: () => void;
-  // How long a lost connection is waited out before the call fails (default 10 minutes).
+  // Recovery window for connection failures, timeouts and server errors (default 10 minutes).
   outageWaitMs?: number;
   requestGate?: <T>(work: () => Promise<T>) => Promise<T>;
 }
@@ -155,10 +155,12 @@ export function modelPolicy(config: ModelConfig): Policy & {
   };
   const retryWait = async (ms: number) => {
     timing.retries++;
+    timing.retrying = (timing.retrying ?? 0) + 1;
     const started = performance.now();
     try {
       await new Promise((resolve) => setTimeout(resolve, ms));
     } finally {
+      timing.retrying--;
       timing.retryWaitMs += performance.now() - started;
     }
   };
@@ -247,19 +249,23 @@ export function modelPolicy(config: ModelConfig): Policy & {
             else lease?.settle(worst);
             lease = undefined;
             // A lost connection is waited out instead of failing the run.
-            if (e instanceof TypeError) {
+            if (
+              e instanceof TypeError ||
+              (e instanceof Error &&
+                (e.name === "TimeoutError" || e.name === "AbortError"))
+            ) {
               offlineSince ??= Date.now();
               const window = config.outageWaitMs ?? 600000;
               if (Date.now() - offlineSince < window) {
                 await retryWait(Math.min(window / 20, backoffMs(attempt++)));
                 continue;
               }
+              throw e;
             }
             if (attempt >= RETRIES) throw e;
             await retryWait(backoffMs(attempt++));
             continue;
           }
-          offlineSince = undefined;
           if (response.ok) break;
           if (response.status === 429) timing.rateLimited++;
           if (response.status >= 500) timing.serverErrors++;
@@ -278,10 +284,20 @@ export function modelPolicy(config: ModelConfig): Policy & {
             console.warn(`API ${label} ${problem}; switching to the next key.`);
             continue;
           }
-          if (
-            (response.status === 429 || response.status >= 500) &&
-            attempt < RETRIES
-          ) {
+          if (response.status >= 500) {
+            offlineSince ??= Date.now();
+            const window = config.outageWaitMs ?? 600000;
+            if (Date.now() - offlineSince < window) {
+              await retryWait(
+                Math.min(
+                  window / 20,
+                  backoffMs(attempt++, response.headers.get("retry-after")),
+                ),
+              );
+              continue;
+            }
+          }
+          if (response.status === 429 && attempt < RETRIES) {
             await retryWait(
               backoffMs(attempt++, response.headers.get("retry-after")),
             );

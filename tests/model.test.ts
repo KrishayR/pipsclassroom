@@ -511,3 +511,76 @@ test("a lost connection is waited out, and requests that never connected are not
   assert.equal(d.calls, 1);
   assert.equal(policy.usage().calls, 1);
 });
+
+test("gateway errors and timeouts recover beyond five retries without replaying a move", async () => {
+  for (const failure of ["gateway", "timeout"]) {
+    let attempts = 0;
+    const obs = observe(createGame(1));
+    const policy = modelPolicy({
+      key: "fixture",
+      baseUrl: "https://example.invalid/v1",
+      model: "fixture",
+      tokenBudget: 1000000,
+      outageWaitMs: 4000,
+      fetch: (async () => {
+        if (++attempts <= 7) {
+          if (failure === "timeout")
+            throw new DOMException("Timed out", "TimeoutError");
+          return new Response("Gateway timeout", { status: 504 });
+        }
+        return response({
+          role: "assistant",
+          tool_calls: [
+            {
+              id: "fixture",
+              type: "function",
+              function: {
+                name: "apply_move",
+                arguments: JSON.stringify({
+                  direction: obs.legal[0],
+                  summary: "fixture",
+                }),
+              },
+            },
+          ],
+        });
+      }) as typeof fetch,
+    });
+    const decision = await policy.decide(obs, emptyWorkspace(), 1);
+    assert.equal(attempts, 8);
+    assert.equal(decision.calls, 1);
+    assert.equal(decision.action, obs.legal[0]);
+    assert.equal(policy.diagnostics!().retrying, 0);
+    assert.equal(policy.diagnostics!().failed, 0);
+  }
+});
+
+test("recovery stops at its window, and stop/budget guards prevent another paid attempt", async (t) => {
+  let now = 0;
+  t.mock.method(Date, "now", () => now);
+  for (const guard of ["window", "stop", "budget"]) {
+    let attempts = 0;
+    const policy = modelPolicy({
+      key: "fixture",
+      baseUrl: "https://example.invalid/v1",
+      model: "fixture",
+      tokenBudget: 1000000,
+      outageWaitMs: 20,
+      beforeRequest: () => {
+        if (attempts && guard !== "window") throw new Error(guard);
+      },
+      fetch: (async () => {
+        attempts++;
+        now += 21;
+        return new Response("Gateway timeout", { status: 504 });
+      }) as typeof fetch,
+    });
+    await assert.rejects(
+      policy.decide(observe(createGame(1)), emptyWorkspace(), 1),
+      guard === "window" ? /HTTP 504/ : new RegExp(guard),
+    );
+    assert.equal(attempts, guard === "window" ? 2 : 1);
+    assert.equal(policy.diagnostics!().active, 0);
+    assert.equal(policy.diagnostics!().retrying, 0);
+  }
+});

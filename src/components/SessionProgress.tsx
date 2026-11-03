@@ -78,6 +78,12 @@ export default function SessionProgress({
           : "Stage progress, not a time estimate. "}
         Discuss and Verify can overlap across students.
       </p>
+      {batch.status === "running" && !!diagnostics?.retrying && (
+        <p className="fine" role="status">
+          Waiting to retry {diagnostics.retrying} temporary API failure(s).
+          Recovery is automatic; stop, time and spending limits still apply.
+        </p>
+      )}
       <div className="session-spend">
         <span>Estimated spend</span>
         <strong>

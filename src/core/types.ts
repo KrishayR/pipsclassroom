@@ -308,6 +308,7 @@ export interface RuntimeTestStatus {
   }[];
 }
 export interface RequestDiagnostics {
+  retrying?: number;
   contextEncoding?: "full" | "columnar-ranking";
   studentReasoningEffort?: string;
   teacherReasoningEffort?: string;
