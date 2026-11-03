@@ -116,6 +116,10 @@ The hardest obstacle was **separating useful teaching from noise and planner ass
 
 Live integration also exposed completion caps consumed by hidden reasoning, invalid structured replies, and throughput limits. The adapter handles truncation, allows one validation correction, and reports failures without silently substituting simulated moves. Earlier adapter timings describe earlier versions, not guaranteed current latency.
 
+## Runtime diagnostics and latency pilot
+
+Independent classroom exam games can use up to six workers (`MODEL_EXAM_CONCURRENCY`, default 6); moves inside each game stay sequential. A one-seed exam still has only three games. Saved-run details and exports include queue, provider, rate-limit and retry timings. `npm run benchmark-muse` previews a separate concurrency/reasoning-effort comparison without making calls; paid execution requires `--live` and uses its own shared budget. Normal runs retain `low` reasoning and the planner. See [Muse runtime checks](docs/MUSE_RUNTIME.md) before running a live pilot.
+
 ## Demo and evaluation
 
 Follow this workflow for the demo:

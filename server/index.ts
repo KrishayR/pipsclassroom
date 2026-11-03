@@ -63,6 +63,10 @@ for (const policy of [simulationPolicy(), ...(real ? [real] : [])]) {
 function publicState(state: LabState) {
   const batchState = state.mode === "model" ? batch.state() : undefined;
   const safe = structuredClone(batchState ?? state);
+  if (state.mode === "model")
+    safe.requestDiagnostics = batchState
+      ? batch.diagnostics()
+      : real?.diagnostics?.();
   if (state.mode === "model") safe.liveBatch = batch.status();
   safe.students.forEach((s) => {
     s.game.rng = 0;
@@ -141,6 +145,7 @@ const server = createServer(async (req, res) => {
         ...exported.state,
         ...(mode === "model" ? { liveBatch: batch.status() } : {}),
         tokens: publicState(lab.state).tokens,
+        requestDiagnostics: publicState(lab.state).requestDiagnostics,
         calls: publicState(lab.state).calls,
       },
     });
@@ -171,7 +176,8 @@ const server = createServer(async (req, res) => {
     const input = JSON.parse(body || "{}");
     const { action } = input;
     if (action === "clear-progress") {
-      if (mode !== "model") throw new Error("Select live model mode to clear session progress.");
+      if (mode !== "model")
+        throw new Error("Select live model mode to clear session progress.");
       batch.clearProgress();
       lab.emit();
       return send(200, { ok: true });

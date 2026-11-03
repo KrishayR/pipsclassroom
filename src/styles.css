@@ -719,6 +719,27 @@ main {
 .session-progress p {
   overflow-wrap: anywhere;
 }
+.request-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.request-stats > div {
+  padding: 10px 12px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.request-stats dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+.request-stats dd {
+  margin: 5px 0 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 .session-progress .session-resume {
   align-items: center;
   justify-content: flex-start;

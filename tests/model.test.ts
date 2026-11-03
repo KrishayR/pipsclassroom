@@ -212,6 +212,14 @@ test("rate limits and server errors are retried with backoff; the call is counte
   const d = await policy.decide(obs, emptyWorkspace(), 1);
   assert.equal(n, 3);
   assert.equal(d.calls, 1);
+  const timing = policy.diagnostics!();
+  assert.equal(timing.attempts, 3);
+  assert.equal(timing.retries, 2);
+  assert.equal(timing.rateLimited, 1);
+  assert.equal(timing.serverErrors, 1);
+  assert.equal(timing.completed, 1);
+  assert.equal(timing.active, 0);
+  assert.ok(timing.retryWaitMs > 0);
 });
 test("a reply truncated by the completion cap is not echoed back", async () => {
   let calls = 0;

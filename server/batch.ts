@@ -89,6 +89,7 @@ export function liveBatchRunner(
   const runner = {
     status: () => (status?.progressCleared ? undefined : status),
     archiveStatus: () => status,
+    diagnostics: () => lab?.policy.diagnostics?.(),
     clearProgress() {
       if (status?.status === "running")
         throw new Error("Stop the session before resetting progress.");
@@ -244,6 +245,7 @@ export function liveBatchRunner(
             startedAt: new Date().toISOString(),
             cycles: [],
             concurrency: protocol.concurrency,
+            examConcurrency: protocol.examConcurrency,
             verificationConcurrency: protocol.verificationConcurrency,
             timings: [],
           };

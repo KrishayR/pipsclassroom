@@ -1,4 +1,4 @@
-import type { LiveBatch } from "../core/types";
+import type { LiveBatch, RequestDiagnostics } from "../core/types";
 import { Play } from "lucide-react";
 
 export function sessionProgress(batch: LiveBatch) {
@@ -17,11 +17,13 @@ export default function SessionProgress({
   onResume,
   resumeDisabled = false,
   resuming = false,
+  diagnostics,
 }: {
   batch: LiveBatch;
   onResume?: () => void;
   resumeDisabled?: boolean;
   resuming?: boolean;
+  diagnostics?: RequestDiagnostics;
 }) {
   const { completed, total } = sessionProgress(batch);
   const label =
@@ -81,6 +83,53 @@ export default function SessionProgress({
       <details className="saved-run-details">
         <summary>Saved run details</summary>
         <div className="saved-run-body">
+          {diagnostics && (
+            <>
+              <p>
+                Request timings · reasoning {diagnostics.reasoningEffort} ·{" "}
+                {diagnostics.active} active · {diagnostics.queued} queued
+              </p>
+              <dl className="request-stats">
+                <div>
+                  <dt>Completed / failed</dt>
+                  <dd>
+                    {diagnostics.completed} / {diagnostics.failed}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Queue wait</dt>
+                  <dd>{(diagnostics.queueMs / 1000).toFixed(1)} s</dd>
+                </div>
+                <div>
+                  <dt>Rate-limit wait</dt>
+                  <dd>{(diagnostics.rateWaitMs / 1000).toFixed(1)} s</dd>
+                </div>
+                <div>
+                  <dt>Response headers</dt>
+                  <dd>{(diagnostics.providerHeadersMs / 1000).toFixed(1)} s</dd>
+                </div>
+                <div>
+                  <dt>Response body</dt>
+                  <dd>{(diagnostics.bodyMs / 1000).toFixed(1)} s</dd>
+                </div>
+                <div>
+                  <dt>Retry wait</dt>
+                  <dd>
+                    {(diagnostics.retryWaitMs / 1000).toFixed(1)} s ·{" "}
+                    {diagnostics.retries} retries
+                  </dd>
+                </div>
+                <div>
+                  <dt>Rate-limit responses</dt>
+                  <dd>{diagnostics.rateLimited}</dd>
+                </div>
+              </dl>
+              <p>
+                Totals across concurrent requests, not wall-clock duration.
+                Response timings include network and provider work.
+              </p>
+            </>
+          )}
           <code>{batch.directory}/status.json</code>
           <p>
             {batch.completed}/{batch.total} cycles finished. Stopped runs stay

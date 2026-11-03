@@ -262,6 +262,7 @@ async function train(arm: Arm, repetition: number): Promise<TrainingRecord> {
     exerciseMoves,
     reviseRejected: revisions,
     concurrency: protocol.concurrency,
+    examConcurrency: protocol.examConcurrency,
     verificationConcurrency: protocol.verificationConcurrency,
   });
   let error: string | undefined;

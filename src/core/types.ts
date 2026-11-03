@@ -209,6 +209,7 @@ export interface Exam {
   completedAt?: string;
 }
 export interface LabState {
+  requestDiagnostics?: RequestDiagnostics;
   plannerEnabled?: boolean;
   pendingCandidates?: { studentId: string; lesson: Lesson }[];
   sessionTeaching?: {
@@ -239,6 +240,7 @@ export interface LabState {
   comparisons: Comparison[];
 }
 export interface LiveBatch {
+  examConcurrency?: number;
   progressCleared?: boolean;
   canResume?: boolean;
   spendStartUsd?: number;
@@ -273,7 +275,25 @@ export interface StrategyExperiment {
   general: number;
   boards: { practice: number; regression: number; moves: number };
 }
+export interface RequestDiagnostics {
+  reasoningEffort: string;
+  queued: number;
+  active: number;
+  completed: number;
+  failed: number;
+  attempts: number;
+  retries: number;
+  rateLimited: number;
+  serverErrors: number;
+  transportErrors: number;
+  queueMs: number;
+  rateWaitMs: number;
+  providerHeadersMs: number;
+  bodyMs: number;
+  retryWaitMs: number;
+}
 export interface Policy {
+  diagnostics?: () => RequestDiagnostics;
   allowSkill?: boolean;
   mode: Mode;
   modelId?: string;

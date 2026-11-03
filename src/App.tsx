@@ -1163,6 +1163,7 @@ export default function App() {
               {batch && (!state.busy || batch.status === "running") && (
                 <SessionProgress
                   batch={batch}
+                  diagnostics={state.requestDiagnostics}
                   onResume={() => run("resume-batch")}
                   resumeDisabled={
                     busy || pending || connection?.kind !== "server"

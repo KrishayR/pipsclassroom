@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "benchmark-muse": "tsx scripts/benchmark-muse.ts",
     "dev": "concurrently -k -n server,web \"npm:server\" \"vite --host 127.0.0.1\"",
     "server": "node --experimental-sqlite --import tsx server/index.ts",
     "build": "tsc --noEmit && vite build",
