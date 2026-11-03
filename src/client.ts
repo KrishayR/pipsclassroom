@@ -124,3 +124,47 @@ export async function exportRun(connection: Connection, mode: Mode) {
     ? browserLab().export()
     : fetch(`/api/export?mode=${mode}`).then((r) => r.json());
 }
+
+export async function exportClassroomArchive(
+  connection: Connection,
+  mode: Mode,
+) {
+  const { classroomSummary, zipArchive } = await import("./archive");
+  const raw = await exportRun(connection, mode);
+  const files: import("./archive").ArchiveFile[] = [
+    { name: "classroom.json", content: JSON.stringify(raw, null, 2) },
+    { name: "SUMMARY.md", content: classroomSummary(raw.state) },
+  ];
+  if (connection.kind !== "browser") {
+    const response = await fetch(`/api/export-checkpoints?mode=${mode}`);
+    if (!response.ok) throw new Error("Could not load checkpoints.");
+    const checkpoints: import("./archive").ArchiveFile[] =
+      await response.json();
+    files.push(...checkpoints);
+    for (const file of checkpoints) {
+      const snapshot = JSON.parse(file.content);
+      if (snapshot.state?.students)
+        files.push({
+          name: file.name.replace(/\.json$/, "-summary.md"),
+          content: classroomSummary(snapshot.state),
+        });
+    }
+  }
+  files.push({
+    name: "README.txt",
+    content: [
+      "CLASSROOM ARCHIVE",
+      "",
+      "SUMMARY.md: readable report for the current classroom snapshot.",
+      "classroom.json: full retained classroom state, protocol, practice traces, exams and lesson verification records.",
+      "live-run/: checkpoint JSON and readable reports from the latest live batch in Live model mode (when available).",
+      "The live-run final-summary.md is the completed batch report; the current classroom can be a separate manual session.",
+      "status.json records progress, timings and estimated spending. A running export is partial; export again after completion.",
+      "Older batches remain in the server's data directory and are not included in this archive.",
+      "Messages are limited to those retained by the app (latest 100 per snapshot). Older snapshots may contain additional messages.",
+      "This archive preserves records for analysis; it is not an automatic restore/import file.",
+      "No Muse calls are made to create this archive.",
+    ].join("\n"),
+  });
+  return zipArchive(files);
+}

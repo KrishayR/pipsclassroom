@@ -1,4 +1,5 @@
 import type { LiveBatch } from "../core/types";
+import { Play } from "lucide-react";
 
 export function sessionProgress(batch: LiveBatch) {
   const stages = batch.kind === "individual" ? 4 : 3;
@@ -11,7 +12,17 @@ export function sessionProgress(batch: LiveBatch) {
   return { completed, total };
 }
 
-export default function SessionProgress({ batch }: { batch: LiveBatch }) {
+export default function SessionProgress({
+  batch,
+  onResume,
+  resumeDisabled = false,
+  resuming = false,
+}: {
+  batch: LiveBatch;
+  onResume?: () => void;
+  resumeDisabled?: boolean;
+  resuming?: boolean;
+}) {
   const { completed, total } = sessionProgress(batch);
   const label =
     batch.status === "complete"
@@ -24,9 +35,9 @@ export default function SessionProgress({ batch }: { batch: LiveBatch }) {
       className="session-progress panel"
       aria-label="Learning session progress"
     >
-      <div role="status">
+      <div className="session-progress-heading" role="status">
         <strong>{label}</strong>
-        <span>
+        <span className="session-checkpoints">
           {completed}/{total} stage checkpoints
         </span>
       </div>
@@ -37,18 +48,45 @@ export default function SessionProgress({ batch }: { batch: LiveBatch }) {
       />
       <p className="fine">
         Stage progress, not a time estimate. Discuss and Verify can overlap
-        across students. Estimated spend: ${batch.spentUsd.toFixed(3)} / $
-        {batch.budgetUsd.toFixed(2)} budget.
+        across students.
       </p>
+      <div className="session-spend">
+        <span>Estimated spend</span>
+        <strong>
+          ${batch.spentUsd.toFixed(3)}{" "}
+          <small>/ ${batch.budgetUsd.toFixed(2)} budget</small>
+        </strong>
+      </div>
       {batch.status !== "running" && batch.status !== "complete" && (
         <p className="fine">{batch.stage}</p>
       )}
-      <details>
+      {onResume &&
+        batch.canResume &&
+        (batch.status === "error" || batch.status === "interrupted") && (
+          <div className="session-resume">
+            <button
+              className="primary"
+              onClick={onResume}
+              disabled={resumeDisabled}
+            >
+              <Play size={15} /> {resuming ? "Starting…" : "Resume session"}
+            </button>
+            <p className="fine">
+              Continue from the last completed stage. Unfinished work may
+              repeat; previous spend counts toward the original $
+              {batch.budgetUsd.toFixed(2)} budget.
+            </p>
+          </div>
+        )}
+      <details className="saved-run-details">
         <summary>Saved run details</summary>
-        <p className="fine">
-          {batch.directory}/status.json · {batch.completed}/{batch.total} cycles
-          finished. Stopped runs stay saved for diagnosis and export.
-        </p>
+        <div className="saved-run-body">
+          <code>{batch.directory}/status.json</code>
+          <p>
+            {batch.completed}/{batch.total} cycles finished. Stopped runs stay
+            saved for diagnosis and export.
+          </p>
+        </div>
       </details>
     </section>
   );

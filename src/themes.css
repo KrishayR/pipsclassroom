@@ -1,0 +1,589 @@
+:root[data-theme="dark"] .pipeline {
+  background: #17263c;
+  border-color: #34465f;
+}
+:root[data-theme="dark"] .pipeline :is(b, small, .pipeline-chevron) {
+  color: #bfd3ec;
+}
+:root[data-theme="dark"] .pipeline .current .pipeline-icon {
+  background: #4c98e8;
+  color: #071b32;
+  border-color: #a6d5ff;
+  box-shadow: 0 0 0 3px #63aeff30;
+}
+:root[data-theme="dark"] .pipeline .current b {
+  color: #b8ddff;
+}
+:root[data-theme="dark"] .pipeline .done .pipeline-icon {
+  background: #32b5a2;
+  color: #052d29;
+  border-color: #80e2cf;
+}
+:root[data-theme="dark"] .pipeline .done b {
+  color: #8be6d3;
+}
+:root[data-theme="dark"] .intro-note {
+  background: #1c2e47;
+  border-color: #3c5474;
+}
+:root[data-theme="dark"] .intro-note p {
+  color: #c2d4eb;
+}
+:root[data-theme="dark"] .intro-note svg {
+  background: #2a4667;
+  color: #b9dfff;
+}
+:root[data-theme="dark"] .focus-detail {
+  background: #20334e;
+  border-color: #3c5474;
+  color: #b5c7df;
+}
+:root[data-theme="dark"] .focus-detail b {
+  color: #e0edff;
+}
+.teacher-content .focus-reason {
+  padding: 12px 14px;
+  margin-top: 16px;
+  border: 1px solid #dce5d5;
+  border-radius: 10px;
+  background: #eaf0e3;
+  color: #53694a;
+  line-height: 1.7;
+}
+.teacher-panel > .teacher-next-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 18px;
+  margin: 0;
+  border-top: 1px solid #dce5d5;
+  background: #eaf0e3;
+  color: #53694a;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.teacher-next-step > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+:root[data-theme="dark"] .teacher-content .focus-reason,
+:root[data-theme="dark"] .teacher-panel > .teacher-next-step {
+  background: #20334e;
+  color: #c2d4eb;
+  border-color: #3c5474;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+  animation-timing-function: ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+:root[data-theme="dark"] .topbar > div:first-child::before {
+  color: #dce7f5;
+}
+:root[data-theme="dark"] .empty {
+  background: #17263c;
+  border-color: #3c5474;
+  color: #b5c7df;
+}
+:root[data-theme="dark"] .empty > svg {
+  color: #a4d5ff;
+}
+:root[data-theme="dark"] .empty h3 {
+  color: #e5edfa;
+}
+:root[data-theme="dark"] .empty p {
+  color: #b5c7df;
+}
+.theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  width: 62px;
+  height: 34px;
+  padding: 8px;
+  border: 1px solid #bfcdbb;
+  border-radius: 30px;
+  background: #e5ebdf;
+  color: #405a48;
+}
+.theme-toggle svg {
+  position: relative;
+  z-index: 1;
+}
+.theme-toggle-knob {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  background: #fffefa;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px #172b3629;
+  transition: transform 360ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.theme-toggle[aria-pressed="true"] .theme-toggle-knob {
+  transform: translateX(28px);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  color: #dce7f5;
+  background: #0e1726;
+  --ink: #e5edfa;
+  --muted: #afbed1;
+  --green: #8dc9ff;
+  --line: #34465f;
+  --cream: #0e1726;
+}
+:root[data-theme="dark"] :is(body, .main-shell, main) {
+  background: #0e1726;
+  color: #dce7f5;
+}
+:root[data-theme="dark"] :is(.sidebar, .topbar, .mobile-nav) {
+  background: #101d30;
+  border-color: #34465f;
+}
+:root[data-theme="dark"]
+  :is(
+    .panel,
+    .student-card,
+    .lesson-card,
+    .settings-card,
+    .modal,
+    .learning-guide,
+    .exam-banner,
+    .session-launch,
+    .comparison-intro
+  ) {
+  background: #17263c;
+  border-color: #34465f;
+  color: #dce7f5;
+}
+:root[data-theme="dark"]
+  :is(
+    p,
+    label,
+    small,
+    .fine,
+    .eyebrow,
+    .table-sub,
+    .topbar b,
+    .page-heading,
+    .empty,
+    .group-status,
+    .group-training,
+    .trace-summary,
+    .lesson-scope,
+    .focus-detail,
+    .comparison-summary > p,
+    .exam-progress > p
+  ) {
+  color: #b5c7df;
+}
+:root[data-theme="dark"]
+  :is(h1, h2, h3, h4, strong, b, .group-results > strong) {
+  color: #e5edfa;
+}
+:root[data-theme="dark"] :is(span, code, dt, dd) {
+  color: inherit;
+}
+:root[data-theme="dark"]
+  :is(.secondary, select, input, .direction-buttons button) {
+  background: #20334e;
+  color: #e0eafb;
+  border-color: #4c6484;
+}
+:root[data-theme="dark"]
+  :is(
+    .secondary:hover:not(:disabled),
+    select:hover,
+    .direction-buttons button:hover
+  ) {
+  background: #2b4566;
+  border-color: #87b9e9;
+}
+:root[data-theme="dark"] .primary {
+  background: #356da0;
+  border-color: #5694c9;
+  color: #ffffff;
+}
+:root[data-theme="dark"] .primary:hover:not(:disabled) {
+  background: #407fb7;
+}
+:root[data-theme="dark"]
+  :is(.text-button, .icon-button, .mode-badge, .mode-badge.model) {
+  color: #9bd1ff;
+}
+:root[data-theme="dark"]
+  :is(
+    .student-tabs button,
+    .sidebar nav button,
+    .sidebar-bottom > button,
+    .mobile-nav button
+  ) {
+  color: #c3d4ea;
+}
+:root[data-theme="dark"]
+  :is(
+    .student-tabs button.active,
+    .sidebar nav button.active,
+    .sidebar-bottom > button.active,
+    .mobile-nav button.active,
+    .student-tabs button:hover,
+    .sidebar nav button:hover,
+    .sidebar-bottom > button:hover
+  ) {
+  background: #294566;
+  color: #eff6ff;
+  border-color: #7bafd9;
+  box-shadow: none;
+}
+:root[data-theme="dark"]
+  :is(
+    .sidebar-experiment,
+    .guide-body,
+    .guide-steps > div,
+    .lesson-scope,
+    .skill-code,
+    .verification-pair > div,
+    .utility-grid > div,
+    .result-metrics > div,
+    .exam-config,
+    .intro-note,
+    .comparison-note,
+    .comparison-finished,
+    .trace-list button,
+    .tool-list details,
+    .focus-reason,
+    .configuration-facts,
+    .setup-steps,
+    .blank-memory,
+    .memory-target,
+    .learning-verdict
+  ) {
+  background: #1c2e47;
+  color: #c9d9ed;
+  border-color: #3c5474;
+}
+:root[data-theme="dark"]
+  :is(
+    .guide-steps > div.active,
+    .guide-steps > div.done,
+    .trace-list button.active,
+    .mode-options button.active
+  ) {
+  background: #294e73;
+  color: #e7f3ff;
+}
+:root[data-theme="dark"]
+  :is(
+    .status,
+    .version,
+    .user-avatar,
+    .feed-avatar,
+    .action-icon,
+    .tool-number,
+    .exam-icon,
+    .avatar,
+    .skill-code > span,
+    .guide-steps > div span
+  ) {
+  background: #2a4261;
+  color: #d4e9ff;
+  border-color: #4b6a8c;
+}
+:root[data-theme="dark"] :is(th, .session-progress, .replay-toolbar) {
+  background: #1c2e47;
+  color: #c2d5ec;
+}
+:root[data-theme="dark"]
+  :is(
+    td,
+    th,
+    .panel-title,
+    .record-grid > div,
+    .feed article,
+    .sidebar-bottom,
+    .exam-config,
+    .bottom-metrics
+  ) {
+  border-color: #34465f;
+}
+:root[data-theme="dark"] td {
+  color: #dce7f5;
+}
+:root[data-theme="dark"]
+  :is(.exam-change.higher, .status.verified, .status.complete) {
+  background: #20483f;
+  color: #b1f0d0;
+}
+:root[data-theme="dark"]
+  :is(.exam-change.lower, .status.rejected, .error, .mode-notice) {
+  background: #49372e;
+  color: #ffd5b4;
+  border-color: #926d4d;
+}
+:root[data-theme="dark"] .exam-change.same {
+  background: #2a4261;
+  color: #d4e9ff;
+}
+:root[data-theme="dark"] .board {
+  background: #0e1b2f;
+}
+:root[data-theme="dark"] .tile {
+  background: #21314b;
+  color: #eef6ff;
+}
+:root[data-theme="dark"] .tile-2 {
+  background: #2c4160;
+  color: #eef6ff;
+}
+:root[data-theme="dark"] .tile-4 {
+  background: #345473;
+  color: #eef6ff;
+}
+:root[data-theme="dark"] .tile-8 {
+  background: #3c648a;
+  color: #eef6ff;
+}
+:root[data-theme="dark"] .tile-16 {
+  background: #4676a1;
+  color: #ffffff;
+}
+:root[data-theme="dark"] .tile-32 {
+  background: #4d7da9;
+  color: #ffffff;
+}
+:root[data-theme="dark"] .tile-64 {
+  background: #5485b2;
+  color: #ffffff;
+}
+:root[data-theme="dark"] :is(.tile-128, .tile-256, .tile-512) {
+  background: #8ac0ed;
+  color: #10233c;
+}
+:root[data-theme="dark"] :is(.tile-1024, .tile-2048) {
+  background: #c9e4ff;
+  color: #10233c;
+}
+:root[data-theme="dark"] .theme-toggle {
+  background: #20334e;
+  color: #dcecff;
+  border-color: #526d90;
+}
+:root[data-theme="dark"] .theme-toggle-knob {
+  background: #466f9b;
+}
+:root[data-theme="dark"] :focus-visible {
+  outline-color: #a1d5ff;
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle-knob {
+    transition: none;
+  }
+}
+
+:root[data-theme="dark"]
+  :is(
+    .session-launcher,
+    .mode-options button,
+    .config-instructions,
+    .config-instructions code,
+    .pipeline-icon,
+    .trace-list button > span,
+    .sidebar-tiles span,
+    .intro-game
+  ) {
+  background: #20334e;
+  color: #c9d9ed;
+  border-color: #4c6484;
+}
+:root[data-theme="dark"] .session-launcher input {
+  background: #142238;
+  color: #e5edfa;
+  border-color: #5a7698;
+}
+:root[data-theme="dark"] .session-launcher .simulation-warning {
+  background: #49372e;
+  color: #ffd5b4;
+  border-color: #926d4d;
+}
+:root[data-theme="dark"] progress {
+  accent-color: #87c3f5;
+}
+
+/* Secondary surfaces and inactive controls must have their own dark fills. */
+:root[data-theme="dark"]
+  :is(.pip-guide, .teacher-panel, .teacher-panel > button) {
+  background: #17263c;
+  border-color: #34465f;
+  color: #c9d9ed;
+}
+:root[data-theme="dark"] .student-tabs button:not(.active) {
+  background: #1c2e47;
+  color: #bfd1e8;
+  border-color: #3c5474;
+}
+:root[data-theme="dark"] .student-tabs button:not(.active):hover {
+  background: #294566;
+  color: #eff6ff;
+  border-color: #7bafd9;
+}
+:root[data-theme="dark"] :is(.teacher-icon, .nav-count) {
+  background: #294566;
+  color: #d4e9ff;
+}
+:root[data-theme="dark"]
+  :is(
+    .pip-guide p,
+    .pip-label,
+    .teacher-content p,
+    .teacher-content .eyebrow,
+    .teacher-disclaimer,
+    .panel-heading div > span,
+    .student-footer,
+    .student-footer span:last-child,
+    .skill-counts,
+    .topbar > div > span,
+    footer,
+    footer > span,
+    .sidebar .nav-label,
+    .bottom-metrics > span
+  ) {
+  color: #b5c7df;
+}
+:root[data-theme="dark"] :is(.teacher-content h3, .pip-guide b) {
+  color: #e5edfa;
+}
+:root[data-theme="dark"] :is(.mode-notice button, footer > button) {
+  color: #9bd1ff;
+}
+:root[data-theme="dark"]
+  :is(
+    .panel-title h2 svg,
+    .capability-list svg,
+    .bottom-metrics svg,
+    .group-icons svg,
+    .sidebar nav button.active svg
+  ) {
+  color: #98c8f2;
+}
+:root[data-theme="dark"]
+  :is(
+    .student-footer,
+    .panel-heading,
+    .teacher-panel > button,
+    .verification-pair,
+    footer,
+    .group-results,
+    .intro-note,
+    .student-card.selected
+  ) {
+  border-color: #34465f;
+}
+:root[data-theme="dark"] .student-card.selected {
+  border-color: #80b4e0;
+  box-shadow: 0 0 0 2px #80b4e025;
+}
+:root[data-theme="dark"] .teacher-divider {
+  background: #34465f;
+}
+:root[data-theme="dark"] .dot {
+  background: #91c8ed;
+}
+:root[data-theme="dark"]
+  :is(.feed, .trace-list, .table-wrap, .comparison-exchanges) {
+  scrollbar-color: #4c6585 #132237;
+}
+:root[data-theme="dark"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+:root[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #132237;
+}
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #4c6585;
+  border: 2px solid #132237;
+  border-radius: 8px;
+}
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #6b8bb1;
+}
+
+:root[data-theme="dark"]
+  :is(
+    .sidebar-label,
+    .connection,
+    .connection > span:last-child,
+    .lesson-card details,
+    .lesson-card summary,
+    .before-after > svg,
+    .tool-list summary > svg,
+    .tool-list summary > span:nth-last-child(2)
+  ) {
+  color: #a9c2df;
+}
+:root[data-theme="dark"] :is(.evidence-row button, .tool-list summary) {
+  background: #223a57;
+  color: #d3e6ff;
+  border-color: #476482;
+}
+:root[data-theme="dark"] .evidence-row button:hover {
+  background: #305176;
+}
+:root[data-theme="dark"] .tool-list pre {
+  background: #101e32;
+  color: #c5dcf8;
+}
+:root[data-theme="dark"] .tool-list summary code {
+  color: #b5daff;
+}
+:root[data-theme="dark"] .replay-toolbar {
+  border-color: #34465f;
+}
+:root[data-theme="dark"] .replay-toolbar input {
+  accent-color: #87c3f5;
+}
+:root[data-theme="dark"] input[type="range"] {
+  accent-color: #87c3f5;
+}
+:root[data-theme="dark"] .lesson-card .verification-pair {
+  border-color: #34465f;
+}
+:root[data-theme="dark"] .connection {
+  border-color: #34465f;
+}
+:root[data-theme="dark"] .replay-toolbar input[type="range"] {
+  appearance: none;
+  height: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: #4c6585;
+}
+:root[data-theme="dark"]
+  .replay-toolbar
+  input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #a4d5ff;
+  border: 2px solid #28496d;
+}
+:root[data-theme="dark"] .replay-toolbar input[type="range"]::-moz-range-thumb {
+  height: 13px;
+  width: 13px;
+  border-radius: 50%;
+  background: #a4d5ff;
+  border: 2px solid #28496d;
+}

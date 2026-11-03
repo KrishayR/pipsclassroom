@@ -31,56 +31,95 @@ const descriptions: Record<Arm, string> = {
 export default function ComparisonPanel({
   comparison,
   busy,
+  starting = false,
+  stopping = false,
+  requestPending = false,
   onRun,
   onStop,
 }: {
   comparison?: Comparison;
   busy: boolean;
+  starting?: boolean;
+  stopping?: boolean;
+  requestPending?: boolean;
   onRun: () => void;
   onStop: () => void;
 }) {
   const solo = comparison?.runs.find((r) => r.arm === "solo");
   const group = comparison?.runs.find((r) => r.arm === "classroom");
-  const complete = solo?.status === "complete" && group?.status === "complete"
-    && solo.rows.length > 0 && group.rows.length > 0;
-  const soloScore = complete ? summarize(solo.rows, comparison!.cap).meanScore : 0;
-  const groupScore = complete ? summarize(group.rows, comparison!.cap).meanScore : 0;
+  const complete =
+    solo?.status === "complete" &&
+    group?.status === "complete" &&
+    solo.rows.length > 0 &&
+    group.rows.length > 0;
+  const soloScore = complete
+    ? summarize(solo.rows, comparison!.cap).meanScore
+    : 0;
+  const groupScore = complete
+    ? summarize(group.rows, comparison!.cap).meanScore
+    : 0;
   const delta = groupScore - soloScore;
   return (
     <>
       <div className="comparison-intro">
         <Pip mood={busy ? "thinking" : "happy"} size={104} />
         <div>
-          <span className="eyebrow">THE QUESTION WE’RE HERE TO ANSWER</span>
+          <span className="eyebrow">EXPLORATORY COMPARISON</span>
           <h2>Does learning together actually help?</h2>
           <p>
             Give four fresh groups the same game, tools, and starting skills.
             Change who they can learn from. Then let everyone take the same test
             alone.
           </p>
+          <p>
+            Each group uses fresh students and the same exam seeds and move cap.
+            Teaching and model costs can differ. Compare teacher + classmates
+            with targeted teacher practice to explore the contribution of peers;
+            classroom vs solo changes several parts of teaching at once.
+          </p>
+          <p>
+            Starting a comparison creates a separate experiment. Your classroom
+            session's exam history remains in Student exams.
+          </p>
         </div>
-        {busy ? (
-          <button className="secondary" onClick={onStop}>
+        {busy && !starting ? (
+          <button
+            className="secondary"
+            onClick={onStop}
+            disabled={stopping || requestPending}
+            aria-busy={stopping}
+          >
             <Square size={15} />
-            Stop the run
+            {stopping ? "Stopping…" : "Stop the run"}
           </button>
         ) : (
-          <button className="primary" onClick={onRun}>
+          <button
+            className="primary"
+            onClick={onRun}
+            disabled={busy || requestPending}
+            aria-busy={starting}
+          >
             <Play size={15} />
-            Try the comparison
+            {starting ? "Starting…" : "Run exploratory comparison"}
           </button>
         )}
       </div>
-      <section className="panel" aria-live="polite">
-        <span className="eyebrow">LEARNING TOGETHER VS LEARNING ALONE</span>
-        <h2>{complete
-          ? delta > 0 ? `Group-trained agents scored ${Math.round(delta).toLocaleString()} points higher`
-            : delta < 0 ? `Solo agents scored ${Math.round(-delta).toLocaleString()} points higher`
-            : "Both approaches earned the same average score"
-          : "Watch shared experiments become tested lessons"}</h2>
-        <p>{complete
-          ? `Group average: ${Math.round(groupScore).toLocaleString()} · Solo average: ${Math.round(soloScore).toLocaleString()}. Saved lessons: ${group!.accepted} in the group, ${solo!.accepted} solo. These are this run’s results; more runs are needed to establish a reliable advantage.`
-          : "Agents practice, share recorded examples, test advice, and keep lessons that pass. The final comparison shows how they perform independently on the same exam seeds."}</p>
+      <section className="panel comparison-summary" aria-live="polite">
+        <span className="eyebrow">THIS RUN · CLASSROOM VS SOLO</span>
+        <h2>
+          {complete
+            ? delta > 0
+              ? `Group-trained agents scored ${Math.round(delta).toLocaleString()} points higher`
+              : delta < 0
+                ? `Solo agents scored ${Math.round(-delta).toLocaleString()} points higher`
+                : "Both approaches earned the same average score"
+            : "Complete both groups to compare their scores"}
+        </h2>
+        <p>
+          {complete
+            ? `Group average: ${Math.round(groupScore).toLocaleString()} · Solo average: ${Math.round(soloScore).toLocaleString()}. Saved lessons: ${group!.accepted} in the group, ${solo!.accepted} solo. These are this run’s results; more runs are needed to establish a reliable advantage.`
+            : "Agents practice, share recorded examples, test advice, and keep lessons that pass. The final comparison shows how they perform independently on the same exam seeds."}
+        </p>
       </section>
       <div className="comparison-groups">
         {ARMS.map((arm, i) => {

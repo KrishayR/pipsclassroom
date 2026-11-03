@@ -51,8 +51,8 @@ export function keysFromEnv() {
   }
   return keyPool({
     keys,
-    // Below the $150 credit by default: the local spend is an estimate.
-    limitUsd: num("MODEL_KEY_LIMIT_USD", 145),
+    // Session runners enforce their own budgets; cumulative usage is accounting only.
+    limitUsd: Infinity,
     prices: prices(),
     ledgerPath: process.env.MODEL_KEY_LEDGER || "data/key-spend.json",
   });

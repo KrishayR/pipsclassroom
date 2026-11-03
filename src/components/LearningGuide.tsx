@@ -8,6 +8,7 @@ export default function LearningGuide({
   navigate,
   state,
   busy,
+  starting = false,
   ready,
   run,
 }: {
@@ -15,6 +16,7 @@ export default function LearningGuide({
   navigate: (page: string) => void;
   state: LabState;
   busy: boolean;
+  starting?: boolean;
   ready: boolean;
   run: (name: string, params?: Record<string, unknown>) => Promise<void>;
 }) {
@@ -139,7 +141,11 @@ export default function LearningGuide({
                   disabled={busy || !ready}
                   onClick={act}
                 >
-                  {busy ? "Classroom working…" : labels[stage]}
+                  {starting
+                    ? "Starting…"
+                    : busy
+                      ? "Classroom working…"
+                      : labels[stage]}
                   <ArrowRight size={15} />
                 </button>
                 {moves > 0 && (

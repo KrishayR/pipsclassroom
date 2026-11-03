@@ -12,6 +12,7 @@ import {
 } from "./config";
 import type { Arm, LabState } from "../src/core/types";
 import { liveBatchRunner } from "./batch";
+import { checkpointFiles } from "./archive";
 loadEnv();
 mkdirSync("data", { recursive: true });
 const db = new DatabaseSync(resolve("data/classroom.sqlite"));
@@ -115,6 +116,21 @@ const server = createServer(async (req, res) => {
     });
   if (req.method === "GET" && url.pathname === "/api/state")
     return send(200, publicState(lab.state));
+  if (req.method === "GET" && url.pathname === "/api/export-checkpoints") {
+    try {
+      return send(
+        200,
+        await checkpointFiles(
+          mode === "model" ? batch.archiveStatus()?.directory : undefined,
+        ),
+      );
+    } catch {
+      return send(500, {
+        error:
+          "Could not read the live-run checkpoints. Please retry the export.",
+      });
+    }
+  }
   if (req.method === "GET" && url.pathname === "/api/export") {
     const exported = lab.export();
     const activeBatch = mode === "model" ? batch.state() : undefined;
@@ -154,6 +170,12 @@ const server = createServer(async (req, res) => {
     }
     const input = JSON.parse(body || "{}");
     const { action } = input;
+    if (action === "clear-progress") {
+      if (mode !== "model") throw new Error("Select live model mode to clear session progress.");
+      batch.clearProgress();
+      lab.emit();
+      return send(200, { ok: true });
+    }
     if (action === "stop") {
       if (mode === "model" && batch.status()?.status === "running")
         batch.stop();
@@ -178,6 +200,10 @@ const server = createServer(async (req, res) => {
       )
         throw new Error("Choose a whole number of cycles from 1 to 100.");
       operation = batch.start(input.cycles ?? 5, input.kind ?? "individual");
+    } else if (action === "resume-batch") {
+      if (mode !== "model")
+        throw new Error("Select live model mode to resume.");
+      operation = batch.resume();
     } else if (action === "practice")
       operation = lab.practice(input.steps ?? 12);
     else if (action === "diagnose") operation = lab.diagnose();
@@ -186,8 +212,10 @@ const server = createServer(async (req, res) => {
     else if (action === "exam")
       operation = lab.exam(input.seedCount ?? 3, input.cap ?? 1500);
     else if (action === "compare") operation = lab.compare(input.cap ?? 1500);
-    else if (action === "reset") lab.reset();
-    else if (action === "rollback") lab.rollback(input.studentId);
+    else if (action === "reset") {
+      if (mode === "model") batch.clearProgress();
+      lab.reset();
+    } else if (action === "rollback") lab.rollback(input.studentId);
     else if (action === "arm") {
       if (!ARMS.includes(input.arm)) throw new Error("Unknown condition.");
       lab.setArm(input.arm as Arm);

@@ -1,5 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import "./themes.css";
+import "./dropdowns.css";
 import LearningRecord from "./components/LearningRecord";
+import ExamProgress from "./components/ExamProgress";
+import Select from "./components/Select";
+import useEdgeBounce from "./useEdgeBounce";
 import SessionProgress from "./components/SessionProgress";
 import LearningGuide from "./components/LearningGuide";
 import Pip from "./components/Pip";
@@ -21,6 +26,8 @@ import {
   Layers,
   Lightbulb,
   LockKeyhole,
+  Moon,
+  Sun,
   Play,
   RotateCcw,
   Settings2,
@@ -31,7 +38,13 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { action, connect, exportRun, watch, type Connection } from "./client";
+import {
+  action,
+  connect,
+  exportClassroomArchive,
+  watch,
+  type Connection,
+} from "./client";
 import { initialState } from "./core/classroom";
 import { createGame, move, observe } from "./core/engine";
 import { MILESTONES, summarize } from "./core/evaluation";
@@ -80,6 +93,23 @@ function BoardView({
     </div>
   );
 }
+function animateButtonClick(
+  event: React.PointerEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>,
+) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const button = (event.target as Element).closest<HTMLButtonElement>(
+    "button:not(:disabled)",
+  );
+  if (!button) return;
+  button.classList.remove("click-animation");
+  void button.offsetWidth;
+  button.classList.add("click-animation");
+  button.addEventListener(
+    "animationend",
+    () => button.classList.remove("click-animation"),
+    { once: true },
+  );
+}
 function Empty({
   icon: Icon,
   title,
@@ -113,98 +143,110 @@ function StudentCard({
   student,
   selected,
   onSelect,
+  onInspect,
   busy,
   exam,
 }: {
   student: Student;
   selected: boolean;
   onSelect: () => void;
+  onInspect: (id: string) => void;
   busy: boolean;
   exam: boolean;
 }) {
   const last = exam ? undefined : student.traces.at(-1);
   const Icon = last ? directions[last.action] : Activity;
   return (
-    <button
-      className={`student-card ${selected ? "selected" : ""}`}
-      onClick={onSelect}
-      aria-pressed={selected}
-    >
-      <div className="student-heading">
-        <div className={`avatar ${student.color}`}>
-          {student.name.slice(0, 1)}
-        </div>
-        <div>
-          <h3>
-            {student.name}
-            <span>Student {student.id.slice(-1)}</span>
-          </h3>
-          <p>
-            <span className={`dot ${busy ? "pulse" : ""}`} />
-            {busy ? "Working independently" : "Ready"}
-          </p>
-        </div>
-        <span className="version">v{student.workspace.version}</span>
-      </div>
-      <div className="score-row">
-        <div>
-          <label>SCORE</label>
-          <strong>{format(student.game.score)}</strong>
-        </div>
-        <div>
-          <label>TOP TILE</label>
-          <strong>{Math.max(...student.game.board)}</strong>
-        </div>
-        <div>
-          <label>MOVES</label>
-          <strong>{student.game.moves}</strong>
-        </div>
-      </div>
-      <BoardView board={student.game.board} />
-      <div className="student-action">
-        <span className="action-icon">
-          <Icon size={15} />
-        </span>
-        <div>
-          <b>
-            {exam
-              ? "Independent exam"
-              : last
-                ? `Moved ${last.action}`
-                : "Waiting for first move"}
-          </b>
-          <span>
-            {exam
-              ? student.status
-              : last
-                ? `${last.simulations} simulated transitions · ${last.tools.length} tools`
-                : "A fresh board. A fresh attempt."}
-          </span>
-        </div>
-      </div>
-      <div
-        className="skill-counts"
-        title="Practice checks passed / applicable moves. Outcome checks, not grades."
+    <article className={`student-card ${selected ? "selected" : ""}`}>
+      <button
+        className="student-select"
+        onClick={onSelect}
+        aria-pressed={selected}
+        aria-label={`Select ${student.name}`}
       >
-        {Object.entries(skillEstimates(student.traces)).map(([id, e]) => (
-          <span key={id}>
-            {focusName(id as keyof ReturnType<typeof skillEstimates>)}{" "}
-            <b>
-              {e.successes}/{e.attempts}
-            </b>
+        <div className="student-heading">
+          <div className={`avatar ${student.color}`}>
+            {student.name.slice(0, 1)}
+          </div>
+          <div>
+            <h3>
+              {student.name}
+              <span>Student {student.id.slice(-1)}</span>
+            </h3>
+            <p>
+              <span className={`dot ${busy ? "pulse" : ""}`} />
+              {busy ? "Working independently" : "Ready"}
+            </p>
+          </div>
+          <span className="version">v{student.workspace.version}</span>
+        </div>
+        <div className="score-row">
+          <div>
+            <label>SCORE</label>
+            <strong>{format(student.game.score)}</strong>
+          </div>
+          <div>
+            <label>TOP TILE</label>
+            <strong>{Math.max(...student.game.board)}</strong>
+          </div>
+          <div>
+            <label>MOVES</label>
+            <strong>{student.game.moves}</strong>
+          </div>
+        </div>
+        <BoardView board={student.game.board} />
+        <div className="student-action">
+          <span className="action-icon">
+            <Icon size={15} />
           </span>
-        ))}
-      </div>
+          <div>
+            <b>
+              {exam
+                ? "Independent exam"
+                : last
+                  ? `Moved ${last.action}`
+                  : "Waiting for first move"}
+            </b>
+            <span>
+              {exam
+                ? student.status
+                : last
+                  ? `${last.simulations} simulated transitions · ${last.tools.length} tools`
+                  : "A fresh board. A fresh attempt."}
+            </span>
+          </div>
+        </div>
+        <div
+          className="skill-counts"
+          title="Practice checks passed / applicable moves. Outcome checks, not grades."
+        >
+          {Object.entries(skillEstimates(student.traces)).map(([id, e]) => (
+            <span key={id}>
+              {focusName(id as keyof ReturnType<typeof skillEstimates>)}{" "}
+              <b>
+                {e.successes}/{e.attempts}
+              </b>
+            </span>
+          ))}
+        </div>
+      </button>
       <div className="student-footer">
         <span>
           <Layers size={13} />
           {student.workspace.lessons.length} saved lessons
         </span>
-        <span>
+        <button
+          className="text-button"
+          disabled={!last}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (last) onInspect(last.id);
+          }}
+        >
           Inspect <ChevronRight size={13} />
-        </span>
+        </button>
       </div>
-    </button>
+    </article>
   );
 }
 function LessonCard({
@@ -229,25 +271,26 @@ function LessonCard({
       )}
       <p>{lesson.rule}</p>
       <div className="lesson-scope">
-        <b>When</b> {lesson.trigger}
-        <br />
-        <b>Exception</b> {lesson.exception}
+        <p>
+          <b>When</b> {lesson.trigger}
+        </p>
+        <p>
+          <b>Exception</b> {lesson.exception}
+        </p>
         {lesson.limits && (
-          <>
-            <br />
+          <p>
             <b>Only steps in</b> when a move breaks the skill; recommends moves
             leaving {lesson.limits.minOptions}+ options
             {lesson.limits.maxGainLoss !== undefined
               ? ` and giving up at most ${lesson.limits.maxGainLoss} points`
               : ""}
-          </>
+          </p>
         )}
         {lesson.sensitivity && (
-          <>
-            <br />
+          <p>
             <b>Changes the plan</b> on {lesson.sensitivity.changed} of{" "}
             {lesson.sensitivity.boards} sample boards
-          </>
+          </p>
         )}
       </div>
       <div className="skill-code">
@@ -361,7 +404,13 @@ function LessonCard({
     </article>
   );
 }
-function HowItWorks({ close }: { close: () => void }) {
+function HowItWorks({
+  close,
+  enter,
+}: {
+  close: () => void;
+  enter: () => void;
+}) {
   const [game, setGame] = useState(() => createGame(42));
   return (
     <div className="modal-backdrop" onClick={close}>
@@ -428,7 +477,7 @@ function HowItWorks({ close }: { close: () => void }) {
             games alone. The exam tells us whether the lesson helped.
           </p>
         </div>
-        <button className="primary" onClick={close}>
+        <button className="primary" onClick={enter}>
           Enter the classroom <ArrowRight size={16} />
         </button>
       </section>
@@ -436,21 +485,77 @@ function HowItWorks({ close }: { close: () => void }) {
   );
 }
 export default function App() {
+  const themeReady = useRef(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem("classroom-theme");
+      return saved
+        ? saved === "dark"
+        : matchMedia("(prefers-color-scheme: dark)").matches;
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    const apply = () => {
+      document.documentElement.dataset.theme = darkMode ? "dark" : "light";
+    };
+    try {
+      localStorage.setItem("classroom-theme", darkMode ? "dark" : "light");
+    } catch {
+      /* Theme still works when storage is unavailable. */
+    }
+    if (
+      themeReady.current &&
+      document.startViewTransition &&
+      !matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      const transition = document.startViewTransition(apply);
+      return () => transition.skipTransition();
+    }
+    themeReady.current = true;
+    apply();
+  }, [darkMode]);
+  const pageSurface = useEdgeBounce();
   const [connection, setConnection] = useState<Connection | null>(null),
     [mode, setMode] = useState<Mode>("simulation"),
     [state, setState] = useState<LabState>(() => initialState()),
     [page, setPage] = useState("classroom"),
     [resultsView, setResultsView] = useState("exams"),
+    [examId, setExamId] = useState(""),
     [traceOrigin, setTraceOrigin] = useState("classroom"),
     [selected, setSelected] = useState("student-1"),
     [intro, setIntro] = useState(false),
     [error, setError] = useState(""),
+    [exporting, setExporting] = useState(false),
     [traceId, setTraceId] = useState<string | null>(null),
     [cap, setCap] = useState(1500),
     [seedCount, setSeedCount] = useState(3),
     [batchCycles, setBatchCycles] = useState("1"),
     [pending, setPending] = useState(false),
+    [pendingAction, setPendingAction] = useState<string | null>(null),
+    [stopping, setStopping] = useState(false),
     [replaying, setReplaying] = useState(false);
+  const requestLock = useRef(false);
+  const stopLock = useRef(false);
+  useEffect(() => {
+    if (!state.busy && state.liveBatch?.status !== "running") {
+      stopLock.current = false;
+      setStopping(false);
+    }
+  }, [state.busy, state.liveBatch?.status]);
+  const replaySlider = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const animation = pageSurface.current?.animate(
+      [
+        { opacity: 0.65, transform: "translateY(5px)" },
+        { opacity: 1, transform: "translateY(0)" },
+      ],
+      { duration: 200, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+    );
+    return () => animation?.cancel();
+  }, [page, resultsView, pageSurface]);
   useEffect(() => {
     connect().then(setConnection);
   }, []);
@@ -472,19 +577,44 @@ export default function App() {
     };
   }, [connection, mode]);
   const run = async (name: string, params: Record<string, unknown> = {}) => {
-    if (!connection) return;
+    if (
+      !connection ||
+      requestLock.current ||
+      (name === "stop"
+        ? stopLock.current
+        : state.busy || state.liveBatch?.status === "running")
+    )
+      return;
+    requestLock.current = true;
+    if (name === "stop") {
+      stopLock.current = true;
+      setStopping(true);
+    }
     setError("");
     setPending(true);
+    setPendingAction(name);
     try {
       await action(connection, mode, name, params);
     } catch (e) {
+      if (name === "stop") {
+        stopLock.current = false;
+        setStopping(false);
+      }
       setError(e instanceof Error ? e.message : "Operation failed");
     } finally {
+      requestLock.current = false;
       setPending(false);
+      setPendingAction(null);
     }
   };
   const busy = state.busy || pending || state.liveBatch?.status === "running";
+  const actionLabel = (name: string, label: string) =>
+    pendingAction === name ? "Starting…" : label;
   const batch = mode === "model" ? state.liveBatch : undefined;
+  const stopPending =
+    stopping ||
+    (batch?.status === "running" &&
+      batch.stage.toLowerCase().includes("stopping"));
   const batchStage =
     batch?.status === "running" ? batch.stage.toLowerCase() : "";
   const sessionComplete = batch?.status === "complete" && !state.busy;
@@ -526,7 +656,8 @@ export default function App() {
   const traces = state.students.flatMap((s) => s.traces);
   const chosenTrace =
     traces.find((t) => t.id === traceId) ?? student.traces.at(-1);
-  const lastExam = state.exams.at(-1);
+  const lastExam =
+    state.exams.find((e) => e.id === examId) ?? state.exams.at(-1);
   const stats = lastExam ? summarize(lastExam.rows, lastExam.cap) : null;
   const replayTraces = chosenTrace
     ? traces.filter(
@@ -537,13 +668,31 @@ export default function App() {
     : [];
   const replayIndex = replayTraces.findIndex((t) => t.id === chosenTrace?.id);
   useEffect(() => {
-    if (!replaying || page !== "traces") return;
-    const timer = setTimeout(() => {
-      if (replayIndex + 1 >= replayTraces.length) setReplaying(false);
-      else setTraceId(replayTraces[replayIndex + 1].id);
-    }, 650);
-    return () => clearTimeout(timer);
-  }, [replaying, page, replayIndex, replayTraces]);
+    if (!replaying || page !== "traces") {
+      if (!replaying && replaySlider.current)
+        replaySlider.current.value = String(Math.max(0, replayIndex));
+      return;
+    }
+    const nextIndex = replayIndex + 1;
+    if (nextIndex >= replayTraces.length) {
+      setReplaying(false);
+      return;
+    }
+    let frame = 0;
+    const start = performance.now();
+    const animate = (now: number) => {
+      const progress = Math.min(1, (now - start) / 650);
+      if (replaySlider.current)
+        replaySlider.current.value = String(replayIndex + progress);
+      if (progress < 1) frame = requestAnimationFrame(animate);
+      else {
+        setTraceId(replayTraces[nextIndex].id);
+        if (nextIndex === replayTraces.length - 1) setReplaying(false);
+      }
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [replaying, page, replayIndex, replayTraces.length]);
   const inspect = (id: string) => {
     if (page !== "traces") setTraceOrigin(page);
     setReplaying(false);
@@ -561,30 +710,39 @@ export default function App() {
     }
   };
   const download = async () => {
-    if (!connection) return;
+    if (!connection || exporting) return;
+    setExporting(true);
     try {
-      const data = await exportRun(connection, mode);
-      const url = URL.createObjectURL(
-        new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
-      );
+      const data = await exportClassroomArchive(connection, mode);
+      const url = URL.createObjectURL(data);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `pips-classroom-${mode}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `pips-classroom-${mode}-${new Date().toISOString().slice(0, 10)}.zip`;
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
-      setError("Could not export this run.");
+      setError(
+        "Could not create the classroom archive. Please retry; saved run data is still on the server.",
+      );
+    } finally {
+      setExporting(false);
     }
   };
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      onPointerDownCapture={animateButtonClick}
+      onClickCapture={(event) => {
+        if (event.detail === 0) animateButtonClick(event);
+      }}
+    >
       <aside className="sidebar">
         <a
           className="brand"
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            setPage("classroom");
+            setPage("home");
           }}
         >
           <span className="brand-icon">
@@ -614,7 +772,7 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-experiment">
-          <span className="eyebrow">EXPERIMENT 001</span>
+          <span className="eyebrow">ABOUT THIS CLASSROOM</span>
           <h3>
             Learning through
             <br />
@@ -656,22 +814,39 @@ export default function App() {
             <span>Pip’s Classroom</span>
             <ChevronRight size={14} />
             <b>
-              {page === "traces"
-                ? "Decision details"
-                : (pages.find((p) => p.id === page)?.name ?? "Settings")}
+              {page === "home"
+                ? "Welcome"
+                : page === "traces"
+                  ? "Decision details"
+                  : (pages.find((p) => p.id === page)?.name ?? "Settings")}
             </b>
           </div>
           <div className="top-actions">
+            <button
+              className="theme-toggle"
+              aria-label="Dark mode"
+              aria-pressed={darkMode}
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              onClick={() => setDarkMode((value) => !value)}
+            >
+              <Sun size={14} aria-hidden="true" />
+              <Moon size={14} aria-hidden="true" />
+              <span className="theme-toggle-knob" aria-hidden="true" />
+            </button>
             <span className={`mode-badge ${mode}`}>
               <span className="dot" />
               {mode === "simulation" ? "Simulation mode" : "Live model mode"}
             </span>
             <button
-              className="icon-button"
-              aria-label="Export full run"
+              className="secondary export-button"
+              aria-label="Export classroom archive"
+              title="Download raw data, readable reports and latest live-run checkpoints"
+              disabled={!connection || exporting}
+              aria-busy={exporting}
               onClick={download}
             >
               <Download size={17} />
+              <span>{exporting ? "Preparing…" : "Export classroom"}</span>
             </button>
             <span className="user-avatar">PC</span>
           </div>
@@ -693,103 +868,151 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <main>
-          <div className="page-heading">
-            <div>
-              <div className="eyebrow">OBSERVE. TEACH. VERIFY.</div>
-              <h1>
-                {page === "classroom"
-                  ? "Watch agents turn practice into tested lessons."
-                  : page === "lessons"
-                    ? "Good ideas have to prove themselves."
-                    : page === "results" && resultsView === "comparison"
-                      ? "Better together? Let’s find out."
-                      : page === "results"
-                        ? "What can they do on their own?"
-                        : page === "traces"
-                          ? "Let’s look at that move."
-                          : "Set up your classroom."}
-              </h1>
-              <p>
-                {page === "classroom"
-                  ? "Watch AI students try, share ideas, and find out what actually helps."
-                  : page === "lessons"
-                    ? "Students keep the advice that helps on new boards. The rest stays here too."
-                    : page === "results" && resultsView === "comparison"
-                      ? "Same starting point. Different ways to learn. One fair question."
-                      : page === "results"
-                        ? "Fresh games, saved lessons, and no hints from the teacher or classmates."
-                        : page === "traces"
-                          ? "See what the student checked, what it chose, and what happened next."
-                          : "Choose how the students think, who helps them, and how long their tests run."}
-              </p>
-            </div>
-            <button
-              className="secondary how-button"
-              onClick={() => setIntro(true)}
-            >
-              <BookOpen size={16} />
-              How this works
-            </button>
-          </div>
-          <div className="pip-guide">
-            <Pip
-              size={68}
-              mood={
-                state.busy
-                  ? "thinking"
-                  : state.ledger.some((l) => l.status === "verified")
-                    ? "cheer"
-                    : "happy"
-              }
-            />
-            <div>
-              <b>Hi, I’m Pip. I’ll show you around.</b>
-              <p>
-                {state.busy
-                  ? "They’re working on it. You can watch the steps or stop after the current move."
-                  : page === "results" && resultsView === "comparison"
-                    ? "Here’s our little experiment: four fresh study groups, then the same test with no hints."
-                    : state.candidate
-                      ? `${state.students.find((s) => s.id === state.candidate?.studentId)?.name ?? "A student"} has an idea to try. Let’s test it before calling it a lesson.`
-                      : state.phase === "exam"
-                        ? "The hints are off. This is where we see what the students can do by themselves."
-                        : "The big question: do students learn more with a teacher and classmates than by practicing alone?"}
-              </p>
-            </div>
-            <span className="pip-label">YOUR CLASSROOM GUIDE</span>
-          </div>
-          <div className="mode-notice">
-            <FlaskConical size={15} />
-            <span>
-              {mode === "simulation" ? (
-                <>
-                  You’re trying the simulation. The students use local game
-                  logic, not an LLM. <b>Connect a model to test AI learning.</b>
-                </>
-              ) : (
-                <>
-                  Live model decisions · <b>{state.modelId}</b> · credentials
-                  stay on the server.
-                  {state.plannerEnabled === false
-                    ? " Planner OFF · Muse chooses without sampled rankings."
-                    : " Planner ON · sampled rankings provided."}
-                </>
-              )}
-            </span>
-            <button onClick={() => setPage("settings")}>
-              {mode === "simulation" ? "Connect a model" : "View configuration"}
-              <ArrowRight size={13} />
-            </button>
-          </div>
-          <LearningGuide
-            selected={selected}
-            navigate={navigate}
-            state={state}
-            busy={busy}
-            ready={!!connection}
-            run={run}
-          />
+        <main ref={pageSurface}>
+          {page === "home" && (
+            <section className="welcome-page">
+              <div className="welcome-hero">
+                <Pip size={150} mood="happy" />
+                <span className="eyebrow">WELCOME TO PIP’S CLASSROOM</span>
+                <h1>Agent learning, one tested lesson at a time.</h1>
+                <p>
+                  “A clever idea is just the beginning. Let’s put it to the
+                  test.”
+                </p>
+              </div>
+              <div className="welcome-options">
+                {[
+                  ...pages,
+                  { id: "settings", name: "Settings", icon: Settings2 },
+                ].map(({ id, name, icon: Icon }) => (
+                  <button
+                    key={id}
+                    className="welcome-option panel"
+                    onClick={() => setPage(id)}
+                  >
+                    <Icon size={28} aria-hidden="true" />
+                    <span>
+                      <b>{name}</b>
+                      <small>
+                        {id === "classroom"
+                          ? "Watch Ada, Lin and Sam practice and test advice."
+                          : id === "lessons"
+                            ? "Explore saved lessons and the ideas behind them."
+                            : id === "results"
+                              ? "Follow exam scores and compare ways of learning."
+                              : "Choose your model and classroom configuration."}
+                      </small>
+                    </span>
+                    <ArrowRight size={20} aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+          {page !== "home" && (
+            <>
+              <div className="page-heading">
+                <div>
+                  <div className="eyebrow">OBSERVE. TEACH. VERIFY.</div>
+                  <h1>
+                    {page === "classroom"
+                      ? "Watch agents turn practice into tested lessons."
+                      : page === "lessons"
+                        ? "Good ideas have to prove themselves."
+                        : page === "results" && resultsView === "comparison"
+                          ? "Better together? Let’s find out."
+                          : page === "results"
+                            ? "What can they do on their own?"
+                            : page === "traces"
+                              ? "Let’s look at that move."
+                              : "Set up your classroom."}
+                  </h1>
+                  <p>
+                    {page === "classroom"
+                      ? "Watch AI students try, share ideas, and find out what actually helps."
+                      : page === "lessons"
+                        ? "Students keep the advice that helps on new boards. The rest stays here too."
+                        : page === "results" && resultsView === "comparison"
+                          ? "Same starting point. Different ways to learn. One fair question."
+                          : page === "results"
+                            ? "Fresh games, saved lessons, and no hints from the teacher or classmates."
+                            : page === "traces"
+                              ? "See what the student checked, what it chose, and what happened next."
+                              : "Choose how the students think, who helps them, and how long their tests run."}
+                  </p>
+                </div>
+                <button
+                  className="secondary how-button"
+                  onClick={() => setIntro(true)}
+                >
+                  <BookOpen size={16} />
+                  How this works
+                </button>
+              </div>
+              <div className="pip-guide">
+                <Pip
+                  size={68}
+                  mood={
+                    state.busy
+                      ? "thinking"
+                      : state.ledger.some((l) => l.status === "verified")
+                        ? "cheer"
+                        : "happy"
+                  }
+                />
+                <div>
+                  <b>Hi, I’m Pip. I’ll show you around.</b>
+                  <p>
+                    {state.busy
+                      ? "They’re working on it. You can watch the steps or stop after the current move."
+                      : page === "results" && resultsView === "comparison"
+                        ? "Here’s our little experiment: four fresh study groups, then the same test with no hints."
+                        : state.candidate
+                          ? `${state.students.find((s) => s.id === state.candidate?.studentId)?.name ?? "A student"} has an idea to try. Let’s test it before calling it a lesson.`
+                          : state.phase === "exam"
+                            ? "The hints are off. This is where we see what the students can do by themselves."
+                            : "The big question: do students learn more with a teacher and classmates than by practicing alone?"}
+                  </p>
+                </div>
+                <span className="pip-label">YOUR CLASSROOM GUIDE</span>
+              </div>
+              <div className="mode-notice">
+                <FlaskConical size={15} />
+                <span>
+                  {mode === "simulation" ? (
+                    <>
+                      You’re trying the simulation. The students use local game
+                      logic, not an LLM.{" "}
+                      <b>Connect a model to test AI learning.</b>
+                    </>
+                  ) : (
+                    <>
+                      Live model decisions · <b>{state.modelId}</b> ·
+                      credentials stay on the server.
+                      {state.plannerEnabled === false
+                        ? " Planner OFF · Muse chooses without sampled rankings."
+                        : " Planner ON · sampled rankings provided."}
+                    </>
+                  )}
+                </span>
+                <button onClick={() => setPage("settings")}>
+                  {mode === "simulation"
+                    ? "Connect a model"
+                    : "View configuration"}
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+              <LearningGuide
+                selected={selected}
+                navigate={navigate}
+                state={state}
+                busy={busy}
+                ready={!!connection}
+                run={run}
+                starting={pending && pendingAction !== "stop"}
+              />
+            </>
+          )}
           {(error || state.error) && (
             <div className="error" role="alert">
               {error || state.error}
@@ -862,14 +1085,21 @@ export default function App() {
                       discussion → verification → independent exam.
                     </p>
                   </div>
-                  {busy ? (
-                    <button className="secondary" onClick={() => run("stop")}>
-                      <Square size={14} /> Stop after current action
+                  {state.busy || batch?.status === "running" ? (
+                    <button
+                      className="secondary"
+                      disabled={stopPending || pending}
+                      aria-busy={stopPending}
+                      onClick={() => run("stop")}
+                    >
+                      <Square size={14} />{" "}
+                      {stopPending ? "Stopping…" : "Stop after current action"}
                     </button>
                   ) : (
                     <button
                       className="primary"
                       disabled={
+                        busy ||
                         mode !== "model" ||
                         connection?.kind !== "server" ||
                         !Number.isInteger(Number(batchCycles)) ||
@@ -883,7 +1113,8 @@ export default function App() {
                         })
                       }
                     >
-                      <Play size={15} /> Run Learning Session
+                      <Play size={15} />{" "}
+                      {actionLabel("live-batch", "Run Learning Session")}
                     </button>
                   )}
                 </div>
@@ -906,7 +1137,7 @@ export default function App() {
                   configured budget. Keep the backend running.
                 </p>
                 {mode !== "model" && (
-                  <p className="fine">
+                  <p className="simulation-warning">
                     You’re in local simulation.{" "}
                     <button
                       className="text-button"
@@ -930,15 +1161,17 @@ export default function App() {
                     max={1}
                     value={0}
                   />
-                  <p className="fine">
-                    The current step and completed stage checkpoints will appear
-                    here. Baseline runs before Practice; Discuss and Verify can
-                    overlap.
-                  </p>
                 </section>
               )}
               {batch && (!state.busy || batch.status === "running") && (
-                <SessionProgress batch={batch} />
+                <SessionProgress
+                  batch={batch}
+                  onResume={() => run("resume-batch")}
+                  resumeDisabled={
+                    busy || pending || connection?.kind !== "server"
+                  }
+                  resuming={pendingAction === "resume-batch"}
+                />
               )}
               <details className="individual-steps panel">
                 <summary>Run Individual steps</summary>
@@ -952,14 +1185,16 @@ export default function App() {
                     disabled={busy || !connection}
                     onClick={() => run("practice", { steps: 12 })}
                   >
-                    <Play size={14} /> Play 12 more moves
+                    <Play size={14} />{" "}
+                    {actionLabel("practice", "Play 12 more moves")}
                   </button>
                   <button
                     className="secondary"
                     disabled={busy || !connection || !!state.candidate}
                     onClick={() => run("diagnose")}
                   >
-                    <FlaskConical size={14} /> Focused practice
+                    <FlaskConical size={14} />{" "}
+                    {actionLabel("diagnose", "Focused practice")}
                   </button>
                   <button
                     className="secondary"
@@ -968,7 +1203,8 @@ export default function App() {
                     }
                     onClick={() => run("review", { studentId: student.id })}
                   >
-                    <Users size={14} /> Discuss {student.name}’s attempt
+                    <Users size={14} />{" "}
+                    {actionLabel("review", `Discuss ${student.name}’s attempt`)}
                   </button>
                   {state.candidate && (
                     <button
@@ -976,7 +1212,8 @@ export default function App() {
                       disabled={busy}
                       onClick={() => run("verify")}
                     >
-                      <ShieldCheck size={14} /> Test pending lesson
+                      <ShieldCheck size={14} />{" "}
+                      {actionLabel("verify", "Test pending lesson")}
                     </button>
                   )}
                   {mode === "model" && connection?.kind === "server" && (
@@ -995,7 +1232,10 @@ export default function App() {
                         })
                       }
                     >
-                      Run individual cycles · {batchCycles || "…"}
+                      {actionLabel(
+                        "live-batch",
+                        `Run individual cycles · ${batchCycles || "…"}`,
+                      )}
                     </button>
                   )}
                 </div>
@@ -1012,8 +1252,11 @@ export default function App() {
                 </div>
               </div>
               {mode === "model" && !!state.liveBatch?.cycles.length && (
-                <details>
-                  <summary>Inspect completed teaching attempts</summary>
+                <details className="teaching-attempts">
+                  <summary className="secondary">
+                    <ChevronRight size={16} aria-hidden="true" />
+                    Inspect completed teaching attempts
+                  </summary>
                   {state.liveBatch.cycles.map((c) => (
                     <section key={c.cycle}>
                       <h3>
@@ -1034,6 +1277,7 @@ export default function App() {
                       student={s}
                       selected={selected === s.id}
                       onSelect={() => setSelected(s.id)}
+                      onInspect={(id) => inspect(id)}
                       busy={state.busy}
                       exam={state.phase === "exam"}
                     />
@@ -1098,9 +1342,12 @@ export default function App() {
                         : "AI feedback · still needs to pass a test"}
                     </span>
                   </div>
-                  <p className="fine">
-                    Use Run Individual steps above to discuss {student.name}’s
-                    attempt.
+                  <p className="teacher-next-step">
+                    <ArrowUp size={16} aria-hidden="true" />
+                    <span>
+                      Open <b>Run Individual steps</b> above to discuss{" "}
+                      {student.name}’s attempt.
+                    </span>
                   </p>
                 </aside>
               </div>
@@ -1278,6 +1525,9 @@ export default function App() {
           )}
           {page === "results" && resultsView === "comparison" && (
             <ComparisonPanel
+              starting={pendingAction === "compare"}
+              stopping={stopPending}
+              requestPending={pending}
               comparison={state.comparisons?.at(-1)}
               busy={busy}
               onRun={() => run("compare", { cap: 1500 })}
@@ -1335,11 +1585,11 @@ export default function App() {
                     onClick={() => run("verify")}
                   >
                     <ShieldCheck size={16} />
-                    Run verification
+                    {actionLabel("verify", "Run verification")}
                   </button>
                 </div>
               )}
-              <h2>Classroom idea archive</h2>
+              <h2 className="archive-heading">Classroom idea archive</h2>
               <p className="fine">
                 All students’ tested ideas, including rejected and retired ones.
                 The individual notebook above shows only the selected student’s
@@ -1348,7 +1598,7 @@ export default function App() {
               {state.ledger.length ? (
                 <div className="lesson-grid">
                   {[...state.ledger].reverse().map((l) => (
-                    <div key={l.id}>
+                    <div className="archive-entry" key={l.id}>
                       <p className="eyebrow">
                         {state.students.find((s) => s.id === l.studentId)
                           ?.name ?? "Earlier record · owner not recorded"}
@@ -1384,30 +1634,32 @@ export default function App() {
                   onClick={() => run("exam", { seedCount, cap })}
                 >
                   <GraduationCap size={16} />
-                  Start the test
+                  {actionLabel("exam", "Start the test")}
                 </button>
               </div>
               <div className="exam-config">
                 <label>
                   Games per student
-                  <select
+                  <Select
+                    label="Games per student"
                     value={seedCount}
                     disabled={busy}
-                    onChange={(e) => setSeedCount(Number(e.target.value))}
+                    onValueChange={(value) => setSeedCount(Number(value))}
                   >
                     {[1, 3, 6, 12].map((n) => (
                       <option key={n} value={n}>
                         {n} development seeds
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
                 <label>
                   Maximum valid moves
-                  <select
+                  <Select
+                    label="Maximum valid moves"
                     value={cap}
                     disabled={busy}
-                    onChange={(e) => setCap(Number(e.target.value))}
+                    onValueChange={(value) => setCap(Number(value))}
                   >
                     {[100, 500, 1500, 3000].map((n) => (
                       <option key={n} value={n}>
@@ -1415,7 +1667,7 @@ export default function App() {
                         {n === 100 ? " · short smoke test" : ""}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
                 <p>
                   Short caps test the workflow. These are public development
@@ -1425,6 +1677,30 @@ export default function App() {
               </div>
               {lastExam && stats ? (
                 <>
+                  <label className="exam-history">
+                    Exam history
+                    <Select
+                      label="Exam history"
+                      value={examId}
+                      onValueChange={setExamId}
+                    >
+                      <option value="">
+                        Latest exam (updates automatically)
+                      </option>
+                      {state.exams.map((exam, i) => (
+                        <option key={exam.id} value={exam.id}>
+                          Exam {i + 1} ·{" "}
+                          {new Date(exam.startedAt).toLocaleString()} ·{" "}
+                          {exam.completedAt ? "Complete" : "Partial"}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+                  <ExamProgress
+                    exams={state.exams}
+                    exam={lastExam}
+                    students={state.students}
+                  />
                   <div className="result-metrics">
                     <div>
                       <label>MEAN SCORE · PRIMARY</label>
@@ -1466,7 +1742,7 @@ export default function App() {
                   </div>
                   <div className="panel">
                     <div className="panel-title">
-                      <h2>Latest exam · {lastExam.arm}</h2>
+                      <h2>Selected exam · {lastExam.arm}</h2>
                       <Status
                         value={
                           lastExam.completedAt
@@ -1578,12 +1854,15 @@ export default function App() {
                     <input
                       aria-label="Recorded move"
                       type="range"
+                      ref={replaySlider}
                       min={0}
                       max={Math.max(0, replayTraces.length - 1)}
-                      value={Math.max(0, replayIndex)}
+                      step="any"
+                      defaultValue={Math.max(0, replayIndex)}
                       onChange={(e) => {
                         setReplaying(false);
-                        setTraceId(replayTraces[Number(e.target.value)].id);
+                        const index = Number(e.target.value);
+                        setTraceId(replayTraces[index].id);
                       }}
                     />
                     <span>Recorded replay · no model calls</span>
@@ -1678,7 +1957,7 @@ export default function App() {
                   ))}
                 </div>
                 <div className="config-instructions">
-                  <b>Connect a live model</b>
+                  <h3>Connect a live model</h3>
                   <ol className="setup-steps">
                     <li>
                       Copy <code>.env.example</code> to <code>.env</code> in the
@@ -1697,14 +1976,28 @@ export default function App() {
                       verification run.
                     </li>
                   </ol>
-                  <button
-                    className="secondary"
-                    disabled={busy}
-                    onClick={() => connect().then(setConnection)}
-                  >
-                    Refresh connection
-                  </button>
-                  <p>
+                  <div className="connection-actions">
+                    <button
+                      className="secondary"
+                      disabled={busy}
+                      onClick={() => connect().then(setConnection)}
+                    >
+                      Refresh connection
+                    </button>
+                    <button
+                      className="primary"
+                      disabled={
+                        busy || mode !== "model" || !connection?.modelAvailable
+                      }
+                      onClick={() => run("practice", { steps: 1 })}
+                    >
+                      {actionLabel(
+                        "practice",
+                        "Test connection · one move per student",
+                      )}
+                    </button>
+                  </div>
+                  <p className="connection-status">
                     <b>Connection:</b>{" "}
                     {connection?.kind === "server"
                       ? connection.modelAvailable
@@ -1712,44 +2005,28 @@ export default function App() {
                         : "Server connected; no model key configured."
                       : "Browser-only simulation; start the local backend for model mode."}
                   </p>
-                  <p>
-                    <b>What gets sent:</b> game boards, recent moves, saved
-                    rules, and review evidence. The server makes model requests;
-                    the key stays out of the browser. The supplied example
-                    selects Contributor mode: review your provider’s data-use
-                    terms before using it.
-                  </p>
-                  <p>
-                    <b>What changes:</b> the model chooses moves and writes
-                    review advice. The engine checks legal moves; paired tests
-                    decide whether a lesson is stored. Each student has separate
-                    memory, using the same configured model.
-                  </p>
-                  <p>
-                    <b>Cost:</b> practice, peer feedback, verification rollouts,
-                    and exams can all make paid calls. Token limits and
-                    estimated key spending are configured in the environment
-                    file; they are not a guaranteed provider billing cap.
-                  </p>
-                  <button
-                    className="primary"
-                    disabled={
-                      busy || mode !== "model" || !connection?.modelAvailable
-                    }
-                    onClick={() => run("practice", { steps: 1 })}
-                  >
-                    Test connection · one move per student
-                  </button>
-                  <p>
-                    Copy <code>.env.example</code> to <code>.env</code> in the
-                    project, set <code>MODEL_API_KEY</code>, and restart{" "}
-                    <code>npm run dev</code>. Reload this page after the server
-                    starts.
-                  </p>
-                  <p>
-                    Model endpoint and ID are configurable. No credential is
-                    stored in the browser.
-                  </p>
+                  <div className="connection-notes">
+                    <p>
+                      <b>What gets sent:</b> game boards, recent moves, saved
+                      rules, and review evidence. The server makes model
+                      requests; the key stays out of the browser. The supplied
+                      example selects Contributor mode: review your provider’s
+                      data-use terms before using it.
+                    </p>
+                    <p>
+                      <b>What changes:</b> the model chooses moves and writes
+                      review advice. The engine checks legal moves; paired tests
+                      decide whether a lesson is stored. Each student has
+                      separate memory, using the same configured model.
+                    </p>
+                    <p>
+                      <b>Cost:</b> practice, peer feedback, verification
+                      rollouts, and exams can all make paid calls. Learning
+                      session batches have a configured estimated budget; manual
+                      actions can also spend credits. Local estimates are not a
+                      guaranteed provider billing cap.
+                    </p>
+                  </div>
                 </div>
               </section>
               <section className="panel settings-card">
@@ -1760,17 +2037,18 @@ export default function App() {
                 </p>
                 <label className="field-label">
                   Study group
-                  <select
+                  <Select
+                    label="Study group"
                     value={state.arm}
                     disabled={busy || !!traces.length || !!state.ledger.length}
-                    onChange={(e) => run("arm", { arm: e.target.value })}
+                    onValueChange={(value) => run("arm", { arm: value })}
                   >
                     {ARMS.map((a) => (
                       <option key={a} value={a}>
                         {armNames[a]}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
                 <div className="configuration-facts">
                   <span>
@@ -1869,7 +2147,16 @@ export default function App() {
           </footer>
         </main>
       </div>
-      {intro && <HowItWorks close={() => setIntro(false)} />}
+      {intro && (
+        <HowItWorks
+          close={() => setIntro(false)}
+          enter={() => {
+            setIntro(false);
+            setPage("classroom");
+            window.scrollTo({ top: 0, behavior: "instant" });
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,108 @@
+:root {
+  --select-surface: #fffefa;
+  --select-ink: #314b3b;
+  --select-line: #c7d2c0;
+  --select-hover: #edf3e8;
+  --select-selected: #e0ecdb;
+}
+:root[data-theme="dark"] {
+  --select-surface: #20334e;
+  --select-ink: #e0eafb;
+  --select-line: #4c6484;
+  --select-hover: #2c496b;
+  --select-selected: #345c83;
+}
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 11px 14px;
+  border: 1px solid var(--select-line);
+  border-radius: 14px;
+  background: var(--select-surface);
+  color: var(--select-ink);
+  text-align: left;
+  font-size: 12px;
+}
+.select-trigger > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.select-trigger > svg {
+  flex-shrink: 0;
+  transition: rotate 180ms ease;
+}
+.select-trigger[aria-expanded="true"] > svg {
+  rotate: 180deg;
+}
+.select-trigger:hover:not(:disabled) {
+  border-color: var(--green);
+}
+.select-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.exam-config label .select-trigger,
+.field-label .select-trigger {
+  margin-top: 8px;
+}
+.exam-history .select-trigger {
+  width: auto;
+  max-width: 100%;
+}
+.select-menu {
+  z-index: 10000;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--select-line);
+  border-radius: 16px;
+  background: var(--select-surface);
+  color: var(--select-ink);
+  box-shadow: 0 10px 28px #02081330;
+  animation: overlay-arrive 140ms ease-out;
+  overscroll-behavior: contain;
+}
+.select-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin: 2px 0;
+  color: var(--select-ink);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.select-option > span {
+  min-width: 0;
+}
+.select-option > svg {
+  flex-shrink: 0;
+}
+.select-option[aria-selected="true"] {
+  background: var(--select-selected);
+  font-weight: 600;
+}
+.select-option.highlighted {
+  background: var(--select-hover);
+}
+.select-option[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+@media (prefers-reduced-motion: reduce) {
+  .select-menu {
+    animation: none;
+  }
+  .select-trigger > svg {
+    transition: none;
+  }
+}

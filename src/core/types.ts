@@ -239,6 +239,9 @@ export interface LabState {
   comparisons: Comparison[];
 }
 export interface LiveBatch {
+  progressCleared?: boolean;
+  canResume?: boolean;
+  spendStartUsd?: number;
   plannerEnabled?: boolean;
   kind?: "individual" | "classroom";
   concurrency?: number;

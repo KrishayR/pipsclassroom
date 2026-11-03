@@ -35,7 +35,6 @@ To use several credit-limited keys (for example, one per teammate), list them in
 
 ```sh
 MODEL_API_KEYS=key-one,key-two,key-three,key-four
-MODEL_KEY_LIMIT_USD=145
 MODEL_PRICE_INPUT_PER_M=...
 MODEL_PRICE_OUTPUT_PER_M=...
 ```
@@ -116,6 +115,10 @@ Training for every arm and repetition runs in parallel; then exam games run `--c
 ## Persistence and deployment
 
 Local backend: `data/classroom.sqlite` (WAL). Runtime records, pilot reports, sealed seeds and `.env` are ignored by Git.
+
+Failed or interrupted live batches with a usable checkpoint and budget remaining show **Resume session**. Resume reuses completed stages and the original exam and verification settings. Unfinished stages repeat, using the remaining original batch budget; earlier spending is retained. The original model and planner setting must match. Completed and intentionally stopped sessions are not resumable. Earlier failed snapshots are preserved as `attempt-*.json` in the batch directory.
+
+**Export classroom** downloads a ZIP containing the current raw classroom state and a readable report. In Live model mode it also includes the latest batch's JSON checkpoints, status and reports for each saved stage. Export after completion for the final report; exports during a run are partial. Older batches remain in `data/`. Conversation reports include retained messages only (latest 100 per snapshot). ZIP creation happens on demand in the browser and makes no model calls. The archive is for analysis, not automatic import or restore.
 
 Hosted static build: browser-only simulation using localStorage, with no model backend. Export to preserve a run.
 
