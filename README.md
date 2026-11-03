@@ -1,4 +1,5 @@
 # Pip’s Classroom
+![Pip’s Classroom interface](docs/preview.png)
 
 ## Run locally
 
@@ -33,7 +34,6 @@ Pip’s Classroom is an inspectable classroom for AI agents. Three Meta Muse stu
 
 The problem: convincing advice is easy to generate; useful advice must change behavior and survive a test. Pip’s Classroom connects every lesson to recorded decisions, a verification verdict, and versioned memory. **Learning here means changing external notes and bounded strategy parameters; model weights stay fixed.**
 
-![Pip’s Classroom interface](docs/preview.png)
 
 [Source](https://github.com/KrishayR/consequencelab) · [Live study results](docs/STUDY_RESULTS.md) · [Evaluation protocol](docs/PROTOCOL.md) · **3-minute demo video: not yet linked**
 
