@@ -4,6 +4,7 @@ import "./dropdowns.css";
 import LearningRecord from "./components/LearningRecord";
 import ExamProgress from "./components/ExamProgress";
 import Select from "./components/Select";
+import RuntimeTestPanel from "./components/RuntimeTestPanel";
 import useEdgeBounce from "./useEdgeBounce";
 import SessionProgress from "./components/SessionProgress";
 import LearningGuide from "./components/LearningGuide";
@@ -539,11 +540,15 @@ export default function App() {
   const requestLock = useRef(false);
   const stopLock = useRef(false);
   useEffect(() => {
-    if (!state.busy && state.liveBatch?.status !== "running") {
+    if (
+      !state.busy &&
+      state.liveBatch?.status !== "running" &&
+      state.runtimeTest?.status !== "running"
+    ) {
       stopLock.current = false;
       setStopping(false);
     }
-  }, [state.busy, state.liveBatch?.status]);
+  }, [state.busy, state.liveBatch?.status, state.runtimeTest?.status]);
   const replaySlider = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -580,13 +585,15 @@ export default function App() {
     if (
       !connection ||
       requestLock.current ||
-      (name === "stop"
+      (["stop", "stop-runtime-test"].includes(name)
         ? stopLock.current
-        : state.busy || state.liveBatch?.status === "running")
+        : state.busy ||
+          state.liveBatch?.status === "running" ||
+          state.runtimeTest?.status === "running")
     )
       return;
     requestLock.current = true;
-    if (name === "stop") {
+    if (["stop", "stop-runtime-test"].includes(name)) {
       stopLock.current = true;
       setStopping(true);
     }
@@ -596,7 +603,7 @@ export default function App() {
     try {
       await action(connection, mode, name, params);
     } catch (e) {
-      if (name === "stop") {
+      if (["stop", "stop-runtime-test"].includes(name)) {
         stopLock.current = false;
         setStopping(false);
       }
@@ -607,7 +614,11 @@ export default function App() {
       setPendingAction(null);
     }
   };
-  const busy = state.busy || pending || state.liveBatch?.status === "running";
+  const busy =
+    state.busy ||
+    pending ||
+    state.liveBatch?.status === "running" ||
+    state.runtimeTest?.status === "running";
   const actionLabel = (name: string, label: string) =>
     pendingAction === name ? "Starting…" : label;
   const batch = mode === "model" ? state.liveBatch : undefined;
@@ -1915,6 +1926,20 @@ export default function App() {
           )}
           {page === "settings" && (
             <div className="settings-grid">
+              <RuntimeTestPanel
+                test={state.runtimeTest}
+                disabled={
+                  busy ||
+                  mode !== "model" ||
+                  connection?.kind !== "server" ||
+                  !connection.modelAvailable
+                }
+                live={mode === "model"}
+                starting={pendingAction === "runtime-test"}
+                stopping={stopping}
+                onStart={() => run("runtime-test")}
+                onStop={() => run("stop-runtime-test")}
+              />
               <section className="panel settings-card">
                 <h2>How the students think</h2>
                 <p>

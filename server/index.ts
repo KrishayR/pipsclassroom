@@ -13,6 +13,7 @@ import {
 import type { Arm, LabState } from "../src/core/types";
 import { liveBatchRunner } from "./batch";
 import { checkpointFiles } from "./archive";
+import { runtimeTestRunner } from "./runtime-test";
 loadEnv();
 mkdirSync("data", { recursive: true });
 const db = new DatabaseSync(resolve("data/classroom.sqlite"));
@@ -24,6 +25,7 @@ const usageOffsets = new Map<string, { tokens: number; calls: number }>();
 const classes = new Map<string, Classroom>();
 const clients = new Map<string, Set<import("node:http").ServerResponse>>();
 const batch = liveBatchRunner(() => classes.get("model")?.emit());
+const runtimeTest = runtimeTestRunner(() => classes.get("model")?.emit());
 for (const policy of [simulationPolicy(), ...(real ? [real] : [])]) {
   const stored = db
     .prepare("SELECT state FROM sessions WHERE mode=?")
@@ -63,6 +65,7 @@ for (const policy of [simulationPolicy(), ...(real ? [real] : [])]) {
 function publicState(state: LabState) {
   const batchState = state.mode === "model" ? batch.state() : undefined;
   const safe = structuredClone(batchState ?? state);
+  safe.runtimeTest = runtimeTest.status();
   if (state.mode === "model")
     safe.requestDiagnostics = batchState
       ? batch.diagnostics()
@@ -118,16 +121,31 @@ const server = createServer(async (req, res) => {
     return send(409, {
       error: "Model mode needs MODEL_API_KEY in the server .env file.",
     });
+  if (req.method === "GET" && url.pathname === "/api/runtime-test/report") {
+    try {
+      const report = await runtimeTest.report();
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="muse-runtime-test.json"',
+      );
+      return send(200, report);
+    } catch {
+      return send(404, { error: "No saved runtime report is available yet." });
+    }
+  }
   if (req.method === "GET" && url.pathname === "/api/state")
     return send(200, publicState(lab.state));
   if (req.method === "GET" && url.pathname === "/api/export-checkpoints") {
     try {
-      return send(
-        200,
-        await checkpointFiles(
-          mode === "model" ? batch.archiveStatus()?.directory : undefined,
-        ),
+      const files = await checkpointFiles(
+        mode === "model" ? batch.archiveStatus()?.directory : undefined,
       );
+      if (runtimeTest.status()?.reportAvailable && mode === "model")
+        files.push({
+          name: "runtime-test/report.json",
+          content: JSON.stringify(await runtimeTest.report(), null, 2),
+        });
+      return send(200, files);
     } catch {
       return send(500, {
         error:
@@ -146,6 +164,7 @@ const server = createServer(async (req, res) => {
         ...(mode === "model" ? { liveBatch: batch.status() } : {}),
         tokens: publicState(lab.state).tokens,
         requestDiagnostics: publicState(lab.state).requestDiagnostics,
+        runtimeTest: runtimeTest.status(),
         calls: publicState(lab.state).calls,
       },
     });
@@ -175,6 +194,10 @@ const server = createServer(async (req, res) => {
     }
     const input = JSON.parse(body || "{}");
     const { action } = input;
+    if (action === "stop-runtime-test") {
+      runtimeTest.stop();
+      return send(200, { ok: true });
+    }
     if (action === "clear-progress") {
       if (mode !== "model")
         throw new Error("Select live model mode to clear session progress.");
@@ -183,6 +206,7 @@ const server = createServer(async (req, res) => {
       return send(200, { ok: true });
     }
     if (action === "stop") {
+      if (runtimeTest.status()?.status === "running") runtimeTest.stop();
       if (mode === "model" && batch.status()?.status === "running")
         batch.stop();
       lab.stop();
@@ -190,13 +214,23 @@ const server = createServer(async (req, res) => {
     }
     if (lab.state.busy)
       return send(409, { error: "An operation is already running." });
+    if (mode === "model" && runtimeTest.status()?.status === "running")
+      return send(409, {
+        error: "Stop the runtime test before starting another live operation.",
+      });
     if (mode === "model" && batch.status()?.status === "running")
       return send(409, {
         error:
           "The live batch is running. Stop it before starting other live actions.",
       });
     let operation: Promise<void> | undefined;
-    if (action === "live-batch") {
+    if (action === "runtime-test") {
+      if (mode !== "model")
+        throw new Error(
+          "Select Muse / model API before running the runtime test.",
+        );
+      operation = runtimeTest.start(lab.state);
+    } else if (action === "live-batch") {
       if (mode !== "model")
         throw new Error("Select live model mode for the Muse batch.");
       if (
@@ -244,6 +278,7 @@ server.listen(port, "127.0.0.1", () =>
   ),
 );
 process.on("SIGINT", () => {
+  runtimeTest.stop();
   batch.stop();
   for (const lab of classes.values()) lab.stop();
   server.close();

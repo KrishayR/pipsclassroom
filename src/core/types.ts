@@ -209,6 +209,7 @@ export interface Exam {
   completedAt?: string;
 }
 export interface LabState {
+  runtimeTest?: RuntimeTestStatus;
   requestDiagnostics?: RequestDiagnostics;
   plannerEnabled?: boolean;
   pendingCandidates?: { studentId: string; lesson: Lesson }[];
@@ -274,6 +275,27 @@ export interface StrategyExperiment {
   targeted: number;
   general: number;
   boards: { practice: number; regression: number; moves: number };
+}
+export interface RuntimeTestStatus {
+  status: "running" | "complete" | "stopped" | "error" | "interrupted";
+  stage: string;
+  completedGames: number;
+  totalGames: number;
+  budgetUsd: number;
+  spentUsd: number;
+  reportPath: string;
+  reportAvailable: boolean;
+  startedAt: string;
+  completedAt?: string;
+  results: {
+    effort: string;
+    concurrency: number;
+    games: number;
+    elapsedMs: number;
+    errors: number;
+    meanScore?: number;
+    medianDecisionMs?: number | null;
+  }[];
 }
 export interface RequestDiagnostics {
   reasoningEffort: string;

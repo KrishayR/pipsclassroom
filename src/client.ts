@@ -157,6 +157,7 @@ export async function exportClassroomArchive(
       "",
       "SUMMARY.md: readable report for the current classroom snapshot.",
       "classroom.json: full retained classroom state, protocol, practice traces, exams and lesson verification records.",
+    "runtime-test/report.json: latest saved temporary runtime comparison, when available in live mode.",
       "live-run/: checkpoint JSON and readable reports from the latest live batch in Live model mode (when available).",
       "The live-run final-summary.md is the completed batch report; the current classroom can be a separate manual session.",
       "status.json records progress, timings and estimated spending. A running export is partial; export again after completion.",
