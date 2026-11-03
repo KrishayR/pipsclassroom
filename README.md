@@ -23,7 +23,7 @@ The **simulation works without credentials**. It uses a deterministic heuristic 
 cp .env.example .env
 ```
 
-Set `MODEL_API_KEY` in `.env`, restart `npm run dev`, reload, and choose **Lab configuration → Muse / model API**. Keys stay in the backend; never use a `VITE_` variable for credentials.
+Set `MODEL_API_KEY` in `.env`, restart `npm run dev`, reload, and choose **Settings → Muse / model API**. Keys stay in the backend; never use a `VITE_` variable for credentials.
 
 Defaults: `https://api.meta.ai/v1`, `muse-spark-1.3`, `MODEL_REASONING_EFFORT=low`, `MODEL_MAX_COMPLETION_TOKENS=4000`. Live access was validated on October 28, 2026 (see `docs/VALIDATION.md`). This project runs the study in **Contributor mode** (`MODEL_ID=muse-spark-1.3-contributor`, $0.10 input / $0.002 cached / $0.20 output per 1M tokens): the same model at discounted prices, in exchange for Meta using prompts and responses to train future models, with a 150 requests/minute team limit. Every arm must use the same model ID. `muse-spark-1.3` is a reasoning model: hidden reasoning counts against the completion cap and is billed as output. It rejects `reasoning_effort: "none"`; accepted values are `minimal | low | medium | high | xhigh | max`.
 
@@ -39,7 +39,7 @@ MODEL_PRICE_INPUT_PER_M=...
 MODEL_PRICE_OUTPUT_PER_M=...
 ```
 
-Each request uses the first key whose estimated spend plus the request's worst-case cost stays under the limit. Estimated spend per key (by fingerprint, never the key itself) is kept in `data/key-spend.json` and shared by the server and CLI runs. A key the provider reports as out of credit (HTTP 402, or an `insufficient_quota`/billing error) or invalid (HTTP 401) is retired, and the same request is sent to the next key. Ordinary rate limits never switch keys. When every key is used up, no request is sent. The default limit is $145 because local spend is an estimate; spending made outside this app (for example in the console) is not in the ledger. Without prices, keys switch only on provider errors. Settings shows how many keys remain.
+Each request uses the first available key. Estimated spend per key (by fingerprint, never the key itself) is kept in `data/key-spend.json` and shared by the server and CLI runs. There is no local cumulative key-spending cap. A key the provider reports as out of credit (HTTP 402, or an `insufficient_quota`/billing error) or invalid (HTTP 401) is retired, and the same request is sent to the next key. Ordinary rate limits never switch keys. When every key is retired, no request is sent. Live learning-session batches enforce their own estimated budget (`BATCH_BUDGET_USD`, default $1 for the entire batch, including all requested sessions). Resuming retains earlier spending against that budget. Manual actions are not covered by the batch's dollar cap. Spending outside this app is not in the ledger; local estimates are not a guaranteed provider billing cap. Settings shows how many keys remain.
 
 ### Lessons, helper mode and command-line batches
 
@@ -47,15 +47,15 @@ Lessons are conditional: they step in only when a move breaks their skill, withi
 
 ## Walk through the prototype
 
-1. **How this works** explains 2048 with an isolated human-playable board.
-2. **Start practice** runs 12 moves per student and records actual tool outputs.
-3. Select a student, then **Discuss**. The curriculum picks one skill (preserve room, keep structure, plan beyond one merge), the student plays a short **targeted exercise** alone on a reachable board chosen for that skill, then the teacher (and, in the classroom group, a classmate with relevant recorded evidence) proposes a candidate lesson.
-4. **Test this idea** compares the candidate with the current workspace on targeted practice snapshots plus general regression snapshots. Acceptance is not guaranteed.
-5. **Saved lessons** shows all outcomes, pairwise checks, provenance and rollback.
-6. **Test results** freezes workspaces and runs fresh games on public development seeds. Mean score is the primary outcome.
-7. **Watch a decision** shows before/after boards, exact tool results, the lesson the student cited, and recorded replay. Replay makes no model calls.
-8. **Classroom vs solo** runs four fresh groups (solo, teacher + random practice, teacher + targeted practice, teacher + targeted practice + classmates). This UI pilot is not a cost-matched study.
-9. **Export** downloads the complete JSON run.
+1. **How this works** explains 2048 with an isolated human-playable board. The Pip’s Classroom logo opens a welcome page linking to Classroom, Lessons, Results, and Settings.
+2. In live model mode, choose **Number of sessions** on **Classroom**, then **Run Learning Session**. A batch starts a fresh classroom and teaches Ada, Lin, and Sam through baseline exam → focused practice → teacher and peer discussion → verification → independent exam. Stage progress and estimated spending appear below the controls. Lesson acceptance and improved scores are not guaranteed.
+3. Open **Run Individual steps** for manual practice, focused exercises, discussion, and pending-lesson checks. **Run individual cycles** instead teaches students one at a time in Ada → Lin → Sam order. Controls lock while an operation runs; Stop preserves partial results.
+4. **Lessons** shows student notebooks and the classroom idea archive, including rejected ideas, verification evidence, and rollback controls.
+5. **Results → Student exams** shows exam history and per-student score changes when settings and seeds are comparable. A single session is exploratory evidence, not proof of learning.
+6. **Results → Classroom vs solo** runs four fresh groups (solo, teacher + random practice, teacher + targeted practice, teacher + targeted practice + classmates). This is a separate exploratory comparison, not a cost-matched study.
+7. **Inspect** opens recorded decisions with before/after boards, tool results, lesson citations, and episode replay. Replay makes no model calls.
+8. **Export classroom** downloads a ZIP with raw JSON, readable summaries, and the latest live batch's saved checkpoints. Only retained messages are included; see Persistence below.
+9. **Settings** controls simulation/model mode and study conditions. The top-bar sun/moon toggle remembers the preferred light or dark theme. Failed or interrupted sessions with a usable checkpoint and remaining budget offer **Resume session**.
 
 ## Architecture
 
@@ -135,8 +135,8 @@ To compare lesson-test rollout lengths without API calls, run
 `npm run calibrate-gate`. It saves a development-only agreement report and
 leaves the live gate unchanged. See [Gate calibration](docs/GATE_CALIBRATION.md).
 
-For unattended live testing, the Classroom page has a **Cycles** field and
-**Run [count] live cycles · $1 max** button. Independent students and
+For unattended live testing, the Classroom page has a **Number of sessions** field and
+**Run Learning Session** button. The entire batch has a default $1 estimated cap, rather than a fresh dollar for each requested session. Independent students and
 verification rollouts run with up to six concurrent model requests (three for student games) while
 learning cycles stay sequential. Baseline, stage checkpoints, cycle results,
 and timing records save locally without assistant supervision. See
