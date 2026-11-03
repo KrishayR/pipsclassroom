@@ -1,6 +1,8 @@
 # Pip’s Classroom
 ![Pip’s Classroom interface](docs/preview.png)
 
+**Run a five-hour experiment while your computer is off:** [Cloud test setup and results](docs/CLOUD_TEST.md).
+
 ## Run locally
 
 Requires **Node.js 22.12+** and npm. Node 22’s experimental SQLite startup warning is expected.

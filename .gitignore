@@ -1,6 +1,7 @@
 node_modules/
 dist/
 data/
+cloud-results/
 .env
 .env.*
 !.env.example
