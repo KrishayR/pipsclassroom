@@ -7,6 +7,74 @@ import { requestLimiter } from "../src/core/concurrency";
 import { createGame, observe } from "../src/core/engine";
 import { emptyWorkspace } from "../src/core/skills";
 
+test("long-run compact context sends all ranking values while normal requests keep their original format", async () => {
+  for (const compactContext of [false, true]) {
+    let wire: any;
+    const policy = modelPolicy({
+      key: "offline",
+      baseUrl: "https://example.invalid",
+      model: "fixture",
+      tokenBudget: 1000000,
+      compactContext,
+      fetch: (async (_url, init) => {
+        const request = JSON.parse(init!.body as string);
+        wire = JSON.parse(request.messages[1].content);
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  role: "assistant",
+                  tool_calls: [
+                    {
+                      id: "move",
+                      type: "function",
+                      function: {
+                        name: "apply_move",
+                        arguments: JSON.stringify({
+                          direction: wire.observation.legal[0],
+                          summary: "fixture",
+                        }),
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+            usage: { total_tokens: 50 },
+          }),
+        );
+      }) as typeof fetch,
+    });
+    const decision = await policy.decide(
+      observe(createGame(3)),
+      emptyWorkspace(),
+      3,
+    );
+    const full = decision.tools.find(
+      (tool) => tool.name === "provided_context",
+    )!.result as any;
+    const decoded = compactContext
+      ? wire.skillRanking.map((row: unknown[]) =>
+          Object.fromEntries(
+            wire.skillRankingColumns.map((column: string, i: number) => [
+              column,
+              row[i],
+            ]),
+          ),
+        )
+      : wire.skillRanking;
+    assert.deepEqual(decoded, full.skillRanking);
+    assert.deepEqual(wire.moveFacts, full.moveFacts);
+    assert.deepEqual(
+      wire.lessonPlan,
+      JSON.parse(JSON.stringify(full.lessonPlan)),
+    );
+    assert.deepEqual(wire.lessons, full.lessons);
+    if (!compactContext) assert.equal(wire.skillRankingColumns, undefined);
+  }
+});
+
 test("six exam workers run independent seeds together with identical deterministic results", async () => {
   const run = async (workers: number) => {
     let active = 0,

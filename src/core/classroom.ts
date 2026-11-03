@@ -75,6 +75,7 @@ export interface ClassroomOptions {
   concurrency?: number;
   examConcurrency?: number;
   verificationConcurrency?: number;
+  verificationRequestCeiling?: 6 | 9;
   reviseRejected?: boolean;
 }
 const clone = <T>(v: T): T => structuredClone(v);
@@ -151,9 +152,11 @@ export class Classroom {
     if (
       !Number.isInteger(this.verificationConcurrency) ||
       this.verificationConcurrency < 1 ||
-      this.verificationConcurrency > 6
+      this.verificationConcurrency > (options.verificationRequestCeiling ?? 6)
     )
-      throw new Error("Verification concurrency must be 1–6.");
+      throw new Error(
+        "Verification concurrency exceeds the configured request ceiling.",
+      );
     this.state = state ?? initialState(policy.mode);
     this.state.comparisons ??= [];
     this.state.focus ??= null;
@@ -1068,6 +1071,8 @@ export class Classroom {
         concurrency: this.concurrency,
         examConcurrency: this.examConcurrency,
         verificationConcurrency: this.verificationConcurrency,
+        verificationRequestCeiling:
+          this.options.verificationRequestCeiling ?? 6,
         reviseRejected: this.options.reviseRejected ?? false,
         verify: this.verifyOptions,
         exerciseMoves: this.exerciseMoves,

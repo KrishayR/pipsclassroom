@@ -32,6 +32,14 @@ The Settings panel now offers **Start 5-hour learning test · $20 max** instead 
 
 The runner dispatches up to 100 cycles but stops new work after five hours or when the estimated budget is exhausted. Pending requests drain before the final partial snapshot is written. The classroom progress bar shows elapsed time within the window, not completed-learning percentage. Stop and Export remain available. A backend restart interrupts the run; resume reuses the original deadline and cannot extend it. Keep the backend running and computer awake. This is a longitudinal exploratory run, not a controlled demonstration of classroom advantage; repeated capped exams alone do not establish full-game gains.
 
+Only the five-hour action enables these optimizations:
+
+- Baseline, an exam every two cycles, and a final assessment after an unexamined last cycle. Teaching and verification remain every cycle. Cycles without exams explicitly store `examSkipped: true` and no exam rows. The final 45 minutes are reserved for assessment; slow active work or budget exhaustion can still leave it partial, recorded as such.
+- Student request rankings use a columnar table that retains every field and number. Full object-form context and all trajectories remain in recorded evidence. No facts, lessons, verification thresholds or token caps are dropped. Teaching prompts remain unchanged. Live performance with this alternate encoding still needs checking.
+- Request slots start at six. After a fully drained stage, measured response latency and low pacing wait may justify up to nine verification slots, targeting at most 85% of the existing RPM pacing limit. Insufficient samples or rate/transport/server errors retain or restore six slots. Actual limits are recorded; the request-rate limiter and spending reservations are unchanged. Six independent exam games still use at most six slots.
+
+Normal classroom and study protocols retain their existing exam cadence, prompt format and six-slot limit. An offline regression compares identical practice traces, lesson rules, parameters and verification outcomes with vs without the intermediate exam. This establishes deterministic isolation, not identical stochastic live outcomes.
+
 ### Earlier latency and student-reasoning pilots
 
 The completed four-case speed pilot has been replaced in the UI. Select **Settings → Muse / model API**, then click **Test student reasoning · $2 max**. It runs low and minimal student moves with six workers, on the same frozen first-student notes, 3 seeds and 2 repetitions: 12 games, up to 150 moves each (1,800 decisions), sharing one $2 cap. Teacher/peer settings stay low; this exam-only test does not call teachers or peers. Normal student settings remain low. Results screen latency, errors and scores, not full-game equivalence or learning. Progress includes live move counts, throttled to at most one update per three seconds; completed games save automatically.

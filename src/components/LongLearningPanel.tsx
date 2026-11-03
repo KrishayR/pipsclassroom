@@ -30,8 +30,9 @@ export default function LongLearningPanel({
       <h2>Follow the classroom for up to five hours</h2>
       <p>
         Start a fresh classroom and repeat learning cycles for Ada, Lin and Sam.
-        Each cycle completes teaching, peer discussion, verification and an
-        independent exam before the next cycle uses its lessons.
+        Every cycle completes teaching, peer discussion and verification before
+        the next uses its lessons. Independent exams measure progress every two
+        cycles.
       </p>
       <dl className="request-stats">
         <div>
@@ -47,17 +48,26 @@ export default function LongLearningPanel({
           <dd>Low for all roles · planner on</dd>
         </div>
         <div>
-          <dt>Exams per stage</dt>
+          <dt>Exam schedule</dt>
+          <dd>Baseline · every 2 cycles · final</dd>
+        </div>
+        <div>
+          <dt>Each exam</dt>
           <dd>3 students × 2 seeds × 300 moves</dd>
         </div>
       </dl>
       <p className="fine">
-        Up to six independent exam games and verification requests at a time.
-        Learning cycles stay sequential. New work stops at the time or spending
-        limit; active requests may take a little longer to finish. Notes,
-        accepted/rejected lessons, conversations and exam moves are saved. This
-        is an exploratory longitudinal run; 300-move exams do not establish
-        full-game learning gains.
+        Teaching and verification happen every cycle. Only this long test skips
+        alternate exams. It starts with six request slots and may use up to nine
+        for verification when measured headroom allows, keeping the existing
+        request-rate limit. Compact move-ranking tables retain all values, and
+        full evidence stays saved. The last 45 minutes are reserved for a final
+        exam; a late cycle or slow requests can still leave a partial
+        assessment. Learning cycles stay sequential. New work stops at the time
+        or spending limit; active requests may take a little longer to finish.
+        Notes, accepted/rejected lessons, conversations and exam moves are
+        saved. This is an exploratory longitudinal run; 300-move exams do not
+        establish full-game learning gains.
       </p>
       <div className="controls runtime-test-actions">
         {running ? (
@@ -101,6 +111,13 @@ export default function LongLearningPanel({
             {longRun.spentUsd.toFixed(3)} / ${longRun.budgetUsd.toFixed(2)}{" "}
             estimated
           </p>
+          {longRun.longRunOptimizations && (
+            <p className="fine">
+              Request-slot limit: {longRun.adaptiveRequestLimit ?? 6}. Final
+              exam:{" "}
+              {longRun.finalExamCompleted ? "completed" : "pending or partial"}.
+            </p>
+          )}
           <p className="fine">
             Scheduled cutoff: {new Date(longRun.deadlineAt!).toLocaleString()}.
             Keep the computer awake and backend running. Closing or refreshing

@@ -15,6 +15,7 @@ import {
   protocolFromEnv,
 } from "./config";
 import { budgetedKeyPool } from "./keys";
+import { longRunTuning } from "./long-run-tuning";
 import type { LiveBatch, Policy, LabState } from "../src/core/types";
 import type { ClassroomOptions } from "../src/core/classroom";
 
@@ -43,7 +44,10 @@ export function liveBatchRunner(
         ...(batch.kind === "classroom"
           ? [`cycle-${i}-teaching`]
           : [`cycle-${i}-review`, `cycle-${i}-verification`]),
-        `cycle-${i}-exam`,
+        ...(i % (batch.examEvery ?? 1) === 0 ||
+        batch.cycles.find((c) => c.cycle === i)?.examSkipped === false
+          ? [`cycle-${i}-exam`]
+          : []),
         `cycle-${i}`,
       );
     const saved = new Map<string, Snapshot>();
@@ -142,6 +146,8 @@ export function liveBatchRunner(
         examMoves: number;
         examSeeds: number;
         maxRuntimeMs: number;
+        optimize?: boolean;
+        finalExamReserveMs?: number;
       },
     ) {
       if (kind !== "individual" && kind !== "classroom")
@@ -222,9 +228,30 @@ export function liveBatchRunner(
             pool.status().reduce((n, k) => n + k.spentUsd, 0) -
             initialSpend,
         );
+      const optimized = resume
+        ? status!.longRunOptimizations === true
+        : limits?.optimize === true;
+      const examEvery = optimized ? 2 : 1;
+      const reserveMs = optimized
+        ? resume
+          ? (status!.finalExamReserveMs ?? 0)
+          : (limits?.finalExamReserveMs ?? 0)
+        : 0;
+      if (
+        reserveMs < 0 ||
+        !Number.isFinite(reserveMs) ||
+        (limits && reserveMs >= limits.maxRuntimeMs)
+      )
+        throw new Error("Invalid final-exam reserve.");
+      const trainingDeadline =
+        deadline === undefined ? undefined : deadline - reserveMs;
+      const tuning = optimized
+        ? longRunTuning(Number(process.env.MODEL_RPM || 120))
+        : undefined;
       const policy =
         options.createPolicy?.() ??
         modelFromEnv({
+          ...(tuning ? { requestGate: tuning.run, compactContext: true } : {}),
           ...(limits
             ? {
                 studentReasoningEffort: "low",
@@ -277,6 +304,12 @@ export function liveBatchRunner(
       const protocol = snapshot?.protocol ?? {
         ...protocolFromEnv("model"),
         ...options.protocol,
+        ...(optimized
+          ? {
+              verificationConcurrency: 9,
+              verificationRequestCeiling: 9 as const,
+            }
+          : {}),
       };
       mkdirSync(directory, { recursive: true });
       if (resume && existsSync(`${directory}/final.json`))
@@ -292,6 +325,7 @@ export function liveBatchRunner(
             canResume: false,
             completedAt: undefined,
             stopReason: undefined,
+            adaptiveRequestLimit: tuning?.limit(),
             spentUsd: previousSpend,
             spendStartUsd: initialSpend - previousSpend,
             cycles: status!.cycles.filter((c) => saved.has(`cycle-${c.cycle}`)),
@@ -311,6 +345,10 @@ export function liveBatchRunner(
             spendStartUsd: initialSpend,
             directory,
             startedAt: new Date().toISOString(),
+            longRunOptimizations: optimized,
+            examEvery,
+            finalExamReserveMs: reserveMs,
+            adaptiveRequestLimit: tuning?.limit(),
             deadlineAt:
               deadline === undefined
                 ? undefined
@@ -371,7 +409,13 @@ export function liveBatchRunner(
           );
         if (stopping) return false;
         status!.timings ??= [];
-        status!.timings.push({ stage: label, elapsedMs: Date.now() - started });
+        status!.timings.push({
+          stage: label,
+          elapsedMs: Date.now() - started,
+          ...(tuning ? { requestLimit: tuning.limit() } : {}),
+        });
+        if (tuning)
+          status!.adaptiveRequestLimit = tuning.adapt(policy.diagnostics?.());
         checkpoint(name);
         checkpointAvailable = true;
         return !stopping;
@@ -388,8 +432,17 @@ export function liveBatchRunner(
           return;
         status.baseline ??= structuredClone(active.state.exams[0].rows);
         save();
+        let lastExamCycle =
+          status.cycles.filter((c) => !c.examSkipped && c.rows.length).at(-1)
+            ?.cycle ?? 0;
         for (let i = 0; i < count; i++) {
           if (status.cycles.some((c) => c.cycle === i + 1)) continue;
+          if (
+            optimized &&
+            trainingDeadline !== undefined &&
+            Date.now() >= trainingDeadline
+          )
+            break;
           const beforeCycle =
             saved.get(i === 0 ? "baseline" : `cycle-${i}`)?.state ??
             active.state;
@@ -403,6 +456,12 @@ export function liveBatchRunner(
               `${prefix}-practice`,
               () => active.diagnose(),
             ))
+          )
+            break;
+          if (
+            optimized &&
+            trainingDeadline !== undefined &&
+            Date.now() >= trainingDeadline
           )
             break;
           if (kind === "classroom") {
@@ -432,7 +491,9 @@ export function liveBatchRunner(
             )
               break;
           }
+          const examDue = (i + 1) % examEvery === 0;
           if (
+            examDue &&
             !(await stage(
               `Cycle ${i + 1}/${count}: independent exam`,
               `${prefix}-exam`,
@@ -440,6 +501,7 @@ export function liveBatchRunner(
             ))
           )
             break;
+          if (examDue) lastExamCycle = i + 1;
           status.cycles.push({
             cycle: i + 1,
             student: kind === "classroom" ? "Ada, Lin, Sam" : student.name,
@@ -447,14 +509,30 @@ export function liveBatchRunner(
             attempts: structuredClone(
               active.state.ledger.filter((l) => !previousLessons.has(l.id)),
             ),
-            rows: structuredClone(active.state.exams.at(-1)!.rows),
+            rows: examDue
+              ? structuredClone(active.state.exams.at(-1)!.rows)
+              : [],
+            examSkipped: !examDue,
           });
           status.completed = i + 1;
           checkpoint(prefix);
         }
+        if (optimized && !stopping && status.completed > lastExamCycle) {
+          const ok = await stage(
+            "Final independent exam after long learning test",
+            "final-exam",
+            () => active.exam(sizes.examSeeds, sizes.examMoves),
+          );
+          if (ok) {
+            status.finalExamCompleted = true;
+            checkpoint("final-assessment");
+          }
+        } else if (optimized && !stopping)
+          status.finalExamCompleted =
+            status.completed > 0 && lastExamCycle === status.completed;
         if (!stopping) {
           status.status = "complete";
-          status.stage = `${count} ${kind === "classroom" ? "Classroom Sessions" : "Individual Cycles"} finished — results ready`;
+          status.stage = `${status.completed} ${kind === "classroom" ? "Classroom Sessions" : "Individual Cycles"} finished — results ready`;
         }
       } catch (e) {
         status.status = "error";

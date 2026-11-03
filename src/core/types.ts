@@ -241,6 +241,11 @@ export interface LabState {
   comparisons: Comparison[];
 }
 export interface LiveBatch {
+  longRunOptimizations?: boolean;
+  examEvery?: number;
+  finalExamReserveMs?: number;
+  adaptiveRequestLimit?: number;
+  finalExamCompleted?: boolean;
   deadlineAt?: string;
   stopReason?: string;
   examConcurrency?: number;
@@ -251,7 +256,7 @@ export interface LiveBatch {
   kind?: "individual" | "classroom";
   concurrency?: number;
   verificationConcurrency?: number;
-  timings?: { stage: string; elapsedMs: number }[];
+  timings?: { stage: string; elapsedMs: number; requestLimit?: number }[];
   status: "running" | "complete" | "stopped" | "error" | "interrupted";
   stage: string;
   completed: number;
@@ -268,6 +273,7 @@ export interface LiveBatch {
     lesson: Lesson;
     attempts?: Lesson[];
     rows: ExamRow[];
+    examSkipped?: boolean;
   }[];
 }
 export interface StrategyExperiment {
@@ -302,6 +308,7 @@ export interface RuntimeTestStatus {
   }[];
 }
 export interface RequestDiagnostics {
+  contextEncoding?: "full" | "columnar-ranking";
   studentReasoningEffort?: string;
   teacherReasoningEffort?: string;
   reasoningEffort: string;

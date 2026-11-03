@@ -236,6 +236,8 @@ const server = createServer(async (req, res) => {
         examMoves: 300,
         examSeeds: 2,
         maxRuntimeMs: 5 * 60 * 60 * 1000,
+        optimize: true,
+        finalExamReserveMs: 45 * 60 * 1000,
       });
     } else if (action === "runtime-test") {
       if (mode !== "model")

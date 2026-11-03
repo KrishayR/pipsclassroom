@@ -104,6 +104,7 @@ export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
         concurrency: 1,
         examConcurrency: 1,
         verificationConcurrency: 1,
+        verificationRequestCeiling: 6,
         reviseRejected: false,
       }
     : {
@@ -120,6 +121,7 @@ export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
         concurrency: 3,
         examConcurrency: num("MODEL_EXAM_CONCURRENCY", 6),
         verificationConcurrency: 6,
+        verificationRequestCeiling: 6,
         reviseRejected: true,
       };
 }
