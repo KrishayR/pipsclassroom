@@ -224,7 +224,20 @@ const server = createServer(async (req, res) => {
           "The live batch is running. Stop it before starting other live actions.",
       });
     let operation: Promise<void> | undefined;
-    if (action === "runtime-test") {
+    if (action === "long-learning-test") {
+      if (mode !== "model")
+        throw new Error("Select Muse for the long learning test.");
+      if (real?.usesHelper === false)
+        throw new Error(
+          "Enable the planner before starting the long learning test.",
+        );
+      operation = batch.start(100, "classroom", false, {
+        budgetUsd: 20,
+        examMoves: 300,
+        examSeeds: 2,
+        maxRuntimeMs: 5 * 60 * 60 * 1000,
+      });
+    } else if (action === "runtime-test") {
       if (mode !== "model")
         throw new Error(
           "Select Muse / model API before running the runtime test.",

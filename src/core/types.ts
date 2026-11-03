@@ -241,6 +241,8 @@ export interface LabState {
   comparisons: Comparison[];
 }
 export interface LiveBatch {
+  deadlineAt?: string;
+  stopReason?: string;
   examConcurrency?: number;
   progressCleared?: boolean;
   canResume?: boolean;

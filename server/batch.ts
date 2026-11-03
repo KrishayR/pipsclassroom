@@ -76,7 +76,9 @@ export function liveBatchRunner(
     }
     if (status && ["error", "interrupted"].includes(status.status))
       status.canResume =
-        status.spentUsd < status.budgetUsd && savedStages(status).size > 0;
+        status.spentUsd < status.budgetUsd &&
+        (!status.deadlineAt || Date.now() < Date.parse(status.deadlineAt)) &&
+        savedStages(status).size > 0;
   }
   const save = () => {
     mkdirSync(root, { recursive: true });
@@ -100,10 +102,11 @@ export function liveBatchRunner(
     },
     // The live classroom can be displayed without replacing the manual session.
     state: () => (status?.status === "running" ? lab?.state : undefined),
-    stop() {
+    stop(reason = "Stopped by user") {
       lab?.stop();
       if (status?.status === "running") {
         stopping = true;
+        status.stopReason = reason;
         status.stage = "Stopping after the current action";
         save();
       }
@@ -134,6 +137,12 @@ export function liveBatchRunner(
       count = 5,
       kind: "individual" | "classroom" = "individual",
       resume = false,
+      limits?: {
+        budgetUsd: number;
+        examMoves: number;
+        examSeeds: number;
+        maxRuntimeMs: number;
+      },
     ) {
       if (kind !== "individual" && kind !== "classroom")
         throw new Error("Choose Individual Cycles or Classroom Session.");
@@ -141,6 +150,28 @@ export function liveBatchRunner(
         throw new Error("Choose a whole number of cycles from 1 to 100.");
       if (status?.status === "running")
         throw new Error("A live batch is already running.");
+      if (
+        limits &&
+        (!Number.isFinite(limits.maxRuntimeMs) ||
+          limits.maxRuntimeMs <= 0 ||
+          limits.maxRuntimeMs > 86400000 ||
+          !Number.isFinite(limits.budgetUsd) ||
+          limits.budgetUsd <= 0)
+      )
+        throw new Error("Invalid timed-run limits.");
+      const deadline =
+        resume && status?.deadlineAt
+          ? Date.parse(status.deadlineAt)
+          : limits
+            ? Date.now() + limits.maxRuntimeMs
+            : undefined;
+      if (deadline !== undefined && deadline <= Date.now()) {
+        if (resume && status) {
+          status.canResume = false;
+          save();
+        }
+        throw new Error("This run's time limit has ended.");
+      }
       stopping = false;
       const saved =
         resume && status ? savedStages(status) : new Map<string, Snapshot>();
@@ -155,7 +186,16 @@ export function liveBatchRunner(
             examMoves: saved.get("baseline")!.state.exams[0].cap,
             examSeeds: saved.get("baseline")!.state.exams[0].seeds.length,
           }
-        : batchFromEnv();
+        : {
+            ...batchFromEnv(),
+            ...(limits
+              ? {
+                  budgetUsd: limits.budgetUsd,
+                  examMoves: limits.examMoves,
+                  examSeeds: limits.examSeeds,
+                }
+              : {}),
+          };
       const pool = (options.createPool ?? keysFromEnv)();
       const rates = (options.getPrices ?? prices)();
       if (!pool || !rates)
@@ -185,11 +225,20 @@ export function liveBatchRunner(
       const policy =
         options.createPolicy?.() ??
         modelFromEnv({
+          ...(limits
+            ? {
+                studentReasoningEffort: "low",
+                reasoningEffort: "low",
+                allowSkill: true,
+              }
+            : {}),
           // A backstop only: about 10M tokens cost $1 at Contributor prices, so the
           // dollar cap binds first.
           tokenBudget: 15000000 * Math.max(1, sizes.budgetUsd),
           keys: budgetedKeyPool(pool, rates, remainingBudget),
           beforeRequest: () => {
+            if (deadline !== undefined && Date.now() >= deadline)
+              runner.stop("Five-hour time limit reached");
             if (stopping)
               throw new Error("Batch stopped before the next request.");
           },
@@ -242,6 +291,7 @@ export function liveBatchRunner(
             stage: "Resuming saved session",
             canResume: false,
             completedAt: undefined,
+            stopReason: undefined,
             spentUsd: previousSpend,
             spendStartUsd: initialSpend - previousSpend,
             cycles: status!.cycles.filter((c) => saved.has(`cycle-${c.cycle}`)),
@@ -261,6 +311,10 @@ export function liveBatchRunner(
             spendStartUsd: initialSpend,
             directory,
             startedAt: new Date().toISOString(),
+            deadlineAt:
+              deadline === undefined
+                ? undefined
+                : new Date(deadline).toISOString(),
             cycles: [],
             concurrency: protocol.concurrency,
             examConcurrency: protocol.examConcurrency,
@@ -276,6 +330,13 @@ export function liveBatchRunner(
       }
       lab = new Classroom(policy, restored, protocol);
       const active = lab;
+      const deadlineTimer =
+        deadline === undefined
+          ? undefined
+          : setTimeout(
+              () => runner.stop("Five-hour time limit reached"),
+              Math.max(1, deadline - Date.now()),
+            );
       const checkpoint = (name: string) => {
         writeFileSync(
           `${directory}/${name}.json`,
@@ -399,9 +460,10 @@ export function liveBatchRunner(
         status.status = "error";
         status.stage = e instanceof Error ? e.message : "Batch failed";
       } finally {
+        if (deadlineTimer) clearTimeout(deadlineTimer);
         if (stopping) {
           status.status = "stopped";
-          status.stage = "Stopped; partial results saved";
+          status.stage = `${status.stopReason ?? "Stopped"}; partial results saved`;
         }
         status.completedAt = new Date().toISOString();
         status.spentUsd = spent();
@@ -409,6 +471,8 @@ export function liveBatchRunner(
           ["error", "interrupted"].includes(status.status) &&
           checkpointAvailable &&
           status.spentUsd < status.budgetUsd;
+        if (deadline !== undefined && Date.now() >= deadline)
+          status.canResume = false;
         checkpoint("final");
         lab = undefined;
       }

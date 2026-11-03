@@ -1,5 +1,6 @@
 import type { LiveBatch, RequestDiagnostics } from "../core/types";
 import { Play } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export function sessionProgress(batch: LiveBatch) {
   const stages = batch.kind === "individual" ? 4 : 3;
@@ -26,6 +27,23 @@ export default function SessionProgress({
   diagnostics?: RequestDiagnostics;
 }) {
   const { completed, total } = sessionProgress(batch);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    if (!batch.deadlineAt || batch.status !== "running") return;
+    const timer = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(timer);
+  }, [batch.deadlineAt, batch.status]);
+  const windowMs = batch.deadlineAt
+    ? Math.max(1, Date.parse(batch.deadlineAt) - Date.parse(batch.startedAt))
+    : 0;
+  const elapsedMs = Math.min(
+    windowMs,
+    Math.max(
+      0,
+      (batch.completedAt ? Date.parse(batch.completedAt) : now) -
+        Date.parse(batch.startedAt),
+    ),
+  );
   const label =
     batch.status === "complete"
       ? "Learning session complete"
@@ -40,17 +58,25 @@ export default function SessionProgress({
       <div className="session-progress-heading" role="status">
         <strong>{label}</strong>
         <span className="session-checkpoints">
-          {completed}/{total} stage checkpoints
+          {batch.deadlineAt
+            ? `${batch.completed} learning cycles completed`
+            : `${completed}/${total} stage checkpoints`}
         </span>
       </div>
       <progress
-        aria-label="Completed learning stages"
-        max={total}
-        value={completed}
+        aria-label={
+          batch.deadlineAt
+            ? "Long learning test elapsed time"
+            : "Completed learning stages"
+        }
+        max={batch.deadlineAt ? windowMs : total}
+        value={batch.deadlineAt ? elapsedMs : completed}
       />
       <p className="fine">
-        Stage progress, not a time estimate. Discuss and Verify can overlap
-        across students.
+        {batch.deadlineAt
+          ? "Elapsed time in the five-hour window, not a learning-success score. "
+          : "Stage progress, not a time estimate. "}
+        Discuss and Verify can overlap across students.
       </p>
       <div className="session-spend">
         <span>Estimated spend</span>

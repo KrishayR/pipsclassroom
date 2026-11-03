@@ -26,6 +26,14 @@ These are sums across requests, so overlapping requests can total more than wall
 
 ## Controlled latency pilot
 
+### Current Settings panel: long learning test
+
+The Settings panel now offers **Start 5-hour learning test · $20 max** instead of the completed reasoning-comparison panel. It starts a fresh classroom, with planner enabled and low reasoning for both student moves and teaching. All three students learn per cycle; cycles remain sequential, while verification can use six requests and exams use six independent games (3 students × 2 development seeds, up to 300 moves each). The $20 ceiling applies only to this timed experiment; ordinary session batches retain their configured budget (default $1).
+
+The runner dispatches up to 100 cycles but stops new work after five hours or when the estimated budget is exhausted. Pending requests drain before the final partial snapshot is written. The classroom progress bar shows elapsed time within the window, not completed-learning percentage. Stop and Export remain available. A backend restart interrupts the run; resume reuses the original deadline and cannot extend it. Keep the backend running and computer awake. This is a longitudinal exploratory run, not a controlled demonstration of classroom advantage; repeated capped exams alone do not establish full-game gains.
+
+### Earlier latency and student-reasoning pilots
+
 The completed four-case speed pilot has been replaced in the UI. Select **Settings → Muse / model API**, then click **Test student reasoning · $2 max**. It runs low and minimal student moves with six workers, on the same frozen first-student notes, 3 seeds and 2 repetitions: 12 games, up to 150 moves each (1,800 decisions), sharing one $2 cap. Teacher/peer settings stay low; this exam-only test does not call teachers or peers. Normal student settings remain low. Results screen latency, errors and scores, not full-game equivalence or learning. Progress includes live move counts, throttled to at most one update per three seconds; completed games save automatically.
 
 Frontend reloads retain progress. Other live actions are blocked until the test finishes or stops. **Download test report** downloads raw results; **Export classroom** in live mode also bundles the latest report under `runtime-test/report.json`. Earlier speed-pilot files remain in `data/`; the new test uses a separate `student-reasoning-test-latest.json` status record. A backend restart interrupts this test rather than silently restarting paid calls.

@@ -6,6 +6,47 @@ import { join } from "node:path";
 import { liveBatchRunner } from "../server/batch";
 import { simulationPolicy } from "../src/core/policy";
 import { keyPool } from "../server/keys";
+import { batchFromEnv } from "../server/config";
+
+test("timed learning test stops new work at its deadline, saves partial results and keeps normal budgets unchanged", async () => {
+  const root = mkdtempSync(join(tmpdir(), "cl-timed-"));
+  const normalBudget = batchFromEnv().budgetUsd;
+  const base = simulationPolicy();
+  const runner = liveBatchRunner(() => {}, {
+    root,
+    createPolicy: () => ({
+      ...base,
+      decide: async (...args) => {
+        await new Promise((resolve) => setTimeout(resolve, 8));
+        return base.decide(...args);
+      },
+    }),
+    createPool: () =>
+      keyPool({ keys: ["offline"], limitUsd: Infinity, prices: null }),
+    getPrices: () => ({ input: 1, output: 1 }),
+    protocol: {
+      exerciseMoves: 0,
+      verify: { practice: 1, regression: 1, moves: 1 },
+      examConcurrency: 6,
+    },
+  });
+  await runner.start(100, "classroom", false, {
+    maxRuntimeMs: 40,
+    budgetUsd: 20,
+    examMoves: 10,
+    examSeeds: 2,
+  });
+  const status = runner.status()!;
+  assert.equal(status.status, "stopped");
+  assert.equal(status.stopReason, "Five-hour time limit reached");
+  assert.equal(status.canResume, false);
+  assert.equal(status.completed, 0);
+  assert.equal(status.budgetUsd, 20);
+  assert.ok(status.deadlineAt);
+  assert.ok(existsSync(`${status.directory}/final.json`));
+  assert.equal(batchFromEnv().budgetUsd, normalBudget);
+  await assert.rejects(runner.resume(), /no resumable checkpoint/);
+});
 
 test("resume preserves baseline, practice, exam settings and cumulative session spend across restart", async () => {
   const root = mkdtempSync(join(tmpdir(), "cl-resume-"));

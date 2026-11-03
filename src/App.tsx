@@ -4,7 +4,7 @@ import "./dropdowns.css";
 import LearningRecord from "./components/LearningRecord";
 import ExamProgress from "./components/ExamProgress";
 import Select from "./components/Select";
-import RuntimeTestPanel from "./components/RuntimeTestPanel";
+import LongLearningPanel from "./components/LongLearningPanel";
 import useEdgeBounce from "./useEdgeBounce";
 import SessionProgress from "./components/SessionProgress";
 import LearningGuide from "./components/LearningGuide";
@@ -1926,8 +1926,8 @@ export default function App() {
           )}
           {page === "settings" && (
             <div className="settings-grid">
-              <RuntimeTestPanel
-                test={state.runtimeTest}
+              <LongLearningPanel
+                batch={batch}
                 disabled={
                   busy ||
                   mode !== "model" ||
@@ -1935,10 +1935,11 @@ export default function App() {
                   !connection.modelAvailable
                 }
                 live={mode === "model"}
-                starting={pendingAction === "runtime-test"}
+                starting={pendingAction === "long-learning-test"}
                 stopping={stopping}
-                onStart={() => run("runtime-test")}
-                onStop={() => run("stop-runtime-test")}
+                onStart={() => run("long-learning-test")}
+                onStop={() => run("stop")}
+                onExport={download}
               />
               <section className="panel settings-card">
                 <h2>How the students think</h2>
