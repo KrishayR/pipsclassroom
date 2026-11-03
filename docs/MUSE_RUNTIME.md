@@ -2,6 +2,8 @@
 
 Normal live runs keep `MODEL_REASONING_EFFORT=low`, the planner/helper, the existing move and lesson records, and the shared request gate and spending reservations. This update does not change prompts, exam scoring, verification thresholds or the number of moves.
 
+`MODEL_STUDENT_REASONING_EFFORT` overrides reasoning for student **moves** only. `MODEL_TEACHER_REASONING_EFFORT` controls teaching, peer feedback and review/reflection calls. Both fall back to the legacy `MODEL_REASONING_EFFORT` (default `low`). Role settings are recorded in diagnostics, and resume rejects a change of reasoning settings for an existing session. Normal settings remain low/low until the longer student comparison is reviewed.
+
 ## Independent exam games
 
 `MODEL_EXAM_CONCURRENCY=6` (range 1–6) lets classroom exams dispatch games across all selected seeds together. Moves inside each game stay sequential; every game uses its own board, RNG, recent-move context and frozen workspace. Results remain ordered by seed and student. The visible student board follows the last configured exam seed so concurrent games do not overwrite it unpredictably.
@@ -24,7 +26,9 @@ These are sums across requests, so overlapping requests can total more than wall
 
 ## Controlled latency pilot
 
-For the temporary in-app test, select **Settings → Muse / model API**, then click **Run runtime comparison · $2 max** in the Runtime test panel. It runs the exact default four-case pilot on a frozen copy of the first current student's notes. Progress and spending are saved automatically, including across frontend reloads. Other live actions are blocked until it finishes or stops. **Download test report** downloads the raw results; **Export classroom** in live mode also bundles the latest report under `runtime-test/report.json`. Earlier report files stay in `data/`. A backend restart interrupts this test rather than silently restarting paid calls.
+The completed four-case speed pilot has been replaced in the UI. Select **Settings → Muse / model API**, then click **Test student reasoning · $2 max**. It runs low and minimal student moves with six workers, on the same frozen first-student notes, 3 seeds and 2 repetitions: 12 games, up to 150 moves each (1,800 decisions), sharing one $2 cap. Teacher/peer settings stay low; this exam-only test does not call teachers or peers. Normal student settings remain low. Results screen latency, errors and scores, not full-game equivalence or learning. Progress includes live move counts, throttled to at most one update per three seconds; completed games save automatically.
+
+Frontend reloads retain progress. Other live actions are blocked until the test finishes or stops. **Download test report** downloads raw results; **Export classroom** in live mode also bundles the latest report under `runtime-test/report.json`. Earlier speed-pilot files remain in `data/`; the new test uses a separate `student-reasoning-test-latest.json` status record. A backend restart interrupts this test rather than silently restarting paid calls.
 
 The benchmark is a separate CLI experiment. It does not change normal settings, train students, or replace classroom results. It uses the same saved workspace, seeds and repetition indices for each worker/effort combination. Model choices remain stochastic: identical live scores are not guaranteed. Short pilots are insufficient to establish equivalent decision quality or learning gains.
 
@@ -37,6 +41,9 @@ npm run benchmark-muse -- --simulation --moves 2 --out data/runtime-smoke.json
 
 # Paid latency pilot, one $0.25 total cap shared across all cases.
 npm run benchmark-muse -- --live --budget 0.25 --source data/live-batch-EXAMPLE/final.json
+
+# The longer two-condition test used by the replacement UI button.
+npm run benchmark-muse -- --live --budget 2 --workers 6 --efforts low,minimal --moves 150 --seeds 3 --repeats 2
 ```
 
 Default pilot: the first student, 3 development seeds, 2 repetitions, 10 moves/game, `low` and `minimal` effort, each at 3 and 6 workers (up to 240 decisions). `--all-students`, `--moves`, `--seeds`, `--repeats`, `--workers`, `--efforts`, `--source`, and `--out` are configurable. The benchmark budget must be greater than zero and at most $2. The in-app button uses a $2 total cap; the CLI still defaults to $0.25 unless overridden. Live mode requires configured token prices and an API key. Unsupported effort values or provider errors are recorded; there is no silent fallback to another condition.

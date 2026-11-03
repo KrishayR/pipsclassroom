@@ -277,6 +277,8 @@ export interface StrategyExperiment {
   boards: { practice: number; regression: number; moves: number };
 }
 export interface RuntimeTestStatus {
+  kind?: "student-reasoning";
+  movesPerGame?: number;
   status: "running" | "complete" | "stopped" | "error" | "interrupted";
   stage: string;
   completedGames: number;
@@ -298,6 +300,8 @@ export interface RuntimeTestStatus {
   }[];
 }
 export interface RequestDiagnostics {
+  studentReasoningEffort?: string;
+  teacherReasoningEffort?: string;
   reasoningEffort: string;
   queued: number;
   active: number;

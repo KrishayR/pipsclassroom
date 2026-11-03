@@ -13,7 +13,7 @@ export function runtimeTestRunner(
   options: { root?: string; simulation?: boolean } = {},
 ) {
   const root = options.root ?? "data";
-  const latest = `${root}/runtime-test-latest.json`;
+  const latest = `${root}/student-reasoning-test-latest.json`;
   let state: RuntimeTestStatus | undefined = existsSync(latest)
     ? JSON.parse(readFileSync(latest, "utf8"))
     : undefined;
@@ -64,10 +64,12 @@ export function runtimeTestRunner(
       controller = new AbortController();
       const signal = controller.signal;
       state = {
+        kind: "student-reasoning",
+        movesPerGame: 150,
         status: "running",
-        stage: "Starting runtime comparison…",
+        stage: "Starting longer student reasoning comparison…",
         completedGames: 0,
-        totalGames: 24,
+        totalGames: 12,
         budgetUsd: 2,
         spentUsd: 0,
         reportPath: path,
@@ -80,13 +82,13 @@ export function runtimeTestRunner(
         [
           options.simulation ? "--simulation" : "--live",
           "--moves",
-          "10",
+          "150",
           "--seeds",
           "3",
           "--repeats",
           "2",
           "--workers",
-          "3,6",
+          "6",
           "--efforts",
           "low,minimal",
           "--budget",
@@ -98,6 +100,11 @@ export function runtimeTestRunner(
           sourceState: frozen,
           signal,
           skipBackendCheck: true,
+          onActivity: (activity) => {
+            if (signal.aborted) return;
+            state!.stage = `${activity.effort} student reasoning · ${activity.moves}/${activity.maxMoves} moves · ${activity.concurrency} workers`;
+            changed();
+          },
           onUpdate: (report) => {
             state!.completedGames = report.results.reduce(
               (n, r) => n + r.rows.length,

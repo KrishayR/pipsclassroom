@@ -86,8 +86,13 @@ export default function SessionProgress({
           {diagnostics && (
             <>
               <p>
-                Request timings · reasoning {diagnostics.reasoningEffort} ·{" "}
-                {diagnostics.active} active · {diagnostics.queued} queued
+                Request timings · student reasoning{" "}
+                {diagnostics.studentReasoningEffort ??
+                  diagnostics.reasoningEffort}{" "}
+                · teacher/peer{" "}
+                {diagnostics.teacherReasoningEffort ??
+                  diagnostics.reasoningEffort}{" "}
+                · {diagnostics.active} active · {diagnostics.queued} queued
               </p>
               <dl className="request-stats">
                 <div>

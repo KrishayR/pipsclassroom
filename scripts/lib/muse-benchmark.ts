@@ -20,6 +20,7 @@ import { budgetedKeyPool } from "../../server/keys";
 
 export interface BenchmarkReport {
   plan: {
+    teacherReasoningEffort: string;
     mode: string;
     source: string;
     cap: number;
@@ -60,6 +61,12 @@ export async function runBenchmark(
   args: string[],
   controls: {
     onUpdate?: (report: BenchmarkReport) => void;
+    onActivity?: (activity: {
+      effort: string;
+      concurrency: number;
+      moves: number;
+      maxMoves: number;
+    }) => void;
     sourceState?: LabState;
     signal?: AbortSignal;
     skipBackendCheck?: boolean;
@@ -118,6 +125,7 @@ export async function runBenchmark(
     })),
   );
   const plan = {
+    teacherReasoningEffort: "low",
     mode: live ? "live" : simulation ? "simulation" : "dry-run",
     source: controls.sourceState
       ? "current classroom (frozen copy)"
@@ -213,7 +221,8 @@ export async function runBenchmark(
         const policy = live
           ? modelFromEnv({
               keys: budget!,
-              reasoningEffort: setup.effort,
+              reasoningEffort: "low",
+              studentReasoningEffort: setup.effort,
               tokenBudget: 15000000,
               beforeRequest: () => {
                 if (stopped) throw new Error("Benchmark stopped.");
@@ -228,6 +237,8 @@ export async function runBenchmark(
         report.results.push(result);
         save();
         const started = performance.now();
+        let caseMoves = 0,
+          lastActivity = -Infinity;
         await mapConcurrent(
           tasks,
           setup.concurrency,
@@ -239,6 +250,18 @@ export async function runBenchmark(
               cap,
               student,
               state.arm,
+              () => {
+                caseMoves++;
+                const now = performance.now();
+                if (now - lastActivity >= 3000) {
+                  lastActivity = now;
+                  controls.onActivity?.({
+                    ...setup,
+                    moves: caseMoves,
+                    maxMoves: tasks.length * cap,
+                  });
+                }
+              },
             );
             row.repetition = repetition;
             result.rows.push(row);

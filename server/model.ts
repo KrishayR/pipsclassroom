@@ -44,6 +44,8 @@ interface ModelConfig {
   // Reasoning models spend hidden tokens from the same completion cap.
   maxCompletionTokens?: number;
   reasoningEffort?: string;
+  // Student moves only. Teaching, peer feedback and review keep reasoningEffort.
+  studentReasoningEffort?: string;
   // false removes the skill ranking, so moves come from the model's own reasoning (ablation).
   allowSkill?: boolean;
   // Awaited before every request; shared across providers to respect team rate limits.
@@ -124,7 +126,15 @@ export function modelPolicy(config: ModelConfig): Policy & {
   }>();
   const requestGate = config.requestGate ?? requestLimiter(3);
   const timing: RequestDiagnostics = {
-    reasoningEffort: config.reasoningEffort ?? "provider default",
+    reasoningEffort:
+      config.studentReasoningEffort ??
+      config.reasoningEffort ??
+      "provider default",
+    studentReasoningEffort:
+      config.studentReasoningEffort ??
+      config.reasoningEffort ??
+      "provider default",
+    teacherReasoningEffort: config.reasoningEffort ?? "provider default",
     queued: 0,
     active: 0,
     completed: 0,
@@ -153,6 +163,7 @@ export function modelPolicy(config: ModelConfig): Policy & {
     messages: ChatMessage[],
     availableTools?: unknown[],
     json = false,
+    effort = config.reasoningEffort,
   ) => {
     const queuedAt = performance.now();
     timing.queued++;
@@ -166,9 +177,7 @@ export function modelPolicy(config: ModelConfig): Policy & {
           model: config.model,
           messages,
           max_completion_tokens: completionCap,
-          ...(config.reasoningEffort
-            ? { reasoning_effort: config.reasoningEffort }
-            : {}),
+          ...(effort ? { reasoning_effort: effort } : {}),
           ...(availableTools ? { tools: availableTools } : {}),
           ...(json ? { response_format: { type: "json_object" } } : {}),
         };
@@ -454,7 +463,12 @@ export function modelPolicy(config: ModelConfig): Policy & {
         ];
         let toolCount = 0;
         for (let round = 0; round < 4; round++) {
-          const message = await chat(messages, tools);
+          const message = await chat(
+            messages,
+            tools,
+            false,
+            config.studentReasoningEffort ?? config.reasoningEffort,
+          );
           // A reply truncated by the cap can be empty; the API rejects empty assistant turns.
           if (message.content || message.tool_calls?.length)
             messages.push(message);

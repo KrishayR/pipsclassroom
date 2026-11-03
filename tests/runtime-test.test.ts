@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { runtimeTestRunner } from "../server/runtime-test";
 import { initialState } from "../src/core/classroom";
 
-test("temporary runtime test runs all four cases, saves results and preserves classroom state", async () => {
+test("longer student comparison saves both six-worker conditions without changing classroom state", async () => {
   const root = mkdtempSync(join(tmpdir(), "cl-runtime-"));
   const source = initialState("model"),
     before = structuredClone(source);
@@ -16,22 +16,24 @@ test("temporary runtime test runs all four cases, saves results and preserves cl
   await operation;
   const status = runner.status()!;
   assert.equal(status.status, "complete");
-  assert.equal(status.completedGames, 24);
-  assert.equal(status.totalGames, 24);
+  assert.equal(status.completedGames, 12);
+  assert.equal(status.totalGames, 12);
+  assert.equal(status.kind, "student-reasoning");
+  assert.equal(status.movesPerGame, 150);
   assert.equal(status.budgetUsd, 2);
   assert.equal(status.spentUsd, 0);
   assert.deepEqual(
     status.results.map((r) => [r.effort, r.concurrency]),
     [
-      ["low", 3],
       ["low", 6],
       ["minimal", 6],
-      ["minimal", 3],
     ],
   );
   assert.ok(existsSync(status.reportPath));
   const report = await runner.report();
-  assert.equal(report.plan.maxDecisions, 240);
+  assert.equal(report.plan.maxDecisions, 1800);
+  assert.equal(report.plan.cap, 150);
+  assert.equal(report.plan.teacherReasoningEffort, "low");
   assert.equal(report.plan.budgetUsd, 2);
   assert.equal(report.frozenWorkspaces.length, 1);
   assert.ok(
@@ -62,7 +64,7 @@ test("stopping the runtime test preserves a downloadable partial report and neve
   );
   await runner.start(initialState("model"));
   assert.equal(runner.status()!.status, "stopped");
-  assert.ok(runner.status()!.completedGames < 24);
+  assert.ok(runner.status()!.completedGames < 12);
   assert.equal((await runner.report()).results.length, 1);
   assert.equal(runner.status()!.reportAvailable, true);
 });

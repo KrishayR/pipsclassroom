@@ -413,13 +413,37 @@ test("a teacher reply that fails validation gets one correction with the specifi
     skill: { ...emptyWorkspace().skill, version: 2 },
   });
   const sent: string[] = [];
+  const teacherEfforts: string[] = [],
+    studentEfforts: string[] = [];
   const policy = modelPolicy({
     key: "test",
     baseUrl: "https://example.invalid/v1",
     model: "test-model",
     tokenBudget: 100000,
+    reasoningEffort: "low",
+    studentReasoningEffort: "minimal",
     fetch: (async (_url, init) => {
       const request = JSON.parse(init!.body as string);
+      if (request.tools) {
+        studentEfforts.push(request.reasoning_effort);
+        return response({
+          role: "assistant",
+          tool_calls: [
+            {
+              id: "student-move",
+              type: "function",
+              function: {
+                name: "apply_move",
+                arguments: JSON.stringify({
+                  direction: obs.legal[0],
+                  summary: "fixture",
+                }),
+              },
+            },
+          ],
+        });
+      }
+      teacherEfforts.push(request.reasoning_effort);
       sent.push(request.messages.at(-1).content);
       return response({
         role: "assistant",
@@ -429,12 +453,19 @@ test("a teacher reply that fails validation gets one correction with the specifi
       });
     }) as typeof fetch,
   });
-  const p = await policy.propose(student, "teacher", undefined, {
-    focus: "space",
-    name: "Preserve room",
-    reason: "test",
-    adaptive: true,
-  });
+  const [p] = await Promise.all([
+    policy.propose(student, "teacher", undefined, {
+      focus: "space",
+      name: "Preserve room",
+      reason: "test",
+      adaptive: true,
+    }),
+    policy.decide(obs, emptyWorkspace(), 1),
+  ]);
+  assert.deepEqual(studentEfforts, ["minimal"]);
+  assert.deepEqual(teacherEfforts, ["low", "low"]);
+  assert.equal(policy.diagnostics!().studentReasoningEffort, "minimal");
+  assert.equal(policy.diagnostics!().teacherReasoningEffort, "low");
   assert.equal(sent.length, 2);
   assert.match(sent[1], /diagnosis is 900 characters \(max 700\)/);
   assert.equal(p.lesson.focus, "space");

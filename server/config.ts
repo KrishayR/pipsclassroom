@@ -70,7 +70,16 @@ export function modelFromEnv(
     model: modelId(),
     tokenBudget: num("MODEL_TOKEN_BUDGET", 100000),
     maxCompletionTokens: num("MODEL_MAX_COMPLETION_TOKENS", 4000),
-    reasoningEffort: process.env.MODEL_REASONING_EFFORT || "low",
+    reasoningEffort:
+      process.env.MODEL_TEACHER_REASONING_EFFORT ||
+      process.env.MODEL_REASONING_EFFORT ||
+      "low",
+    studentReasoningEffort:
+      overrides.studentReasoningEffort ??
+      process.env.MODEL_STUDENT_REASONING_EFFORT ??
+      overrides.reasoningEffort ??
+      process.env.MODEL_REASONING_EFFORT ??
+      "low",
     limiter: (limiter ??= rateLimiter(num("MODEL_RPM", 120))),
     outageWaitMs: num("MODEL_OUTAGE_WAIT_MS", 600000),
     allowSkill: studentHelper(),

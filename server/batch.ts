@@ -207,6 +207,24 @@ export function liveBatchRunner(
       const directory = resume
         ? status!.directory
         : `${root}/live-batch-${Date.now()}`;
+      const savedReasoning = snapshot?.state.requestDiagnostics;
+      const currentReasoning = policy.diagnostics?.();
+      if (
+        resume &&
+        savedReasoning &&
+        currentReasoning &&
+        ((savedReasoning.studentReasoningEffort ??
+          savedReasoning.reasoningEffort) !==
+          (currentReasoning.studentReasoningEffort ??
+            currentReasoning.reasoningEffort) ||
+          (savedReasoning.teacherReasoningEffort ??
+            savedReasoning.reasoningEffort) !==
+            (currentReasoning.teacherReasoningEffort ??
+              currentReasoning.reasoningEffort))
+      )
+        throw new Error(
+          "Restore the original student and teacher reasoning settings before resuming.",
+        );
       const protocol = snapshot?.protocol ?? {
         ...protocolFromEnv("model"),
         ...options.protocol,

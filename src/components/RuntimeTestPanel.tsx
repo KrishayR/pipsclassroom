@@ -34,7 +34,7 @@ export default function RuntimeTestPanel({
       const url = URL.createObjectURL(await response.blob());
       const a = document.createElement("a");
       a.href = url;
-      a.download = "muse-runtime-test.json";
+      a.download = "muse-student-reasoning-test.json";
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
@@ -45,18 +45,19 @@ export default function RuntimeTestPanel({
   };
   return (
     <section className="panel settings-card wide runtime-test-panel">
-      <span className="eyebrow">TEMPORARY · RUNTIME TEST</span>
-      <h2>Find the faster Muse setup</h2>
+      <span className="eyebrow">TEMPORARY · STUDENT REASONING TEST</span>
+      <h2>Compare low and minimal student reasoning</h2>
       <p>
-        Compare 3 vs 6 workers and low vs minimal reasoning: four
-        configurations, 24 short games, up to 240 decisions. Uses a frozen copy
-        of the first student's notes; results stay separate from classroom exams
-        and lessons.
+        Run both student settings with six workers on the same frozen notes and
+        seeds: 12 games, up to 150 moves each (1,800 decisions total). Uses the
+        first student's notes; results stay separate from classroom exams and
+        lessons.
       </p>
       <p className="fine">
-        Live Muse calls · $2 estimated total cap across all four tests.
-        Normal runs keep low reasoning and the planner enabled. This is a speed
-        pilot, not proof of equivalent learning or decision quality.
+        Live Muse calls · $2 estimated total cap across both settings. Normal
+        students stay on low; teacher and peer feedback stay on low. The planner
+        remains enabled. This tests student moves, not teaching. A 150-move
+        screening test cannot establish full-game equivalence or learning.
       </p>
       <div className="controls runtime-test-actions">
         {running ? (
@@ -67,7 +68,7 @@ export default function RuntimeTestPanel({
             aria-busy={isStopping}
           >
             <Square size={15} />
-            {isStopping ? "Stopping…" : "Stop runtime test"}
+            {isStopping ? "Stopping…" : "Stop comparison"}
           </button>
         ) : (
           <button
@@ -77,7 +78,7 @@ export default function RuntimeTestPanel({
             aria-busy={starting}
           >
             <Play size={15} />
-            {starting ? "Starting…" : "Run runtime comparison · $2 max"}
+            {starting ? "Starting…" : "Test student reasoning · $2 max"}
           </button>
         )}
         {test?.reportAvailable && (
