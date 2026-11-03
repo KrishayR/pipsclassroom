@@ -4,7 +4,8 @@
 
 - **Lessons are accepted.** Teachers get free strategy experiments, and the lesson test is unchanged. In live runs, every student saved a lesson in its first Classroom Session. See [Lesson acceptance](LESSON_ACCEPTANCE.md).
 - **The gains show up in full games.** Short exams cannot show them, so `npm run full-game-check` and the study's `report.fullGameCheck` play the saved notes through whole simulated games on fresh seeds.
-- **Study started Nov 2, about 3 PM PST, on this commit.** Helper on, 1 repetition, revisions on, full-game live exams on 2 sealed seeds:
+- **Study finished Nov 2, 8:20 PM PST.** Results: [Study results](STUDY_RESULTS.md). Accepted lessons improved full-game play (teacher group +929 [243, 1,620]). The classroom group kept no lesson in this one repetition, so no classroom advantage was shown. Exams were cut to 300 moves after training, for time (disclosed). Raw reports: `data/study/study-300.json` (used) and `data/study/study.json` (stopped full-game run).
+- **Study started Nov 2, about 3 PM PST, on commit `d728afc`.** Helper on, 1 repetition, revisions on, full-game live exams on 2 sealed seeds:
 
   ```
   npm run evaluate -- --mode model --split exam --seeds 2 --cap 1500 \

@@ -33,7 +33,13 @@ Agents can talk to each other, but it is rarely measured whether that helps them
 
 ## Results
 
-_To be filled from `data/model-study.json` after the sealed run. Report the primary contrast (classroom − adaptive) with its interval, all four arms against the untrained baseline, both ablations, costs, and the planning-target decision, including if it is negative._
+Full details: [Study results](STUDY_RESULTS.md) and [Lesson acceptance](LESSON_ACCEPTANCE.md). One training repetition per group, so all results are exploratory.
+
+- **Lessons pass a test that was never loosened.** Before each review, teachers run free strategy experiments on separate boards. Before this, all 11 live lessons were rejected. Now the first live Classroom Session saved a lesson for every student, and in the study 4 of 20 candidates passed. Every lesson that passed adopted a tested experiment exactly.
+- **Accepted lessons improve whole games.** Over 40 full simulated games per student on fresh seeds, the teacher group's notes scored **+929 [243, 1,620]** points per game against untrained notes. Solo was +460 and adaptive +631, both with intervals that include zero.
+- **No classroom advantage was shown.** In the study, all 6 of the classroom group's candidates failed, several narrowly. Its notes never changed, so the primary contrast (classroom − adaptive) is −631 [−1,403, 120] over full games and +162 [−191, 579] in the live exams. The planning target was not met.
+- **Live 300-move exams show no difference.** Every game survives to the cap. They were shortened from full games after training, for time; the change is disclosed in the report. 30 games, 0 errors, 0 invalid moves.
+- **Cost:** about $3.50 for the study; $5.35 in total for the project's live work.
 
 ## Honest limits
 
