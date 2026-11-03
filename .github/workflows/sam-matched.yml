@@ -1,0 +1,65 @@
+name: Sam notebook vs empty
+on:
+  workflow_dispatch:
+    inputs:
+      code_ref:
+        description: Branch or commit with the frozen Sam test
+        type: string
+        default: codex/muse-throughput
+        required: true
+      budget_usd:
+        description: Maximum estimated Muse dollars (at most 5)
+        type: number
+        default: 5
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: cloud-learning-test
+  cancel-in-progress: false
+jobs:
+  matched-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 290
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.code_ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Check the matched test without paid calls
+        run: node --import tsx scripts/sam-matched.ts
+        env:
+          SAM_BUDGET_USD: ${{ inputs.budget_usd }}
+      - name: Compare Sam notebooks using live Muse
+        timeout-minutes: 270
+        run: node --import tsx scripts/sam-matched.ts --live
+        env:
+          SAM_BUDGET_USD: ${{ inputs.budget_usd }}
+          MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
+          MODEL_BASE_URL: https://api.meta.ai/v1
+          MODEL_ID: muse-spark-1.3-contributor
+          MODEL_STUDENT_HELPER: "on"
+          MODEL_USE_PLANNER: "true"
+          MODEL_STUDENT_REASONING_EFFORT: low
+          MODEL_TEACHER_REASONING_EFFORT: low
+          MODEL_RPM: "120"
+          MODEL_MAX_COMPLETION_TOKENS: "4000"
+          MODEL_OUTAGE_WAIT_MS: "600000"
+          MODEL_PRICE_INPUT_PER_M: "0.10"
+          MODEL_PRICE_CACHED_INPUT_PER_M: "0.002"
+          MODEL_PRICE_OUTPUT_PER_M: "0.20"
+          MODEL_KEY_LEDGER: sam-results/key-spend.json
+      - name: Upload full and partial matched results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: sam-matched-${{ github.run_id }}-${{ github.run_attempt }}
+          path: sam-results/
+          retention-days: 7
+          if-no-files-found: warn
+          compression-level: 6
