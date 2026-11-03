@@ -24,7 +24,7 @@ These are sums across requests, so overlapping requests can total more than wall
 
 ## Controlled latency pilot
 
-For the temporary in-app test, select **Settings → Muse / model API**, then click **Run runtime comparison · $0.25 max** in the Runtime test panel. It runs the exact default four-case pilot on a frozen copy of the first current student's notes. Progress and spending are saved automatically, including across frontend reloads. Other live actions are blocked until it finishes or stops. **Download test report** downloads the raw results; **Export classroom** in live mode also bundles the latest report under `runtime-test/report.json`. Earlier report files stay in `data/`. A backend restart interrupts this test rather than silently restarting paid calls.
+For the temporary in-app test, select **Settings → Muse / model API**, then click **Run runtime comparison · $2 max** in the Runtime test panel. It runs the exact default four-case pilot on a frozen copy of the first current student's notes. Progress and spending are saved automatically, including across frontend reloads. Other live actions are blocked until it finishes or stops. **Download test report** downloads the raw results; **Export classroom** in live mode also bundles the latest report under `runtime-test/report.json`. Earlier report files stay in `data/`. A backend restart interrupts this test rather than silently restarting paid calls.
 
 The benchmark is a separate CLI experiment. It does not change normal settings, train students, or replace classroom results. It uses the same saved workspace, seeds and repetition indices for each worker/effort combination. Model choices remain stochastic: identical live scores are not guaranteed. Short pilots are insufficient to establish equivalent decision quality or learning gains.
 
@@ -39,7 +39,7 @@ npm run benchmark-muse -- --simulation --moves 2 --out data/runtime-smoke.json
 npm run benchmark-muse -- --live --budget 0.25 --source data/live-batch-EXAMPLE/final.json
 ```
 
-Default pilot: the first student, 3 development seeds, 2 repetitions, 10 moves/game, `low` and `minimal` effort, each at 3 and 6 workers (up to 240 decisions). `--all-students`, `--moves`, `--seeds`, `--repeats`, `--workers`, `--efforts`, `--source`, and `--out` are configurable. The benchmark budget must be greater than zero and at most $1. Live mode requires configured token prices and an API key. Unsupported effort values or provider errors are recorded; there is no silent fallback to another condition.
+Default pilot: the first student, 3 development seeds, 2 repetitions, 10 moves/game, `low` and `minimal` effort, each at 3 and 6 workers (up to 240 decisions). `--all-students`, `--moves`, `--seeds`, `--repeats`, `--workers`, `--efforts`, `--source`, and `--out` are configurable. The benchmark budget must be greater than zero and at most $2. The in-app button uses a $2 total cap; the CLI still defaults to $0.25 unless overridden. Live mode requires configured token prices and an API key. Unsupported effort values or provider errors are recorded; there is no silent fallback to another condition.
 
 Do not run alongside other live jobs: Meta quotas are shared by the team. The benchmark checks the default local backend for an active job before starting. Other machines/processes cannot be detected automatically. It stops dispatching new games after a failed game or Ctrl+C, drains active work, and saves partial results; budget reservations account for in-flight requests.
 

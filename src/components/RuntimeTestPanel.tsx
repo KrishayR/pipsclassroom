@@ -54,7 +54,7 @@ export default function RuntimeTestPanel({
         and lessons.
       </p>
       <p className="fine">
-        Live Muse calls · $0.25 estimated total cap across all four tests.
+        Live Muse calls · $2 estimated total cap across all four tests.
         Normal runs keep low reasoning and the planner enabled. This is a speed
         pilot, not proof of equivalent learning or decision quality.
       </p>
@@ -77,7 +77,7 @@ export default function RuntimeTestPanel({
             aria-busy={starting}
           >
             <Play size={15} />
-            {starting ? "Starting…" : "Run runtime comparison · $0.25 max"}
+            {starting ? "Starting…" : "Run runtime comparison · $2 max"}
           </button>
         )}
         {test?.reportAvailable && (

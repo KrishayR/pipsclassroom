@@ -18,7 +18,7 @@ test("temporary runtime test runs all four cases, saves results and preserves cl
   assert.equal(status.status, "complete");
   assert.equal(status.completedGames, 24);
   assert.equal(status.totalGames, 24);
-  assert.equal(status.budgetUsd, 0.25);
+  assert.equal(status.budgetUsd, 2);
   assert.equal(status.spentUsd, 0);
   assert.deepEqual(
     status.results.map((r) => [r.effort, r.concurrency]),
@@ -32,7 +32,7 @@ test("temporary runtime test runs all four cases, saves results and preserves cl
   assert.ok(existsSync(status.reportPath));
   const report = await runner.report();
   assert.equal(report.plan.maxDecisions, 240);
-  assert.equal(report.plan.budgetUsd, 0.25);
+  assert.equal(report.plan.budgetUsd, 2);
   assert.equal(report.frozenWorkspaces.length, 1);
   assert.ok(
     report.results.every(

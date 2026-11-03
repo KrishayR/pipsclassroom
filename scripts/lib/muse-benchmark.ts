@@ -94,8 +94,8 @@ export async function runBenchmark(
   if (!efforts.length || efforts.some((e) => !["low", "minimal"].includes(e)))
     throw new Error("--efforts must use low and/or minimal.");
   const budgetUsd = Number(arg("budget", "0.25"));
-  if (!Number.isFinite(budgetUsd) || budgetUsd <= 0 || budgetUsd > 1)
-    throw new Error("--budget must be greater than 0 and at most $1.");
+  if (!Number.isFinite(budgetUsd) || budgetUsd <= 0 || budgetUsd > 2)
+    throw new Error("--budget must be greater than 0 and at most $2.");
   const source = arg("source", "");
   const saved =
     controls.sourceState ??
