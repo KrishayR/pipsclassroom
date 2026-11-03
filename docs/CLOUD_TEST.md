@@ -8,8 +8,8 @@ Normal website runs are unchanged.
 
 ## One-time setup
 
-1. Merge the workflow and its supporting branch changes into `main`.
-   GitHub enables manual dispatch only after the workflow exists on the default branch.
+1. Put only `.github/workflows/learning-test.yml` on `main` to register the launcher.
+   The experiment code can remain on `codex/muse-throughput`; it does not need to merge.
 2. Open **Settings → Secrets and variables → Actions → New repository secret**.
    Name it **MODEL_API_KEY**, and paste your Muse key as the secret value.
    Never put it in source code, a workflow input, a commit or a chat.
@@ -21,8 +21,10 @@ Normal website runs are unchanged.
 ## Run and download
 
 1. Open **Actions → Five-hour learning test → Run workflow**.
-2. Select the branch to test (normally `main`), choose a Muse budget above $0 and
-   at most $20 (default $20), then click **Run workflow**.
+2. Leave **Use workflow from** on `main`. Set **Branch or commit to test** to
+   `codex/muse-throughput` (the default), choose a Muse budget above $0 and at most
+   $20 (default $20), then click **Run workflow**. The launcher checks out that
+   branch's experiment code without merging it into `main`.
 3. Once GitHub shows the job running, you can close the browser and shut down
    your computer. Progress appears in the **Run the classroom** step's logs.
 4. Download **learning-results-…** under **Artifacts** on the completed run's page.

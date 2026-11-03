@@ -4,6 +4,11 @@ name: Five-hour learning test
 on:
   workflow_dispatch:
     inputs:
+      code_ref:
+        description: Branch or commit to test from this repository
+        type: string
+        default: codex/muse-throughput
+        required: true
       budget_usd:
         description: Maximum estimated Muse spend (above 0, at most 20 USD)
         type: number
@@ -24,6 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.code_ref }}
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
