@@ -989,9 +989,8 @@ export default function App() {
                     <>
                       Live model decisions · <b>{state.modelId}</b> ·
                       credentials stay on the server.
-                      {state.plannerEnabled === false
-                        ? " Planner OFF · Muse chooses without sampled rankings."
-                        : " Planner ON · sampled rankings provided."}
+                      {state.plannerEnabled !== false &&
+                        " Lesson-aware planner and helper enabled."}
                     </>
                   )}
                 </span>
