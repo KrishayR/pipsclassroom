@@ -100,6 +100,11 @@
 :root[data-theme="dark"] .empty p {
   color: #b5c7df;
 }
+:root[data-theme="dark"] .main-shell .mode-notice {
+  background: #1c3552;
+  border-color: #4c79a2;
+  color: #c6e2ff;
+}
 .theme-toggle {
   position: relative;
   display: inline-flex;
@@ -326,7 +331,7 @@
   color: #b1f0d0;
 }
 :root[data-theme="dark"]
-  :is(.exam-change.lower, .status.rejected, .error, .mode-notice) {
+  :is(.exam-change.lower, .status.rejected, .error) {
   background: #49372e;
   color: #ffd5b4;
   border-color: #926d4d;
