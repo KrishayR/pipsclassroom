@@ -9,7 +9,6 @@ import SessionProgress from "./components/SessionProgress";
 import StudyResults from "./components/StudyResults";
 import LearningGuide from "./components/LearningGuide";
 import Pip from "./components/Pip";
-import ComparisonPanel, { armNames } from "./components/ComparisonPanel";
 import {
   Activity,
   ArrowDown,
@@ -54,7 +53,6 @@ import { initialState } from "./core/classroom";
 import { createGame, move, observe } from "./core/engine";
 import { MILESTONES, summarize } from "./core/evaluation";
 import { FOCI, focusName, skillEstimates } from "./core/curriculum";
-import { ARMS } from "./core/classroom";
 import type {
   Board,
   Direction,
@@ -1340,26 +1338,7 @@ export default function App() {
           )}
           {page === "results" && (
             <div className="section-bar">
-              <div
-                className="student-tabs"
-                role="group"
-                aria-label="Results view"
-              >
-                <button
-                  className={resultsView === "exams" ? "active" : ""}
-                  aria-pressed={resultsView === "exams"}
-                  onClick={() => setResultsView("exams")}
-                >
-                  Student exams
-                </button>
-                <button
-                  className={resultsView === "comparison" ? "active" : ""}
-                  aria-pressed={resultsView === "comparison"}
-                  onClick={() => setResultsView("comparison")}
-                >
-                  Classroom vs solo
-                </button>
-              </div>
+              <div />
               <button
                 className="secondary"
                 disabled={!student.traces.length}
@@ -1368,17 +1347,6 @@ export default function App() {
                 <Activity size={15} /> Inspect recorded decisions
               </button>
             </div>
-          )}
-          {page === "results" && resultsView === "comparison" && (
-            <ComparisonPanel
-              starting={pendingAction === "compare"}
-              stopping={stopPending}
-              requestPending={pending}
-              comparison={state.comparisons?.at(-1)}
-              busy={busy}
-              onRun={() => run("compare", { cap: 1500 })}
-              onStop={() => run("stop")}
-            />
           )}
           {page === "lessons" && (
             <>
@@ -1852,24 +1820,9 @@ export default function App() {
               <section className="panel settings-card">
                 <h2>Who helps them learn?</h2>
                 <p>
-                  Choose before practice. Reset or export the current run before
-                  changing conditions.
+                  Every learning session is a classroom: a teacher plus
+                  classmates who share examples.
                 </p>
-                <label className="field-label">
-                  Study group
-                  <Select
-                    label="Study group"
-                    value={state.arm}
-                    disabled={busy || !!traces.length || !!state.ledger.length}
-                    onValueChange={(value) => run("arm", { arm: value })}
-                  >
-                    {ARMS.map((a) => (
-                      <option key={a} value={a}>
-                        {armNames[a]}
-                      </option>
-                    ))}
-                  </Select>
-                </label>
                 <div className="configuration-facts">
                   <span>
                     Per-decision simulation cap <b>96 transitions</b>

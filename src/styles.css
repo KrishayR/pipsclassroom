@@ -3964,6 +3964,10 @@ td b {
 .gain-chart .bar {
   fill: var(--green);
 }
+.gain-chart .base .bar {
+  fill: var(--muted);
+  opacity: 0.55;
+}
 .gain-chart .whisker line {
   stroke: var(--ink);
   stroke-width: 2;

@@ -42,7 +42,7 @@ export default function StudyResults() {
           <li key={t}>{t}</li>
         ))}
       </ul>
-      <h3>Live exams: score change vs untrained students</h3>
+      <h3>Live exams: classroom vs untrained students</h3>
       <GainChart rows={s.live} />
       <h3>Lessons kept in training</h3>
       <div className="table-wrap">
