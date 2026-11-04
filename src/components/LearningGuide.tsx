@@ -59,20 +59,16 @@ export default function LearningGuide() {
         <>
           <div className="guide-steps" role="tablist">
             {steps.map((s, i) => (
-              <div
+              <button
                 key={s.title}
                 role="tab"
-                tabIndex={0}
                 aria-selected={i === step}
                 className={i === step ? "active" : ""}
                 onClick={() => setStep(i)}
-                onKeyDown={(e) =>
-                  (e.key === "Enter" || e.key === " ") && setStep(i)
-                }
               >
                 <b>{`0${i + 1}`}</b>
                 <span>{s.title}</span>
-              </div>
+              </button>
             ))}
           </div>
           <div className="guide-body">
