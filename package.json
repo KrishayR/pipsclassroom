@@ -15,7 +15,10 @@
     "seal-seeds": "tsx scripts/seal-seeds.ts",
     "calibrate-gate": "tsx scripts/calibrate-gate.ts",
     "live-batch": "tsx scripts/live-batch.ts",
-    "full-game-check": "tsx scripts/full-game-check.ts"
+    "full-game-check": "tsx scripts/full-game-check.ts",
+    "live-full-game": "tsx scripts/live-full-game.ts",
+    "combine-study": "tsx scripts/combine-study.ts",
+    "redo-exam-games": "tsx scripts/redo-exam-games.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

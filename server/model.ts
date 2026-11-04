@@ -202,7 +202,6 @@ export function modelPolicy(config: ModelConfig): Policy & {
           await new Promise((r) => setTimeout(r, backoffMs(attempt++)));
           continue;
         }
-        offlineSince = undefined;
         if (response.ok) break;
         let errorBody: string;
         try {
@@ -217,6 +216,17 @@ export function modelPolicy(config: ModelConfig): Policy & {
           console.warn(`API ${label} ${problem}; switching to the next key.`);
           continue;
         }
+        // A provider gateway outage is waited out like a lost connection.
+        if ([502, 503, 504].includes(response.status)) {
+          offlineSince ??= Date.now();
+          const window = config.outageWaitMs ?? 600000;
+          if (Date.now() - offlineSince < window) {
+            await new Promise((r) =>
+              setTimeout(r, Math.min(window / 20, backoffMs(attempt++))),
+            );
+            continue;
+          }
+        } else offlineSince = undefined;
         if (
           (response.status === 429 || response.status >= 500) &&
           attempt < RETRIES

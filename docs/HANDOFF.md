@@ -1,3 +1,15 @@
+# Handoff — November 3, 2026
+
+## Latest update (Nov 3): Study 2 finished, classroom lessons accepted
+
+- **Results: [Study 2 results](STUDY_2_RESULTS.md).** Full-game live exams on new sealed seeds, with both ablations. Every group kept 1–2 lessons, the classroom group included. Classroom students beat untrained students in live full games (+1,479 [333, 2,813]). Without the skill tool, the same students lose 5,515 points. The primary contrast (classroom − adaptive) is not significant.
+- **HTTP 502/503/504 from the provider are now waited out** like a lost connection. Training for three groups was first cut short by 504s and was rerun.
+- **New scripts:**
+  - `npm run combine-study` merges a report with a retrain.
+  - `npm run redo-exam-games` replays errored exam games while a run continues. It needs its own `MODEL_KEY_LEDGER`.
+  - `npm run live-full-game` plays live full games with and without saved notes.
+- **Long runs:** the request limiter is per process, so splitting a run across processes is about three times faster per game.
+
 # Handoff — November 2, 2026
 
 ## Latest update (Nov 2): lessons pass, study running

@@ -6,6 +6,7 @@ import ExamProgress from "./components/ExamProgress";
 import Select from "./components/Select";
 import useEdgeBounce from "./useEdgeBounce";
 import SessionProgress from "./components/SessionProgress";
+import StudyResults from "./components/StudyResults";
 import LearningGuide from "./components/LearningGuide";
 import Pip from "./components/Pip";
 import ComparisonPanel, { armNames } from "./components/ComparisonPanel";
@@ -18,11 +19,13 @@ import {
   BookOpen,
   Check,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Code2,
   Download,
   FlaskConical,
   GraduationCap,
+  History,
   Layers,
   Lightbulb,
   LockKeyhole,
@@ -42,8 +45,10 @@ import {
   action,
   connect,
   exportClassroomArchive,
+  loadRecording,
   watch,
   type Connection,
+  type RecordingInfo,
 } from "./client";
 import { initialState } from "./core/classroom";
 import { createGame, move, observe } from "./core/engine";
@@ -519,7 +524,7 @@ export default function App() {
   const pageSurface = useEdgeBounce();
   const [connection, setConnection] = useState<Connection | null>(null),
     [mode, setMode] = useState<Mode>("simulation"),
-    [state, setState] = useState<LabState>(() => initialState()),
+    [liveState, setState] = useState<LabState>(() => initialState()),
     [page, setPage] = useState("classroom"),
     [resultsView, setResultsView] = useState("exams"),
     [examId, setExamId] = useState(""),
@@ -535,7 +540,25 @@ export default function App() {
     [pending, setPending] = useState(false),
     [pendingAction, setPendingAction] = useState<string | null>(null),
     [stopping, setStopping] = useState(false),
-    [replaying, setReplaying] = useState(false);
+    [replaying, setReplaying] = useState(false),
+    // A saved live run shown read-only in place of the live classroom.
+    [recording, setRecording] = useState<{
+      run: RecordingInfo;
+      stage: number;
+      state: LabState;
+    } | null>(null);
+  const state = recording?.state ?? liveState;
+  // A recorded run is a live model run, whatever mode the live classroom is in.
+  const shownMode: Mode = recording ? "model" : mode;
+  const showRecording = async (run: RecordingInfo, stage: number) => {
+    try {
+      setError("");
+      const recorded = await loadRecording(run.id, run.stages[stage].id);
+      setRecording({ run, stage, state: recorded });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load that run.");
+    }
+  };
   const requestLock = useRef(false);
   const stopLock = useRef(false);
   useEffect(() => {
@@ -579,6 +602,7 @@ export default function App() {
   const run = async (name: string, params: Record<string, unknown> = {}) => {
     if (
       !connection ||
+      !!recording ||
       requestLock.current ||
       (name === "stop"
         ? stopLock.current
@@ -607,7 +631,11 @@ export default function App() {
       setPendingAction(null);
     }
   };
-  const busy = state.busy || pending || state.liveBatch?.status === "running";
+  const busy =
+    !!recording ||
+    state.busy ||
+    pending ||
+    state.liveBatch?.status === "running";
   const actionLabel = (name: string, label: string) =>
     pendingAction === name ? "Starting…" : label;
   const batch = mode === "model" ? state.liveBatch : undefined;
@@ -771,27 +799,14 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-experiment">
-          <span className="eyebrow">ABOUT THIS CLASSROOM</span>
-          <h3>
-            Learning through
-            <br />
-            consequences.
-          </h3>
-          <p>
-            One teacher.
-            <br />
-            Three independent minds.
-            <br />A test that tells the truth.
-          </p>
-          <div className="sidebar-tiles">
-            <span>2</span>
-            <span>4</span>
-            <span>8</span>
-            <span>?</span>
-          </div>
-        </div>
         <div className="sidebar-bottom">
+          <button
+            onClick={() => setPage("recordings")}
+            className={page === "recordings" ? "active" : ""}
+          >
+            <History size={18} />
+            Past results
+          </button>
           <button
             onClick={() => setPage("settings")}
             className={page === "settings" ? "active" : ""}
@@ -799,13 +814,6 @@ export default function App() {
             <Settings2 size={18} />
             Settings
           </button>
-          <div className="connection">
-            <span className="dot" />
-            {connection?.kind === "server"
-              ? "Local server · SQLite"
-              : "Browser workspace"}
-            <span>v0.2</span>
-          </div>
         </div>
       </aside>
       <div className="main-shell">
@@ -818,7 +826,9 @@ export default function App() {
                 ? "Welcome"
                 : page === "traces"
                   ? "Decision details"
-                  : (pages.find((p) => p.id === page)?.name ?? "Settings")}
+                  : page === "recordings"
+                    ? "Past results"
+                    : (pages.find((p) => p.id === page)?.name ?? "Settings")}
             </b>
           </div>
           <div className="top-actions">
@@ -833,9 +843,13 @@ export default function App() {
               <Moon size={14} aria-hidden="true" />
               <span className="theme-toggle-knob" aria-hidden="true" />
             </button>
-            <span className={`mode-badge ${mode}`}>
+            <span className={`mode-badge ${recording ? "model" : mode}`}>
               <span className="dot" />
-              {mode === "simulation" ? "Simulation mode" : "Live model mode"}
+              {recording
+                ? "Recorded live run"
+                : mode === "simulation"
+                  ? "Simulation mode"
+                  : "Live model mode"}
             </span>
             <button
               className="secondary export-button"
@@ -868,6 +882,48 @@ export default function App() {
             </button>
           ))}
         </nav>
+        {recording && (
+          <div className="recording-bar" role="status">
+            <History size={16} />
+            <span>
+              <b>Recorded live run</b> ·{" "}
+              {new Date(recording.run.startedAt).toLocaleString()} · read-only,
+              no model calls
+            </span>
+            <button
+              className="icon-button"
+              aria-label="Previous stage"
+              disabled={recording.stage === 0}
+              onClick={() => showRecording(recording.run, recording.stage - 1)}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <select
+              aria-label="Stage"
+              value={recording.stage}
+              onChange={(e) =>
+                showRecording(recording.run, Number(e.target.value))
+              }
+            >
+              {recording.run.stages.map((s, i) => (
+                <option key={s.id} value={i}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            <button
+              className="icon-button"
+              aria-label="Next stage"
+              disabled={recording.stage === recording.run.stages.length - 1}
+              onClick={() => showRecording(recording.run, recording.stage + 1)}
+            >
+              <ChevronRight size={16} />
+            </button>
+            <button className="secondary" onClick={() => setRecording(null)}>
+              Back to live classroom
+            </button>
+          </div>
+        )}
         <main ref={pageSurface}>
           {page === "home" && (
             <section className="welcome-page">
@@ -913,7 +969,6 @@ export default function App() {
             <>
               <div className="page-heading">
                 <div>
-                  <div className="eyebrow">OBSERVE. TEACH. VERIFY.</div>
                   <h1>
                     {page === "classroom"
                       ? "Watch agents turn practice into tested lessons."
@@ -925,7 +980,9 @@ export default function App() {
                             ? "What can they do on their own?"
                             : page === "traces"
                               ? "Let’s look at that move."
-                              : "Set up your classroom."}
+                              : page === "recordings"
+                                ? "Past results."
+                                : "Set up your classroom."}
                   </h1>
                   <p>
                     {page === "classroom"
@@ -938,7 +995,9 @@ export default function App() {
                             ? "Fresh games, saved lessons, and no hints from the teacher or classmates."
                             : page === "traces"
                               ? "See what the student checked, what it chose, and what happened next."
-                              : "Choose how the students think, who helps them, and how long their tests run."}
+                              : page === "recordings"
+                                ? "What the finished live studies found."
+                                : "Choose how the students think, who helps them, and how long their tests run."}
                   </p>
                 </div>
                 <button
@@ -949,65 +1008,20 @@ export default function App() {
                   How this works
                 </button>
               </div>
-              <div className="pip-guide">
-                <Pip
-                  size={68}
-                  mood={
-                    state.busy
-                      ? "thinking"
-                      : state.ledger.some((l) => l.status === "verified")
-                        ? "cheer"
-                        : "happy"
-                  }
-                />
-                <div>
-                  <b>Hi, I’m Pip. I’ll show you around.</b>
-                  <p>
-                    {state.busy
-                      ? "They’re working on it. You can watch the steps or stop after the current move."
-                      : page === "results" && resultsView === "comparison"
-                        ? "Here’s our little experiment: four fresh study groups, then the same test with no hints."
-                        : state.candidate
-                          ? `${state.students.find((s) => s.id === state.candidate?.studentId)?.name ?? "A student"} has an idea to try. Let’s test it before calling it a lesson.`
-                          : state.phase === "exam"
-                            ? "The hints are off. This is where we see what the students can do by themselves."
-                            : "The big question: do students learn more with a teacher and classmates than by practicing alone?"}
-                  </p>
-                </div>
-                <span className="pip-label">YOUR CLASSROOM GUIDE</span>
-              </div>
-              <div className="mode-notice">
-                <FlaskConical size={15} />
-                <span>
-                  {mode === "simulation" ? (
-                    <>
-                      You’re trying the simulation. The students use local game
-                      logic, not an LLM.{" "}
-                      <b>Connect a model to test AI learning.</b>
-                    </>
-                  ) : (
-                    <>
-                      Live model decisions · <b>{state.modelId}</b> ·
-                      credentials stay on the server.
-                    </>
-                  )}
-                </span>
-                <button onClick={() => setPage("settings")}>
-                  {mode === "simulation"
-                    ? "Connect a model"
-                    : "View configuration"}
-                  <ArrowRight size={13} />
-                </button>
-              </div>
-              <LearningGuide
-                selected={selected}
-                navigate={navigate}
-                state={state}
-                busy={busy}
-                ready={!!connection}
-                run={run}
-                starting={pending && pendingAction !== "stop"}
-              />
+              {page === "classroom" && (
+                <>
+                  <LearningGuide
+                    selected={selected}
+                    navigate={navigate}
+                    state={state}
+                    busy={busy}
+                    ready={!!connection}
+                    run={run}
+                    starting={pending && pendingAction !== "stop"}
+                    recorded={!!recording}
+                  />
+                </>
+              )}
             </>
           )}
           {(error || state.error) && (
@@ -1172,10 +1186,6 @@ export default function App() {
               )}
               <details className="individual-steps panel">
                 <summary>Run Individual steps</summary>
-                <p className="fine">
-                  Continue the current classroom one step at a time. These
-                  actions don’t automatically run the complete session.
-                </p>
                 <div className="controls">
                   <button
                     className="secondary"
@@ -1334,7 +1344,7 @@ export default function App() {
                       </p>
                     )}
                     <span className="teacher-disclaimer">
-                      {mode === "simulation"
+                      {shownMode === "simulation"
                         ? "Simulation example · generated from recorded moves"
                         : "AI feedback · still needs to pass a test"}
                     </span>
@@ -1350,7 +1360,7 @@ export default function App() {
               </div>
               <LearningRecord
                 student={student}
-                mode={mode}
+                mode={shownMode}
                 onInspect={inspect}
               />
               <div className="lower-grid">
@@ -1567,7 +1577,7 @@ export default function App() {
               </div>
               <LearningRecord
                 student={student}
-                mode={mode}
+                mode={shownMode}
                 onInspect={inspect}
               />
               {state.candidate?.studentId === selected && (
@@ -1666,11 +1676,6 @@ export default function App() {
                     ))}
                   </Select>
                 </label>
-                <p>
-                  Short caps test the workflow. These are public development
-                  seeds; the final study uses sealed seeds via the evaluation
-                  runner.
-                </p>
               </div>
               {lastExam && stats ? (
                 <>
@@ -1912,6 +1917,7 @@ export default function App() {
               )}
             </>
           )}
+          {page === "recordings" && <StudyResults />}
           {page === "settings" && (
             <div className="settings-grid">
               <section className="panel settings-card">

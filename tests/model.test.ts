@@ -472,3 +472,39 @@ test("a lost connection is waited out, and requests that never connected are not
   assert.equal(d.calls, 1);
   assert.equal(policy.usage().calls, 1);
 });
+test("a provider gateway outage (HTTP 504) is waited out", async () => {
+  let attempts = 0;
+  const policy = modelPolicy({
+    key: "fixture",
+    baseUrl: "https://example.invalid/v1",
+    model: "fixture",
+    tokenBudget: 1000000,
+    outageWaitMs: 4000,
+    fetch: (async (_url, init) => {
+      // More failures than the normal retry count, as in an outage.
+      if (++attempts <= 7)
+        return new Response("gateway timeout", { status: 504 });
+      const request = JSON.parse(init!.body as string);
+      const observation = JSON.parse(request.messages[1].content).observation;
+      return response({
+        role: "assistant",
+        tool_calls: [
+          {
+            id: "fixture",
+            type: "function",
+            function: {
+              name: "apply_move",
+              arguments: JSON.stringify({
+                direction: observation.legal[0],
+                summary: "fixture",
+              }),
+            },
+          },
+        ],
+      });
+    }) as typeof fetch,
+  });
+  const d = await policy.decide(observe(createGame(1)), emptyWorkspace(), 1);
+  assert.equal(attempts, 8);
+  assert.equal(d.calls, 1);
+});

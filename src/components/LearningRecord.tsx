@@ -29,11 +29,6 @@ export default function LearningRecord({
         <h2>{student.name}’s learning record</h2>
         <span className="version">Notebook v{student.workspace.version}</span>
       </div>
-      <p>
-        Separate memory. Shared starting policy. Students develop different
-        records through their experiences and accepted feedback; they do not
-        have built-in personalities or separately trained models.
-      </p>
       <div className="record-grid">
         <div>
           <span className="eyebrow">WHAT IS REMEMBERED</span>
@@ -78,12 +73,6 @@ export default function LearningRecord({
               . A rejected idea leaves the strategy unchanged.
             </p>
           )}
-          <p className="fine">
-            {student.history.length
-              ? "Compared with the previous saved notebook."
-              : "Compared with the starting strategy."}{" "}
-            A parameter change does not guarantee better results.
-          </p>
         </div>
         <div>
           <span className="eyebrow">DID IT GUIDE A MOVE?</span>
@@ -108,11 +97,6 @@ export default function LearningRecord({
               →
             </button>
           )}
-          <p className="fine">
-            Peer advice is shared during classroom review only when a classmate
-            has a relevant recorded example. Accepted lessons belong to the
-            reviewed student; they are not copied to everyone.
-          </p>
         </div>
       </div>
     </section>

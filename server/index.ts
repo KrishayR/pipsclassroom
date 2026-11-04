@@ -13,6 +13,7 @@ import {
 import type { Arm, LabState } from "../src/core/types";
 import { liveBatchRunner } from "./batch";
 import { checkpointFiles } from "./archive";
+import { listRecordings, loadRecording } from "./recordings";
 loadEnv();
 mkdirSync("data", { recursive: true });
 const db = new DatabaseSync(resolve("data/classroom.sqlite"));
@@ -108,6 +109,22 @@ const server = createServer(async (req, res) => {
         studentHelper: studentHelper(),
       },
     });
+  // Saved live runs, shown read-only. No model calls are made.
+  if (req.method === "GET" && url.pathname === "/api/recordings")
+    return send(200, listRecordings());
+  if (req.method === "GET" && url.pathname === "/api/recording") {
+    try {
+      return send(
+        200,
+        loadRecording(
+          url.searchParams.get("id") ?? "",
+          url.searchParams.get("stage") ?? "",
+        ),
+      );
+    } catch (e) {
+      return send(404, { error: e instanceof Error ? e.message : "Not found" });
+    }
+  }
   const mode = url.searchParams.get("mode") ?? "simulation";
   const lab = classes.get(mode);
   if (!lab)
@@ -171,7 +188,8 @@ const server = createServer(async (req, res) => {
     const input = JSON.parse(body || "{}");
     const { action } = input;
     if (action === "clear-progress") {
-      if (mode !== "model") throw new Error("Select live model mode to clear session progress.");
+      if (mode !== "model")
+        throw new Error("Select live model mode to clear session progress.");
       batch.clearProgress();
       lab.emit();
       return send(200, { ok: true });

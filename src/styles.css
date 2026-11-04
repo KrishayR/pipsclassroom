@@ -3691,3 +3691,101 @@ td b {
     grid-template-columns: 1fr;
   }
 }
+
+/* Recorded runs: a saved live run shown read-only. */
+.recording-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 24px;
+  padding: 9px 14px;
+  border: 1px solid #b9cfdd;
+  border-radius: 10px;
+  background: #eef5f9;
+  color: #2f5a75;
+  font-size: 12px;
+}
+.recording-bar > span {
+  flex: 1 1 220px;
+}
+.recording-bar select {
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #b9cfdd;
+  border-radius: 7px;
+  background: #fff;
+  font: inherit;
+}
+.recordings {
+  padding: 20px;
+}
+.recordings ul {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.recordings li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e0e7d6;
+  border-radius: 10px;
+}
+.recordings li > div {
+  display: grid;
+  gap: 3px;
+}
+.recordings li span {
+  color: #69815c;
+  font-size: 12px;
+}
+.study-results {
+  margin-top: 16px;
+}
+.study-results h3 {
+  margin: 20px 0 8px;
+  font-size: 13px;
+}
+.study-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.study-tabs button {
+  display: grid;
+  gap: 2px;
+  padding: 8px 14px;
+  border: 1px solid #e0e7d6;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.study-tabs button.active {
+  border-color: #7fae5c;
+  background: #f1f7e9;
+}
+.study-tabs button span,
+.study-note {
+  color: #69815c;
+  font-size: 12px;
+}
+.study-takeaways {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding-left: 18px;
+}
+@media (max-width: 700px) {
+  .recording-bar {
+    margin: 0 16px;
+  }
+}

@@ -592,3 +592,30 @@
   background: #a4d5ff;
   border: 2px solid #28496d;
 }
+/* Recorded runs */
+:root[data-theme="dark"] .recording-bar {
+  background: #16304a;
+  border-color: #3c5f80;
+  color: #cfe3f5;
+}
+:root[data-theme="dark"] .recording-bar select {
+  background: #1c2e47;
+  border-color: #3c5474;
+  color: #dce7f5;
+}
+:root[data-theme="dark"] .recordings li {
+  border-color: #34465f;
+}
+:root[data-theme="dark"] .recordings li span {
+  color: #a9bdd6;
+}
+:root[data-theme="dark"] .study-tabs button {
+  border-color: #34465f;
+}
+:root[data-theme="dark"] .study-tabs button.active {
+  border-color: #6f9bc8;
+  background: #1c2e47;
+}
+:root[data-theme="dark"] :is(.study-tabs button span, .study-note) {
+  color: #a9bdd6;
+}

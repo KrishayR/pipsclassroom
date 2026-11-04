@@ -168,3 +168,32 @@ export async function exportClassroomArchive(
   });
   return zipArchive(files);
 }
+// Saved live runs, shown read-only (server only).
+export interface RecordingInfo {
+  id: string;
+  kind: string;
+  status: string;
+  startedAt: string;
+  plannerEnabled: boolean | null;
+  completed: number;
+  total: number;
+  spentUsd: number;
+  lessonsKept: number;
+  lessonsTested: number;
+  stages: { id: string; label: string }[];
+}
+export async function listRecordings(
+  connection: Connection,
+): Promise<RecordingInfo[]> {
+  if (connection.kind !== "server") return [];
+  const r = await fetch("/api/recordings");
+  return r.ok ? r.json() : [];
+}
+export async function loadRecording(id: string, stage: string) {
+  const r = await fetch(
+    `/api/recording?id=${encodeURIComponent(id)}&stage=${encodeURIComponent(stage)}`,
+  );
+  const body = await r.json();
+  if (!r.ok) throw new Error(body.error);
+  return body as LabState;
+}

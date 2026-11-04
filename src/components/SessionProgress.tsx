@@ -37,19 +37,12 @@ export default function SessionProgress({
     >
       <div className="session-progress-heading" role="status">
         <strong>{label}</strong>
-        <span className="session-checkpoints">
-          {completed}/{total} stage checkpoints
-        </span>
       </div>
       <progress
         aria-label="Completed learning stages"
         max={total}
         value={completed}
       />
-      <p className="fine">
-        Stage progress, not a time estimate. Discuss and Verify can overlap
-        across students.
-      </p>
       <div className="session-spend">
         <span>Estimated spend</span>
         <strong>
@@ -78,16 +71,6 @@ export default function SessionProgress({
             </p>
           </div>
         )}
-      <details className="saved-run-details">
-        <summary>Saved run details</summary>
-        <div className="saved-run-body">
-          <code>{batch.directory}/status.json</code>
-          <p>
-            {batch.completed}/{batch.total} cycles finished. Stopped runs stay
-            saved for diagnosis and export.
-          </p>
-        </div>
-      </details>
     </section>
   );
 }
