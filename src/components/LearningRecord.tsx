@@ -83,8 +83,8 @@ export default function LearningRecord({
           </h3>
           <p>
             {mode === "model"
-              ? "These are moves where the model explicitly cited an active lesson. A citation shows reported use, not proof that the lesson caused success."
-              : "Simulation executes the current strategy parameters. It does not claim that a language model understood a lesson."}
+              ? "Moves where the model cited an active lesson."
+              : "Simulation follows the current strategy settings."}
           </p>
           {student.traces.length > 0 && (
             <button

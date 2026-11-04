@@ -23,11 +23,6 @@ export default function ExamProgress({
   return (
     <section className="panel exam-progress">
       <h2>Performance since the first completed exam</h2>
-      <p>
-        Compare average scores for each student. Higher scores in one session
-        are exploratory evidence; repeated controlled runs are needed to show
-        that lessons help.
-      </p>
       <div className="table-wrap">
         <table>
           <thead>
@@ -94,11 +89,6 @@ export default function ExamProgress({
           </tbody>
         </table>
       </div>
-      <p className="fine">
-        Score changes require completed exams with the same mode, teaching
-        setup, move cap and student seeds, with no error outcomes. Matching
-        seeds do not remove all model or game randomness.
-      </p>
     </section>
   );
 }

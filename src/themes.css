@@ -298,8 +298,7 @@
     .tool-number,
     .exam-icon,
     .avatar,
-    .skill-code > span,
-    .guide-steps > div span
+    .skill-code > span
   ) {
   background: #2a4261;
   color: #d4e9ff;

@@ -647,42 +647,6 @@ export default function App() {
     stopping ||
     (batch?.status === "running" &&
       batch.stage.toLowerCase().includes("stopping"));
-  const batchStage =
-    batch?.status === "running" ? batch.stage.toLowerCase() : "";
-  const sessionComplete = batch?.status === "complete" && !state.busy;
-  const pipelineState = (phase: string) => {
-    if (!batchStage)
-      return sessionComplete
-        ? "done"
-        : state.busy && state.phase === phase
-          ? "current"
-          : "";
-    if (batchStage.includes("baseline") || batchStage.includes("stopping"))
-      return "";
-    if (batchStage.includes("practice"))
-      return phase === "practice" ? "current" : "";
-    if (batchStage.includes("teaching"))
-      return phase === "practice"
-        ? "done"
-        : ["review", "verify"].includes(phase)
-          ? "current"
-          : "";
-    if (batchStage.includes("review"))
-      return phase === "practice"
-        ? "done"
-        : phase === "review"
-          ? "current"
-          : "";
-    if (batchStage.includes("verification"))
-      return ["practice", "review"].includes(phase)
-        ? "done"
-        : phase === "verify"
-          ? "current"
-          : "";
-    if (batchStage.includes("exam"))
-      return phase === "exam" ? "current" : "done";
-    return "";
-  };
   const student =
     state.students.find((s) => s.id === selected) ?? state.students[0];
   const traces = state.students.flatMap((s) => s.traces);
@@ -1014,16 +978,7 @@ export default function App() {
               </div>
               {page === "classroom" && (
                 <>
-                  <LearningGuide
-                    selected={selected}
-                    navigate={navigate}
-                    state={state}
-                    busy={busy}
-                    ready={!!connection}
-                    run={run}
-                    starting={pending && pendingAction !== "stop"}
-                    recorded={!!recording}
-                  />
+                  <LearningGuide />
                 </>
               )}
             </>
@@ -1041,56 +996,6 @@ export default function App() {
           )}
           {page === "classroom" && (
             <>
-              <div className="pipeline">
-                {[
-                  {
-                    name: "Practice",
-                    desc: "Have a go",
-                    icon: Play,
-                    phase: "practice",
-                  },
-                  {
-                    name: "Discuss",
-                    desc: "Swap ideas",
-                    icon: Users,
-                    phase: "review",
-                  },
-                  {
-                    name: "Verify",
-                    desc: "See if it helps",
-                    icon: ShieldCheck,
-                    phase: "verify",
-                  },
-                  {
-                    name: "Exam",
-                    desc: "Try it alone",
-                    icon: GraduationCap,
-                    phase: "exam",
-                  },
-                ].map(({ name, desc, icon: Icon, phase }, i) => (
-                  <div
-                    key={name}
-                    className={pipelineState(phase)}
-                    aria-current={
-                      pipelineState(phase) === "current" ? "step" : undefined
-                    }
-                  >
-                    <span className="pipeline-icon">
-                      <Icon size={17} />
-                    </span>
-                    <div>
-                      <b>
-                        <span>0{i + 1}</span>
-                        {name}
-                      </b>
-                      <small>{desc}</small>
-                    </div>
-                    {i < 3 && (
-                      <ChevronRight className="pipeline-chevron" size={17} />
-                    )}
-                  </div>
-                ))}
-              </div>
               <section className="panel session-launcher">
                 <div className="section-bar">
                   <div>
@@ -1146,11 +1051,6 @@ export default function App() {
                     onChange={(e) => setBatchCycles(e.target.value)}
                   />
                 </label>
-                <p className="fine">
-                  Teaches Ada, Lin and Sam. Starts a fresh classroom; previous
-                  run data stays saved. Uses Muse credits within the server’s
-                  configured budget. Keep the backend running.
-                </p>
                 {mode !== "model" && (
                   <p className="simulation-warning">
                     You’re in local simulation.{" "}
@@ -1160,8 +1060,7 @@ export default function App() {
                     >
                       Select Muse in Settings
                     </button>{" "}
-                    to run an automated learning session, or try the individual
-                    steps below.
+                    to run a learning session.
                   </p>
                 )}
               </section>
@@ -1193,69 +1092,6 @@ export default function App() {
                   resuming={pendingAction === "resume-batch"}
                 />
               )}
-              <details className="individual-steps panel">
-                <summary>Run Individual steps</summary>
-                <div className="controls">
-                  <button
-                    className="secondary"
-                    disabled={busy || !connection}
-                    onClick={() => run("practice", { steps: 12 })}
-                  >
-                    <Play size={14} />{" "}
-                    {actionLabel("practice", "Play 12 more moves")}
-                  </button>
-                  <button
-                    className="secondary"
-                    disabled={busy || !connection || !!state.candidate}
-                    onClick={() => run("diagnose")}
-                  >
-                    <FlaskConical size={14} />{" "}
-                    {actionLabel("diagnose", "Focused practice")}
-                  </button>
-                  <button
-                    className="secondary"
-                    disabled={
-                      busy || !student.traces.length || !!state.candidate
-                    }
-                    onClick={() => run("review", { studentId: student.id })}
-                  >
-                    <Users size={14} />{" "}
-                    {actionLabel("review", `Discuss ${student.name}’s attempt`)}
-                  </button>
-                  {state.candidate && (
-                    <button
-                      className="secondary"
-                      disabled={busy}
-                      onClick={() => run("verify")}
-                    >
-                      <ShieldCheck size={14} />{" "}
-                      {actionLabel("verify", "Test pending lesson")}
-                    </button>
-                  )}
-                  {mode === "model" && connection?.kind === "server" && (
-                    <button
-                      className="secondary"
-                      disabled={
-                        busy ||
-                        !Number.isInteger(Number(batchCycles)) ||
-                        Number(batchCycles) < 1 ||
-                        Number(batchCycles) > 100
-                      }
-                      onClick={() =>
-                        run("live-batch", {
-                          cycles: Number(batchCycles),
-                          kind: "individual",
-                        })
-                      }
-                    >
-                      {actionLabel(
-                        "live-batch",
-                        `Run individual cycles · ${batchCycles || "…"}`,
-                      )}
-                    </button>
-                  )}
-                </div>
-              </details>
               <div className="section-bar">
                 <div>
                   <h2>
@@ -1358,13 +1194,6 @@ export default function App() {
                         : "AI feedback · still needs to pass a test"}
                     </span>
                   </div>
-                  <p className="teacher-next-step">
-                    <ArrowUp size={16} aria-hidden="true" />
-                    <span>
-                      Open <b>Run Individual steps</b> above to discuss{" "}
-                      {student.name}’s attempt.
-                    </span>
-                  </p>
                 </aside>
               </div>
               <LearningRecord
@@ -1392,9 +1221,9 @@ export default function App() {
                       <div>
                         <b>Everyone’s here. Let’s begin.</b>
                         <p>
-                          Choose Play 12 more moves under Run Individual steps.
-                          You’ll see each student check the board, try out
-                          moves, and make a choice.
+                          Press Run Learning Session to start. You’ll see each
+                          student check the board, try out moves, and make a
+                          choice.
                         </p>
                       </div>
                     </div>
@@ -1458,12 +1287,6 @@ export default function App() {
                           {state.candidate.lesson.skill.spaceWeight}
                         </code>
                       </div>
-                      <p className="fine">
-                        Open “Run Individual steps” and choose “Test pending
-                        lesson” to compare old and new notes on fresh boards
-                        chosen for this skill, plus a few general check-up
-                        boards.
-                      </p>
                     </>
                   ) : (
                     <>
@@ -1606,11 +1429,6 @@ export default function App() {
                 </div>
               )}
               <h2 className="archive-heading">Classroom idea archive</h2>
-              <p className="fine">
-                All students’ tested ideas, including rejected and retired ones.
-                The individual notebook above shows only the selected student’s
-                active memory.
-              </p>
               {state.ledger.length ? (
                 <div className="lesson-grid">
                   {[...state.ledger].reverse().map((l) => (
@@ -1920,8 +1738,8 @@ export default function App() {
                 </>
               ) : (
                 <Empty icon={Activity} title="First, let’s make a move.">
-                  Play 12 more moves under Run Individual steps, then come back
-                  to replay a move and open the tool results.
+                  Run a learning session, then come back to replay a move and
+                  open the tool results.
                 </Empty>
               )}
             </>
@@ -2143,11 +1961,6 @@ export default function App() {
                     </span>
                   ))}
                 </div>
-                <p className="fine">
-                  Coding tasks are the next environment, after the game learning
-                  loop is validated. Simulation outcomes establish software
-                  behavior, not LLM learning or cross-domain transfer.
-                </p>
               </section>
             </div>
           )}

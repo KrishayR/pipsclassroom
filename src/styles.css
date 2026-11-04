@@ -3525,6 +3525,7 @@ td b {
   }
 }
 .guide-steps > div {
+  cursor: pointer;
   flex: 1;
   border: 1px solid var(--line);
   background: white;

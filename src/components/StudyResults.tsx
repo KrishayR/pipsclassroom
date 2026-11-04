@@ -67,7 +67,6 @@ export default function StudyResults() {
         </table>
       </div>
       <h3>Live exams</h3>
-      <p className="study-note">{s.exam}</p>
       <div className="table-wrap">
         <table>
           <thead>
@@ -129,7 +128,6 @@ export default function StudyResults() {
           </tbody>
         </table>
       </div>
-      <p className="study-note">{s.notes}</p>
     </section>
   );
 }
