@@ -1,7 +1,6 @@
 import {
   mkdirSync,
   writeFileSync,
-  renameSync,
   existsSync,
   readFileSync,
   copyFileSync,
@@ -15,6 +14,7 @@ import {
   protocolFromEnv,
 } from "./config";
 import { budgetedKeyPool } from "./keys";
+import { atomicWriteFileSync } from "./persistence";
 import type { LiveBatch, Policy, LabState } from "../src/core/types";
 import type { ClassroomOptions } from "../src/core/classroom";
 
@@ -81,14 +81,14 @@ export function liveBatchRunner(
   const save = () => {
     mkdirSync(root, { recursive: true });
     for (const path of [latest, `${status!.directory}/status.json`]) {
-      writeFileSync(`${path}.tmp`, JSON.stringify(status, null, 2));
-      renameSync(`${path}.tmp`, path);
+      atomicWriteFileSync(path, JSON.stringify(status, null, 2));
     }
     changed();
   };
   const runner = {
     status: () => (status?.progressCleared ? undefined : status),
     archiveStatus: () => status,
+    diagnostics: () => lab?.policy.diagnostics?.(),
     clearProgress() {
       if (status?.status === "running")
         throw new Error("Stop the session before resetting progress.");
@@ -244,6 +244,7 @@ export function liveBatchRunner(
             startedAt: new Date().toISOString(),
             cycles: [],
             concurrency: protocol.concurrency,
+            examConcurrency: protocol.examConcurrency,
             verificationConcurrency: protocol.verificationConcurrency,
             timings: [],
           };

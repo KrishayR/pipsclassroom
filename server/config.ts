@@ -93,6 +93,7 @@ export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
         verify: { practice: 6, regression: 3, moves: 8 },
         exerciseMoves: 4,
         concurrency: 1,
+        examConcurrency: 1,
         verificationConcurrency: 1,
         reviseRejected: false,
       }
@@ -108,6 +109,7 @@ export function protocolFromEnv(mode: Mode): Required<ClassroomOptions> {
         },
         exerciseMoves: num("EXERCISE_MOVES", 4),
         concurrency: 3,
+        examConcurrency: num("MODEL_EXAM_CONCURRENCY", 6),
         verificationConcurrency: 6,
         reviseRejected: true,
       };

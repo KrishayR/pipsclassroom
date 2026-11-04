@@ -1,4 +1,4 @@
-import type { LiveBatch } from "../core/types";
+import type { LiveBatch, RequestDiagnostics } from "../core/types";
 import { Play } from "lucide-react";
 
 export function sessionProgress(batch: LiveBatch) {
@@ -17,11 +17,13 @@ export default function SessionProgress({
   onResume,
   resumeDisabled = false,
   resuming = false,
+  diagnostics,
 }: {
   batch: LiveBatch;
   onResume?: () => void;
   resumeDisabled?: boolean;
   resuming?: boolean;
+  diagnostics?: RequestDiagnostics;
 }) {
   const { completed, total } = sessionProgress(batch);
   const label =
@@ -57,6 +59,12 @@ export default function SessionProgress({
           <small>/ ${batch.budgetUsd.toFixed(2)} budget</small>
         </strong>
       </div>
+      {batch.status === "running" && !!diagnostics?.retrying && (
+        <p className="fine" role="status">
+          Waiting to retry {diagnostics.retrying} temporary API failure(s).
+          Recovery is automatic; stop and spending limits still apply.
+        </p>
+      )}
       {batch.status !== "running" && batch.status !== "complete" && (
         <p className="fine">{batch.stage}</p>
       )}
@@ -81,6 +89,15 @@ export default function SessionProgress({
       <details className="saved-run-details">
         <summary>Saved run details</summary>
         <div className="saved-run-body">
+          {diagnostics && (
+            <p>
+              Model requests: {diagnostics.completed} completed ·{" "}
+              {diagnostics.failed} failed · {diagnostics.active} active ·{" "}
+              {diagnostics.queued} queued · {diagnostics.retries} retries.
+              Temporary server errors: {diagnostics.serverErrors}; connection
+              errors: {diagnostics.transportErrors}.
+            </p>
+          )}
           <code>{batch.directory}/status.json</code>
           <p>
             {batch.completed}/{batch.total} cycles finished. Stopped runs stay
