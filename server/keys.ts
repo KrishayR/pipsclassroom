@@ -1,12 +1,7 @@
 import { createHash } from "node:crypto";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { atomicWriteFileSync } from "./persistence";
 // Several API keys used in order. Each key's estimated spend is kept in a ledger so a
 // key is skipped before a request could take it past its limit; a provider billing or
 // authentication error also retires a key. Keys are identified by fingerprint only.
@@ -100,9 +95,7 @@ export function keyPool(options: {
       return;
     }
     mkdirSync(dirname(options.ledgerPath), { recursive: true });
-    const tmp = `${options.ledgerPath}.tmp`;
-    writeFileSync(tmp, JSON.stringify(ledger, null, 2));
-    renameSync(tmp, options.ledgerPath);
+    atomicWriteFileSync(options.ledgerPath, JSON.stringify(ledger, null, 2));
   };
   const entry = (ledger: Ledger, fp: string): Entry =>
     (ledger[fp] ??= {

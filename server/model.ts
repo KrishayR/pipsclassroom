@@ -9,7 +9,13 @@ import {
 } from "../src/core/skills";
 import { analyze } from "../src/core/engine";
 import { focusOutcome, moveFacts } from "../src/core/curriculum";
-import type { Policy, ToolEvent, Direction, Lesson } from "../src/core/types";
+import type {
+  Policy,
+  ToolEvent,
+  Direction,
+  Lesson,
+  RequestDiagnostics,
+} from "../src/core/types";
 import {
   keyPool,
   keyProblem,
@@ -44,7 +50,7 @@ interface ModelConfig {
   limiter?: () => Promise<void>;
   fetch?: typeof fetch;
   beforeRequest?: () => void;
-  // How long a lost connection is waited out before the call fails (default 10 minutes).
+  // Recovery window for connection failures, timeouts and server errors (default 10 minutes).
   outageWaitMs?: number;
   requestGate?: <T>(work: () => Promise<T>) => Promise<T>;
 }
@@ -117,173 +123,231 @@ export function modelPolicy(config: ModelConfig): Policy & {
     calls: number;
   }>();
   const requestGate = config.requestGate ?? requestLimiter(3);
+  const timing: RequestDiagnostics = {
+    reasoningEffort: config.reasoningEffort ?? "provider default",
+    queued: 0,
+    active: 0,
+    completed: 0,
+    failed: 0,
+    attempts: 0,
+    retries: 0,
+    rateLimited: 0,
+    serverErrors: 0,
+    transportErrors: 0,
+    queueMs: 0,
+    rateWaitMs: 0,
+    providerHeadersMs: 0,
+    bodyMs: 0,
+    retryWaitMs: 0,
+  };
+  const retryWait = async (ms: number) => {
+    timing.retries++;
+    timing.retrying = (timing.retrying ?? 0) + 1;
+    const started = performance.now();
+    try {
+      await new Promise((resolve) => setTimeout(resolve, ms));
+    } finally {
+      timing.retrying--;
+      timing.retryWaitMs += performance.now() - started;
+    }
+  };
   const chat = async (
     messages: ChatMessage[],
     availableTools?: unknown[],
     json = false,
-  ) =>
-    requestGate(async () => {
-      config.beforeRequest?.();
-      const request = {
-        model: config.model,
-        messages,
-        max_completion_tokens: completionCap,
-        ...(config.reasoningEffort
-          ? { reasoning_effort: config.reasoningEffort }
-          : {}),
-        ...(availableTools ? { tools: availableTools } : {}),
-        ...(json ? { response_format: { type: "json_object" } } : {}),
-      };
-      // UTF-8 bytes are a conservative token reservation; failed/unknown usage remains charged.
-      const reservation =
-        new TextEncoder().encode(JSON.stringify(request)).length +
-        completionCap +
-        256;
-      if (totalTokens + reservation > config.tokenBudget)
-        throw new Error(
-          "Model session token ceiling reached. Export results before starting a new budgeted session.",
-        );
-      totalTokens += reservation;
-      totalCalls++;
-      const local = operationUsage.getStore();
-      if (local) {
-        local.tokens += reservation;
-        local.calls++;
-      }
-      let response: Response,
-        label: string,
-        lease: RequestReservation | undefined;
-      const worst = {
-        promptTokens: reservation - completionCap,
-        completionTokens: completionCap,
-      };
-      // A key that is out of credit or rejected is retired and the same request goes to
-      // the next key. Rate limits, server errors and timeouts get capped backoff retries;
-      // other errors fail the call. A retry is not a new model call.
-      let offlineSince: number | undefined;
-      for (let attempt = 0; ;) {
-        await config.limiter?.();
+  ) => {
+    const queuedAt = performance.now();
+    timing.queued++;
+    return requestGate(async () => {
+      timing.queued--;
+      timing.active++;
+      timing.queueMs += performance.now() - queuedAt;
+      try {
         config.beforeRequest?.();
-        lease = pool.reserve?.(worst);
-        const picked = lease ?? pool.pick(worst);
-        label = picked.label;
-        try {
-          response = await send(
-            `${config.baseUrl.replace(/\/$/, "")}/chat/completions`,
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${picked.key}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(request),
-              signal: AbortSignal.timeout(90000),
-            },
+        const request = {
+          model: config.model,
+          messages,
+          max_completion_tokens: completionCap,
+          ...(config.reasoningEffort
+            ? { reasoning_effort: config.reasoningEffort }
+            : {}),
+          ...(availableTools ? { tools: availableTools } : {}),
+          ...(json ? { response_format: { type: "json_object" } } : {}),
+        };
+        // UTF-8 bytes are a conservative token reservation; failed/unknown usage remains charged.
+        const reservation =
+          new TextEncoder().encode(JSON.stringify(request)).length +
+          completionCap +
+          256;
+        if (totalTokens + reservation > config.tokenBudget)
+          throw new Error(
+            "Model session token ceiling reached. Export results before starting a new budgeted session.",
           );
-        } catch (e) {
-          // A request that never connected is not charged; any other transport failure
-          // may have reached the provider, so a conservative charge is kept.
-          const code = (e as { cause?: { code?: string } })?.cause?.code;
-          if (code && NOT_SENT.has(code)) lease?.release();
-          else lease?.settle(worst);
-          lease = undefined;
-          // A lost connection is waited out instead of failing the run.
-          if (e instanceof TypeError) {
+        totalTokens += reservation;
+        totalCalls++;
+        const local = operationUsage.getStore();
+        if (local) {
+          local.tokens += reservation;
+          local.calls++;
+        }
+        let response: Response,
+          label: string,
+          lease: RequestReservation | undefined;
+        const worst = {
+          promptTokens: reservation - completionCap,
+          completionTokens: completionCap,
+        };
+        // A key that is out of credit or rejected is retired and the same request goes to
+        // the next key. Rate limits, server errors and timeouts get capped backoff retries;
+        // other errors fail the call. A retry is not a new model call.
+        let offlineSince: number | undefined;
+        for (let attempt = 0; ;) {
+          const rateAt = performance.now();
+          await config.limiter?.();
+          timing.rateWaitMs += performance.now() - rateAt;
+          config.beforeRequest?.();
+          lease = pool.reserve?.(worst);
+          const picked = lease ?? pool.pick(worst);
+          label = picked.label;
+          try {
+            timing.attempts++;
+            const networkAt = performance.now();
+            try {
+              response = await send(
+                `${config.baseUrl.replace(/\/$/, "")}/chat/completions`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${picked.key}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify(request),
+                  signal: AbortSignal.timeout(90000),
+                },
+              );
+            } finally {
+              timing.providerHeadersMs += performance.now() - networkAt;
+            }
+          } catch (e) {
+            timing.transportErrors++;
+            // A request that never connected is not charged; any other transport failure
+            // may have reached the provider, so a conservative charge is kept.
+            const code = (e as { cause?: { code?: string } })?.cause?.code;
+            if (code && NOT_SENT.has(code)) lease?.release();
+            else lease?.settle(worst);
+            lease = undefined;
+            // A lost connection is waited out instead of failing the run.
+            if (
+              e instanceof TypeError ||
+              (e instanceof Error &&
+                (e.name === "TimeoutError" || e.name === "AbortError"))
+            ) {
+              offlineSince ??= Date.now();
+              const window = config.outageWaitMs ?? 600000;
+              if (Date.now() - offlineSince < window) {
+                await retryWait(Math.min(window / 20, backoffMs(attempt++)));
+                continue;
+              }
+              throw e;
+            }
+            if (attempt >= RETRIES) throw e;
+            await retryWait(backoffMs(attempt++));
+            continue;
+          }
+          if (response.ok) break;
+          if (response.status === 429) timing.rateLimited++;
+          if (response.status >= 500) timing.serverErrors++;
+          let errorBody: string;
+          const errorBodyAt = performance.now();
+          try {
+            errorBody = await response.text();
+          } finally {
+            timing.bodyMs += performance.now() - errorBodyAt;
+            lease?.release();
+            lease = undefined;
+          }
+          const problem = keyProblem(response.status, errorBody);
+          if (problem) {
+            pool.retire(label, problem);
+            console.warn(`API ${label} ${problem}; switching to the next key.`);
+            continue;
+          }
+          if (response.status >= 500) {
             offlineSince ??= Date.now();
             const window = config.outageWaitMs ?? 600000;
             if (Date.now() - offlineSince < window) {
-              await new Promise((r) =>
-                setTimeout(r, Math.min(window / 20, backoffMs(attempt++))),
+              await retryWait(
+                Math.min(
+                  window / 20,
+                  backoffMs(attempt++, response.headers.get("retry-after")),
+                ),
               );
               continue;
             }
           }
-          if (attempt >= RETRIES) throw e;
-          await new Promise((r) => setTimeout(r, backoffMs(attempt++)));
-          continue;
-        }
-        if (response.ok) break;
-        let errorBody: string;
-        try {
-          errorBody = await response.text();
-        } finally {
-          lease?.release();
-          lease = undefined;
-        }
-        const problem = keyProblem(response.status, errorBody);
-        if (problem) {
-          pool.retire(label, problem);
-          console.warn(`API ${label} ${problem}; switching to the next key.`);
-          continue;
-        }
-        // A provider gateway outage is waited out like a lost connection.
-        if ([502, 503, 504].includes(response.status)) {
-          offlineSince ??= Date.now();
-          const window = config.outageWaitMs ?? 600000;
-          if (Date.now() - offlineSince < window) {
-            await new Promise((r) =>
-              setTimeout(r, Math.min(window / 20, backoffMs(attempt++))),
+          if (response.status === 429 && attempt < RETRIES) {
+            await retryWait(
+              backoffMs(attempt++, response.headers.get("retry-after")),
             );
             continue;
           }
-        } else offlineSince = undefined;
-        if (
-          (response.status === 429 || response.status >= 500) &&
-          attempt < RETRIES
-        ) {
-          await new Promise((r) =>
-            setTimeout(
-              r,
-              backoffMs(attempt++, response.headers.get("retry-after")),
-            ),
+          throw new Error(
+            `Model API returned HTTP ${response.status}. Check server configuration; no simulated fallback was used.`,
           );
-          continue;
         }
-        throw new Error(
-          `Model API returned HTTP ${response.status}. Check server configuration; no simulated fallback was used.`,
-        );
-      }
-      type Reply = {
-        usage?: {
-          total_tokens?: number;
-          prompt_tokens?: number;
-          completion_tokens?: number;
-          completion_tokens_details?: { reasoning_tokens?: number };
-          prompt_tokens_details?: { cached_tokens?: number };
+        type Reply = {
+          usage?: {
+            total_tokens?: number;
+            prompt_tokens?: number;
+            completion_tokens?: number;
+            completion_tokens_details?: { reasoning_tokens?: number };
+            prompt_tokens_details?: { cached_tokens?: number };
+          };
+          choices?: { message: ChatMessage }[];
         };
-        choices?: { message: ChatMessage }[];
-      };
-      let data: Reply;
-      try {
-        data = (await response.json()) as Reply;
-      } catch (e) {
-        lease?.settle(worst);
-        throw e;
+        let data: Reply;
+        const bodyAt = performance.now();
+        try {
+          data = (await response.json()) as Reply;
+        } catch (e) {
+          lease?.settle(worst);
+          throw e;
+        } finally {
+          timing.bodyMs += performance.now() - bodyAt;
+        }
+        if (
+          Number.isFinite(data.usage?.total_tokens) &&
+          data.usage!.total_tokens! >= 0
+        ) {
+          const delta = data.usage!.total_tokens! - reservation;
+          totalTokens += delta;
+          if (local) local.tokens += delta;
+        }
+        promptTokens += data.usage?.prompt_tokens ?? 0;
+        completionTokens += data.usage?.completion_tokens ?? 0;
+        cachedTokens += data.usage?.prompt_tokens_details?.cached_tokens ?? 0;
+        const billed = {
+          promptTokens:
+            data.usage?.prompt_tokens ?? reservation - completionCap,
+          completionTokens: data.usage?.completion_tokens ?? completionCap,
+          cachedTokens: data.usage?.prompt_tokens_details?.cached_tokens ?? 0,
+        };
+        if (lease) lease.settle(billed);
+        else pool.record(label, billed);
+        reasoningTokens +=
+          data.usage?.completion_tokens_details?.reasoning_tokens ?? 0;
+        const message = data.choices?.[0]?.message;
+        if (!message) throw new Error("Model returned no assistant message.");
+        timing.completed++;
+        return message;
+      } catch (error) {
+        timing.failed++;
+        throw error;
+      } finally {
+        timing.active--;
       }
-      if (
-        Number.isFinite(data.usage?.total_tokens) &&
-        data.usage!.total_tokens! >= 0
-      ) {
-        const delta = data.usage!.total_tokens! - reservation;
-        totalTokens += delta;
-        if (local) local.tokens += delta;
-      }
-      promptTokens += data.usage?.prompt_tokens ?? 0;
-      completionTokens += data.usage?.completion_tokens ?? 0;
-      cachedTokens += data.usage?.prompt_tokens_details?.cached_tokens ?? 0;
-      const billed = {
-        promptTokens: data.usage?.prompt_tokens ?? reservation - completionCap,
-        completionTokens: data.usage?.completion_tokens ?? completionCap,
-        cachedTokens: data.usage?.prompt_tokens_details?.cached_tokens ?? 0,
-      };
-      if (lease) lease.settle(billed);
-      else pool.record(label, billed);
-      reasoningTokens +=
-        data.usage?.completion_tokens_details?.reasoning_tokens ?? 0;
-      const message = data.choices?.[0]?.message;
-      if (!message) throw new Error("Model returned no assistant message.");
-      return message;
     });
+  };
   // JSON role output with one bounded correction opportunity: a reply that fails
   // validation is returned with the specific problem, then the second failure stands.
   const structured = async (
@@ -323,6 +387,7 @@ export function modelPolicy(config: ModelConfig): Policy & {
     mode: "model",
     modelId: config.model,
     usesHelper: config.allowSkill !== false,
+    diagnostics: () => ({ ...timing }),
     keyStatus: () => pool.status(),
     usage: () => ({
       tokens: totalTokens,

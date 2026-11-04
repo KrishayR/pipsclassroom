@@ -65,6 +65,10 @@ function publicState(state: LabState) {
   const batchState = state.mode === "model" ? batch.state() : undefined;
   const safe = structuredClone(batchState ?? state);
   if (state.mode === "model") safe.liveBatch = batch.status();
+  if (state.mode === "model")
+    safe.requestDiagnostics = batchState
+      ? batch.diagnostics()
+      : real?.diagnostics?.();
   safe.students.forEach((s) => {
     s.game.rng = 0;
     s.game.seed = 0;
@@ -159,6 +163,7 @@ const server = createServer(async (req, res) => {
         ...(mode === "model" ? { liveBatch: batch.status() } : {}),
         tokens: publicState(lab.state).tokens,
         calls: publicState(lab.state).calls,
+        requestDiagnostics: publicState(lab.state).requestDiagnostics,
       },
     });
   }

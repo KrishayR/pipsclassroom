@@ -73,6 +73,7 @@ export interface ClassroomOptions {
   // Moves in the short targeted exercise that precedes each review (0 disables).
   exerciseMoves?: number;
   concurrency?: number;
+  examConcurrency?: number;
   verificationConcurrency?: number;
   reviseRejected?: boolean;
 }
@@ -122,6 +123,7 @@ export class Classroom {
   readonly verifyOptions: VerifyOptions;
   readonly exerciseMoves: number;
   readonly concurrency: number;
+  readonly examConcurrency: number;
   readonly verificationConcurrency: number;
   constructor(
     public policy: Policy,
@@ -131,6 +133,13 @@ export class Classroom {
     this.verifyOptions = options.verify ?? DEFAULT_VERIFY;
     this.exerciseMoves = options.exerciseMoves ?? 4;
     this.concurrency = options.concurrency ?? 1;
+    this.examConcurrency = options.examConcurrency ?? this.concurrency;
+    if (
+      !Number.isInteger(this.examConcurrency) ||
+      this.examConcurrency < 1 ||
+      this.examConcurrency > 6
+    )
+      throw new Error("Exam concurrency must be 1–6.");
     this.verificationConcurrency =
       options.verificationConcurrency ?? this.concurrency;
     if (
@@ -163,6 +172,7 @@ export class Classroom {
     };
   }
   emit() {
+    this.state.requestDiagnostics = this.policy.diagnostics?.();
     this.listeners.forEach((fn) => fn(clone(this.state)));
   }
   private message(
@@ -884,51 +894,51 @@ export class Classroom {
         "Independent exam",
         "Teacher and peers are disabled. Workspaces are frozen; every decision starts with fresh context. These are development seeds; the final study uses sealed seeds from the CLI.",
       );
-      for (const seed of exam.seeds) {
-        await mapConcurrent(
-          this.state.students,
-          this.concurrency,
-          async (student) => {
-            student.status = "Independent exam · frozen workspace";
-            const guarded: Policy = {
-              ...this.policy,
-              decide: async (...args) => {
-                if (this.cancelled) throw new Error("Exam stopped by user.");
-                const d = await this.policy.decide(...args);
-                this.usage(d.tokens, d.calls, d.simulations);
-                return d;
-              },
-            };
-            const row = await examEpisode(
-              guarded,
-              frozen[student.id],
-              seed,
-              cap,
-              student,
-              this.state.arm,
-              (game, n) => {
-                student.game = game;
-                if (n % 10 === 0) this.emit();
-              },
-            );
-            exam.rows.push(row);
-            exam.rows.sort(
-              (a, b) =>
-                exam.seeds.indexOf(a.seed) - exam.seeds.indexOf(b.seed) ||
-                a.studentId.localeCompare(b.studentId),
-            );
-            student.status = row.reached
-              ? "Reached 2048"
-              : row.terminal === "error"
-                ? "Exam interrupted"
-                : `Exam finished · ${row.highest} tile`;
-            this.emit();
-            await new Promise((r) => setTimeout(r, 0));
-          },
-          () => this.cancelled,
-        );
-        if (this.cancelled) break;
-      }
+      const games = exam.seeds.flatMap((seed) =>
+        this.state.students.map((student) => ({ seed, student })),
+      );
+      const completed = new Map<string, number>();
+      await mapConcurrent(
+        games,
+        this.examConcurrency,
+        async ({ seed, student }) => {
+          student.status = "Independent exam · frozen workspace";
+          const guarded: Policy = {
+            ...this.policy,
+            decide: async (...args) => {
+              if (this.cancelled) throw new Error("Exam stopped by user.");
+              const d = await this.policy.decide(...args);
+              this.usage(d.tokens, d.calls, d.simulations);
+              return d;
+            },
+          };
+          const row = await examEpisode(
+            guarded,
+            clone(frozen[student.id]),
+            seed,
+            cap,
+            student,
+            this.state.arm,
+            (game, n) => {
+              // Only one game per student updates the classroom board; all games retain trajectories.
+              if (seed === exam.seeds.at(-1)) student.game = game;
+              if (n % 10 === 0) this.emit();
+            },
+          );
+          exam.rows.push(row);
+          exam.rows.sort(
+            (a, b) =>
+              exam.seeds.indexOf(a.seed) - exam.seeds.indexOf(b.seed) ||
+              a.studentId.localeCompare(b.studentId),
+          );
+          const done = (completed.get(student.id) ?? 0) + 1;
+          completed.set(student.id, done);
+          student.status = `${done}/${exam.seeds.length} exam games finished${row.terminal === "error" ? " · error recorded" : ""}`;
+          this.emit();
+          await new Promise((r) => setTimeout(r, 0));
+        },
+        () => this.cancelled,
+      );
       if (!this.cancelled) exam.completedAt = new Date().toISOString();
       this.message(
         "system",
@@ -1046,12 +1056,17 @@ export class Classroom {
     });
   }
   export() {
+    const state: LabState = {
+      ...clone(this.state),
+      requestDiagnostics: this.policy.diagnostics?.(),
+    };
     return {
       exportedAt: new Date().toISOString(),
       engine: "cl-2048-1",
       rng: "mulberry32-1",
       protocol: {
         concurrency: this.concurrency,
+        examConcurrency: this.examConcurrency,
         verificationConcurrency: this.verificationConcurrency,
         reviseRejected: this.options.reviseRejected ?? false,
         verify: this.verifyOptions,
@@ -1062,7 +1077,7 @@ export class Classroom {
         "Single classroom runs are exploratory.",
         "Matched seed streams do not guarantee identical spawn positions after diverging actions.",
       ],
-      state: clone(this.state),
+      state,
     };
   }
 }

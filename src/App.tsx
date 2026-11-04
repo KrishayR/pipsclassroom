@@ -637,7 +637,11 @@ export default function App() {
     pending ||
     state.liveBatch?.status === "running";
   const actionLabel = (name: string, label: string) =>
-    pendingAction === name ? "Starting…" : label;
+    pendingAction === name
+      ? "Starting…"
+      : state.busy && state.phase === name
+        ? "Running…"
+        : label;
   const batch = mode === "model" ? state.liveBatch : undefined;
   const stopPending =
     stopping ||
@@ -1177,6 +1181,11 @@ export default function App() {
               {batch && (!state.busy || batch.status === "running") && (
                 <SessionProgress
                   batch={batch}
+                  diagnostics={
+                    batch.status === "running"
+                      ? state.requestDiagnostics
+                      : undefined
+                  }
                   onResume={() => run("resume-batch")}
                   resumeDisabled={
                     busy || pending || connection?.kind !== "server"

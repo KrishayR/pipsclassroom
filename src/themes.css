@@ -330,8 +330,7 @@
   background: #20483f;
   color: #b1f0d0;
 }
-:root[data-theme="dark"]
-  :is(.exam-change.lower, .status.rejected, .error) {
+:root[data-theme="dark"] :is(.exam-change.lower, .status.rejected, .error) {
   background: #49372e;
   color: #ffd5b4;
   border-color: #926d4d;

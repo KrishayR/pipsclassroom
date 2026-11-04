@@ -1,4 +1,4 @@
-import type { LiveBatch } from "../core/types";
+import type { LiveBatch, RequestDiagnostics } from "../core/types";
 import { Play } from "lucide-react";
 
 export function sessionProgress(batch: LiveBatch) {
@@ -17,11 +17,13 @@ export default function SessionProgress({
   onResume,
   resumeDisabled = false,
   resuming = false,
+  diagnostics,
 }: {
   batch: LiveBatch;
   onResume?: () => void;
   resumeDisabled?: boolean;
   resuming?: boolean;
+  diagnostics?: RequestDiagnostics;
 }) {
   const { completed, total } = sessionProgress(batch);
   const label =
@@ -50,6 +52,12 @@ export default function SessionProgress({
           <small>/ ${batch.budgetUsd.toFixed(2)} budget</small>
         </strong>
       </div>
+      {batch.status === "running" && !!diagnostics?.retrying && (
+        <p className="fine" role="status">
+          Waiting to retry {diagnostics.retrying} temporary API failure(s).
+          Recovery is automatic; stop and spending limits still apply.
+        </p>
+      )}
       {batch.status !== "running" && batch.status !== "complete" && (
         <p className="fine">{batch.stage}</p>
       )}
