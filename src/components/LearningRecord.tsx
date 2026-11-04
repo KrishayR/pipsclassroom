@@ -27,32 +27,34 @@ export default function LearningRecord({
     <section className="panel learning-record">
       <div className="panel-title">
         <h2>{student.name}’s learning record</h2>
-        <span className="version">Notebook v{student.workspace.version}</span>
+        <span className="version">
+          Notebook version {student.workspace.version}
+        </span>
       </div>
       <div className="record-grid">
         <div>
           <span className="eyebrow">WHAT IS REMEMBERED</span>
-          <h3>{student.workspace.lessons.length} active lessons</h3>
+          <h3>{student.workspace.lessons.length} saved lessons</h3>
           {student.workspace.lessons.length ? (
             student.workspace.lessons.map((l) => (
               <article key={l.id}>
                 <b>{l.title}</b>
                 <p>{l.rule}</p>
                 <small>
-                  From {l.source} · applies {l.trigger}
+                  From {l.source} · used {l.trigger}
                 </small>
               </article>
             ))
           ) : (
             <p>
-              No verified lesson in this notebook yet. Practice alone does not
-              automatically create lasting memory.
+              No lessons yet. A lesson is only saved after it passes a test;
+              practice alone doesn’t add one.
             </p>
           )}
         </div>
         <div>
           <span className="eyebrow">WHAT CHANGED</span>
-          <h3>Executable strategy</h3>
+          <h3>How it plays</h3>
           {changes.length ? (
             <dl>
               {changes.map(([key, label]) => (
@@ -66,11 +68,11 @@ export default function LearningRecord({
             </dl>
           ) : (
             <p>
-              No parameter change from{" "}
+              No change from{" "}
               {student.history.length
-                ? "the previous saved strategy"
+                ? "the last saved strategy"
                 : "the starting strategy"}
-              . A rejected idea leaves the strategy unchanged.
+              . A rejected idea changes nothing.
             </p>
           )}
         </div>
@@ -78,13 +80,13 @@ export default function LearningRecord({
           <span className="eyebrow">DID IT GUIDE A MOVE?</span>
           <h3>
             {mode === "model"
-              ? `${applied.length} lesson-linked moves`
-              : "Strategy-driven simulation"}
+              ? `${applied.length} moves used a lesson`
+              : "Practice mode"}
           </h3>
           <p>
             {mode === "model"
-              ? "Moves where the model cited an active lesson."
-              : "Simulation follows the current strategy settings."}
+              ? "Moves where the student said a saved lesson guided it."
+              : "The built-in player follows the current strategy."}
           </p>
           {student.traces.length > 0 && (
             <button
@@ -92,8 +94,8 @@ export default function LearningRecord({
               onClick={() => onInspect((latest ?? student.traces.at(-1)!).id)}
             >
               {latest
-                ? "Inspect the latest lesson-linked decision"
-                : "Inspect a recorded decision"}{" "}
+                ? "See the latest move that used a lesson"
+                : "See a recorded move"}{" "}
               →
             </button>
           )}

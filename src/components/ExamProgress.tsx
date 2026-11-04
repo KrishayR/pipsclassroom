@@ -22,7 +22,7 @@ export default function ExamProgress({
   );
   return (
     <section className="panel exam-progress">
-      <h2>Performance since the first completed exam</h2>
+      <h2>Progress since the first exam</h2>
       <div className="table-wrap">
         <table>
           <thead>
@@ -79,7 +79,9 @@ export default function ExamProgress({
                       </span>
                     ) : (
                       <span className="fine">
-                        {baseline === exam ? "First exam" : "Not comparable"}
+                        {baseline === exam
+                          ? "First exam"
+                          : "Different exam settings"}
                       </span>
                     )}
                   </td>

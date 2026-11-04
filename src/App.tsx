@@ -214,14 +214,14 @@ function StudentCard({
               {exam
                 ? student.status
                 : last
-                  ? `${last.simulations} simulated transitions · ${last.tools.length} tools`
+                  ? `Tried ${last.simulations} possible moves · used ${last.tools.length} tools`
                   : "A fresh board. A fresh attempt."}
             </span>
           </div>
         </div>
         <div
           className="skill-counts"
-          title="Practice checks passed / applicable moves. Outcome checks, not grades."
+          title="Good moves out of moves where this skill mattered"
         >
           {Object.entries(skillEstimates(student.traces)).map(([id, e]) => (
             <span key={id}>
@@ -270,7 +270,7 @@ function LessonCard({
       </div>
       <h3>{lesson.title}</h3>
       {lesson.revisionOf && (
-        <p className="fine">Teacher revision · tested on fresh boards</p>
+        <p className="fine">Revised by the teacher · tested on new boards</p>
       )}
       <p>{lesson.rule}</p>
       <div className="lesson-scope">
@@ -278,12 +278,12 @@ function LessonCard({
           <b>When</b> {lesson.trigger}
         </p>
         <p>
-          <b>Exception</b> {lesson.exception}
+          <b>Except</b> {lesson.exception}
         </p>
         {lesson.limits && (
           <p>
-            <b>Only steps in</b> when a move breaks the skill; recommends moves
-            leaving {lesson.limits.minOptions}+ options
+            <b>Only steps in</b> when a move would break the skill; suggests
+            moves that leave {lesson.limits.minOptions}+ options
             {lesson.limits.maxGainLoss !== undefined
               ? ` and giving up at most ${lesson.limits.maxGainLoss} points`
               : ""}
@@ -292,29 +292,29 @@ function LessonCard({
         {lesson.sensitivity && (
           <p>
             <b>Changes the plan</b> on {lesson.sensitivity.changed} of{" "}
-            {lesson.sensitivity.boards} sample boards
+            {lesson.sensitivity.boards} example boards
           </p>
         )}
       </div>
       <div className="skill-code">
         <Code2 size={15} />
-        <code>{lesson.skill.id}</code>
         <span>
-          v{lesson.skill.version} · depth {lesson.skill.depth}
+          Strategy version {lesson.skill.version} · looks {lesson.skill.depth}{" "}
+          moves ahead
         </span>
       </div>
       {lesson.verification && (
         <>
           <div className="verification-pair">
             <div>
-              <span>Practice change</span>
+              <span>Change on targeted boards</span>
               <b>
                 {lesson.verification.meanDelta >= 0 ? "+" : ""}
                 {lesson.verification.meanDelta.toFixed(1)}
               </b>
             </div>
             <div>
-              <span>Regression change</span>
+              <span>Change on general boards</span>
               <b>
                 {lesson.verification.regressionDelta >= 0 ? "+" : ""}
                 {lesson.verification.regressionDelta.toFixed(1)}
@@ -323,17 +323,17 @@ function LessonCard({
           </div>
           <details>
             <summary>
-              Inspect all {lesson.verification.rows.length} verification pairs
+              See all {lesson.verification.rows.length} test boards
             </summary>
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Snapshot</th>
-                    <th>Before</th>
-                    <th>Candidate</th>
+                    <th>Board</th>
+                    <th>Without lesson</th>
+                    <th>With lesson</th>
                     <th>Change</th>
-                    <th title="Moves with the candidate where the student cited a saved lesson">
+                    <th title="Moves where the student said it used a saved lesson">
                       Cited
                     </th>
                     <th>Decisions</th>
@@ -524,7 +524,6 @@ export default function App() {
     [mode, setMode] = useState<Mode>("simulation"),
     [liveState, setState] = useState<LabState>(() => initialState()),
     [page, setPage] = useState("classroom"),
-    [resultsView, setResultsView] = useState("exams"),
     [examId, setExamId] = useState(""),
     [traceOrigin, setTraceOrigin] = useState("classroom"),
     [selected, setSelected] = useState("student-1"),
@@ -576,7 +575,7 @@ export default function App() {
       { duration: 200, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
     );
     return () => animation?.cancel();
-  }, [page, resultsView, pageSurface]);
+  }, [page, pageSurface]);
   useEffect(() => {
     connect().then(setConnection);
   }, []);
@@ -608,8 +607,7 @@ export default function App() {
     )
       return {
         ok: false,
-        error:
-          "The classroom is busy, disconnected, or showing a read-only recording.",
+        error: "The classroom is busy, offline, or showing a saved run.",
       };
     requestLock.current = true;
     if (name === "stop") {
@@ -701,14 +699,8 @@ export default function App() {
     setPage("traces");
   };
   const navigate = (next: string) => {
-    if (next === "compare") {
-      setResultsView("comparison");
-      setPage("results");
-    } else {
-      if (next === "results") setResultsView("exams");
-      if (next === "traces" && page !== "traces") setTraceOrigin(page);
-      setPage(next);
-    }
+    if (next === "traces" && page !== "traces") setTraceOrigin(page);
+    setPage(next);
   };
   const download = async () => {
     if (!connection || exporting) return;
@@ -821,13 +813,13 @@ export default function App() {
               {recording
                 ? "Recorded live run"
                 : mode === "simulation"
-                  ? "Simulation mode"
-                  : "Live model mode"}
+                  ? "Practice mode"
+                  : "Live AI"}
             </span>
             <button
               className="secondary export-button"
               aria-label="Export classroom archive"
-              title="Download raw data, readable reports and latest live-run checkpoints"
+              title="Download all data and readable reports"
               disabled={!connection || exporting}
               aria-busy={exporting}
               onClick={download}
@@ -860,8 +852,8 @@ export default function App() {
             <History size={16} />
             <span>
               <b>Recorded live run</b> ·{" "}
-              {new Date(recording.run.startedAt).toLocaleString()} · read-only,
-              no model calls
+              {new Date(recording.run.startedAt).toLocaleString()} · view only,
+              no AI requests
             </span>
             <button
               className="icon-button"
@@ -928,8 +920,8 @@ export default function App() {
                           : id === "lessons"
                             ? "Explore saved lessons and the ideas behind them."
                             : id === "results"
-                              ? "Follow exam scores and compare ways of learning."
-                              : "Choose your model and classroom configuration."}
+                              ? "Follow exam scores before and after teaching."
+                              : "Choose practice mode or the live AI."}
                       </small>
                     </span>
                     <ArrowRight size={20} aria-hidden="true" />
@@ -947,30 +939,26 @@ export default function App() {
                       ? "Watch agents turn practice into tested lessons."
                       : page === "lessons"
                         ? "Good ideas have to prove themselves."
-                        : page === "results" && resultsView === "comparison"
-                          ? "Better together? Let’s find out."
-                          : page === "results"
-                            ? "What can they do on their own?"
-                            : page === "traces"
-                              ? "Let’s look at that move."
-                              : page === "recordings"
-                                ? "Past results."
-                                : "Set up your classroom."}
+                        : page === "results"
+                          ? "What can they do on their own?"
+                          : page === "traces"
+                            ? "Let’s look at that move."
+                            : page === "recordings"
+                              ? "Past results."
+                              : "Set up your classroom."}
                   </h1>
                   <p>
                     {page === "classroom"
                       ? "Watch AI students try, share ideas, and find out what actually helps."
                       : page === "lessons"
                         ? "Students keep the advice that helps on new boards. The rest stays here too."
-                        : page === "results" && resultsView === "comparison"
-                          ? "Same starting point. Different ways to learn. One fair question."
-                          : page === "results"
-                            ? "Fresh games, saved lessons, and no hints from the teacher or classmates."
-                            : page === "traces"
-                              ? "See what the student checked, what it chose, and what happened next."
-                              : page === "recordings"
-                                ? "What the finished live studies found."
-                                : "Choose how the students think, who helps them, and how long their tests run."}
+                        : page === "results"
+                          ? "Fresh games, saved lessons, and no hints from the teacher or classmates."
+                          : page === "traces"
+                            ? "See what the student checked, what it chose, and what happened next."
+                            : page === "recordings"
+                              ? "What the finished live studies found."
+                              : "Choose practice mode or the live AI, and reset the classroom."}
                   </p>
                 </div>
                 <button
@@ -1006,8 +994,8 @@ export default function App() {
                   <div>
                     <h2>Run a learning session</h2>
                     <p>
-                      Baseline exam → focused practice → teacher and peer
-                      discussion → verification → independent exam.
+                      First exam → practice → talk with the teacher and a
+                      classmate → test the lesson → final exam.
                     </p>
                   </div>
                   {state.busy || batch?.status === "running" ? (
@@ -1058,12 +1046,12 @@ export default function App() {
                 </label>
                 {mode !== "model" && (
                   <p className="simulation-warning">
-                    You’re in local simulation.{" "}
+                    You’re in practice mode.{" "}
                     <button
                       className="text-button"
                       onClick={() => setPage("settings")}
                     >
-                      Select Muse in Settings
+                      Switch to the live AI in Settings
                     </button>{" "}
                     to run a learning session.
                   </p>
@@ -1164,7 +1152,7 @@ export default function App() {
                       {state.focus
                         ? FOCI.find((f) => f.id === state.focus!.focus)!
                             .question
-                        : "Each review picks one skill. Targeted groups usually pick the weakest measured skill; the rest pick at random."}
+                        : "Each review picks one skill to work on, usually the student’s weakest."}
                     </p>
                     {state.focus && (
                       <p className="focus-reason">{state.focus.reason}</p>
@@ -1195,8 +1183,8 @@ export default function App() {
                     )}
                     <span className="teacher-disclaimer">
                       {shownMode === "simulation"
-                        ? "Simulation example · generated from recorded moves"
-                        : "AI feedback · still needs to pass a test"}
+                        ? "Example feedback · written from recorded moves"
+                        : "AI feedback · must pass a test before it is kept"}
                     </span>
                   </div>
                 </aside>
@@ -1287,10 +1275,9 @@ export default function App() {
                       <p>{state.candidate.lesson.rule}</p>
                       <div className="memory-target">
                         <Code2 size={16} />
-                        <code>
-                          depth {state.candidate.lesson.skill.depth} · space{" "}
-                          {state.candidate.lesson.skill.spaceWeight}
-                        </code>
+                        <span>
+                          Looks {state.candidate.lesson.skill.depth} moves ahead
+                        </span>
                       </div>
                     </>
                   ) : (
@@ -1320,11 +1307,11 @@ export default function App() {
                 </span>
                 <span>
                   <Zap size={15} />
-                  <b>{format(state.simulations)}</b> simulated transitions
+                  <b>{format(state.simulations)}</b> moves tried out
                 </span>
                 <span>
                   <Code2 size={15} />
-                  <b>{format(state.calls)}</b> model calls
+                  <b>{format(state.calls)}</b> AI requests
                 </span>
                 <span>
                   <Layers size={15} />
@@ -1424,7 +1411,7 @@ export default function App() {
               )}
             </>
           )}
-          {page === "results" && resultsView === "exams" && (
+          {page === "results" && (
             <>
               <div className="exam-banner">
                 <span className="exam-icon">
@@ -1457,7 +1444,7 @@ export default function App() {
                   >
                     {[1, 3, 6, 12].map((n) => (
                       <option key={n} value={n}>
-                        {n} development seeds
+                        {n} {n === 1 ? "game" : "games"}
                       </option>
                     ))}
                   </Select>
@@ -1473,7 +1460,7 @@ export default function App() {
                     {[100, 500, 1500, 3000].map((n) => (
                       <option key={n} value={n}>
                         {n}
-                        {n === 100 ? " · short smoke test" : ""}
+                        {n === 100 ? " · quick check" : ""}
                       </option>
                     ))}
                   </Select>
@@ -1507,10 +1494,10 @@ export default function App() {
                   />
                   <div className="result-metrics">
                     <div>
-                      <label>MEAN SCORE · PRIMARY</label>
+                      <label>AVERAGE SCORE</label>
                       <strong>{format(stats.meanScore)}</strong>
                       <span>
-                        Every game counts, under a {lastExam.cap}-move cap
+                        Across all games, up to {lastExam.cap} moves each
                       </span>
                     </div>
                     <div>
@@ -1537,7 +1524,7 @@ export default function App() {
                       <label>HOW GAMES ENDED</label>
                       <strong>
                         {stats.truncated}
-                        <small> hit the move cap</small>
+                        <small> reached the move limit</small>
                       </strong>
                       <span>
                         {stats.losses} ran out of moves · {stats.errors} errors
@@ -1562,12 +1549,12 @@ export default function App() {
                         <thead>
                           <tr>
                             <th>Student</th>
-                            <th>Seed</th>
+                            <th>Game</th>
                             <th>Top tile</th>
                             <th>Score</th>
                             <th>Moves</th>
                             <th>Outcome</th>
-                            <th>Model calls</th>
+                            <th>AI requests</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1576,7 +1563,7 @@ export default function App() {
                               <td>
                                 <b>{r.name}</b>
                                 <span className="table-sub">
-                                  workspace v{r.workspaceVersion}
+                                  notes version {r.workspaceVersion}
                                 </span>
                               </td>
                               <td className="mono">{r.seed}</td>
@@ -1600,10 +1587,8 @@ export default function App() {
                     </div>
                   </div>
                   <p className="fine result-note">
-                    {state.exams.length} exam runs stored in the export. A
-                    single run does not establish classroom improvement. Use the
-                    evaluation runner for matched conditions and training
-                    repetitions.
+                    {state.exams.length} exams saved. One exam on its own can’t
+                    prove the students improved.
                   </p>
                 </>
               ) : (
@@ -1635,7 +1620,7 @@ export default function App() {
                 </div>
                 <button className="secondary" onClick={download}>
                   <Download size={15} />
-                  Export all traces
+                  Export all moves
                 </button>
               </div>
               {traces.length ? (
@@ -1669,7 +1654,7 @@ export default function App() {
                         setTraceId(replayTraces[index].id);
                       }}
                     />
-                    <span>Recorded replay · no model calls</span>
+                    <span>Replay · no AI requests</span>
                   </div>
                   <div className="trace-layout">
                     <div className="trace-list">
@@ -1725,8 +1710,8 @@ export default function App() {
               <section className="panel settings-card">
                 <h2>How the students think</h2>
                 <p>
-                  Simulation runs immediately. Live model mode requires the
-                  local backend and a server-side API key.
+                  Practice mode works right away and is free. The live AI needs
+                  the local server and an API key.
                 </p>
                 <div className="mode-options">
                   {(["simulation", "model"] as Mode[]).map((m) => (
@@ -1747,12 +1732,12 @@ export default function App() {
                       </span>
                       <b>
                         {m === "simulation"
-                          ? "Local simulation"
-                          : "Muse / model API"}
+                          ? "Practice mode"
+                          : "Live AI (Muse)"}
                       </b>
                       <small>
                         {m === "simulation"
-                          ? "Deterministic heuristic · no API cost"
+                          ? "Built-in player · free"
                           : connection?.modelAvailable
                             ? connection.modelId
                             : "API key not configured"}
@@ -1762,7 +1747,7 @@ export default function App() {
                   ))}
                 </div>
                 <div className="config-instructions">
-                  <h3>Connect a live model</h3>
+                  <h3>Connect the live AI</h3>
                   <ol className="setup-steps">
                     <li>
                       Copy <code>.env.example</code> to <code>.env</code> in the
@@ -1773,7 +1758,7 @@ export default function App() {
                     </li>
                     <li>
                       Restart <code>npm run dev</code>, then refresh the
-                      connection below. Select Muse / model API when enabled.
+                      connection below. Then choose Live AI (Muse).
                     </li>
                   </ol>
                   <div className="connection-actions">
@@ -1789,30 +1774,28 @@ export default function App() {
                     <b>Connection:</b>{" "}
                     {connection?.kind === "server"
                       ? connection.modelAvailable
-                        ? "Model configured; a successful move is still needed to verify credentials and compatibility."
-                        : "Server connected; no model key configured."
-                      : "Browser-only simulation; start the local backend for model mode."}
+                        ? "Key found. The first move will confirm it works."
+                        : "Server connected, but no API key is set."
+                      : "Practice mode only. Start the local server to use the live AI."}
                   </p>
                   <div className="connection-notes">
                     <p>
-                      <b>What gets sent:</b> game boards, recent moves, saved
-                      rules, and review evidence. The server makes model
-                      requests; the key stays out of the browser. The supplied
-                      example selects Contributor mode: review your provider’s
-                      data-use terms before using it.
+                      <b>What gets sent:</b> game boards, recent moves and saved
+                      lessons. Only the server talks to the AI, so your key
+                      never reaches the browser. The example model is a
+                      Contributor model, so check the provider’s data-use terms
+                      first.
                     </p>
                     <p>
-                      <b>What changes:</b> the model chooses moves and writes
-                      review advice. The engine checks legal moves; paired tests
-                      decide whether a lesson is stored. Each student has
-                      separate memory, using the same configured model.
+                      <b>What changes:</b> the AI picks moves and writes advice.
+                      The game checks every move, and a test decides whether a
+                      lesson is kept. Each student has its own notes.
                     </p>
                     <p>
-                      <b>Cost:</b> practice, peer feedback, verification
-                      rollouts, and exams can all make paid calls. Learning
-                      session batches have a configured estimated budget; manual
-                      actions can also spend credits. Local estimates are not a
-                      guaranteed provider billing cap.
+                      <b>Cost:</b> practice, feedback, lesson tests and exams
+                      all use paid AI requests. Each learning session has a
+                      spending limit, but costs shown here are estimates, not
+                      your provider’s bill.
                     </p>
                   </div>
                 </div>
@@ -1825,10 +1808,10 @@ export default function App() {
                 </p>
                 <div className="configuration-facts">
                   <span>
-                    Per-decision simulation cap <b>96 transitions</b>
+                    Moves tried before each choice <b>up to 96</b>
                   </span>
                   <span>
-                    Active memory limit <b>3 lessons</b>
+                    Lessons each student can keep <b>3</b>
                   </span>
                   <span>
                     Lesson check{" "}
@@ -1837,12 +1820,12 @@ export default function App() {
                         const v =
                           connection?.protocol?.[mode]?.verify ??
                           ({ practice: 6, regression: 3, moves: 8 } as const);
-                        return `${v.practice} + ${v.regression} boards × ${v.moves} moves`;
+                        return `${v.practice + v.regression} boards, ${v.moves} moves each`;
                       })()}
                     </b>
                   </span>
                   <span>
-                    Model session token ceiling{" "}
+                    AI usage limit (tokens){" "}
                     <b>{format(connection?.tokenBudget ?? 100000)}</b>
                   </span>
                   {!!connection?.keys?.length && (
@@ -1862,8 +1845,8 @@ export default function App() {
                     Storage{" "}
                     <b>
                       {connection?.kind === "server"
-                        ? "SQLite · local server"
-                        : "Local browser storage"}
+                        ? "On this computer"
+                        : "In this browser"}
                     </b>
                   </span>
                 </div>
@@ -1872,7 +1855,7 @@ export default function App() {
                   onClick={() => {
                     if (
                       window.confirm(
-                        "Reset this classroom? Export first if you want to keep its traces.",
+                        "Reset this classroom? Export first if you want to keep its history.",
                       )
                     )
                       run("reset");
@@ -1887,16 +1870,16 @@ export default function App() {
                 <h2>What you can try today</h2>
                 <div className="capability-list">
                   {[
-                    "Seeded 2048 engine + replayable traces",
-                    "Bounded planning tools + executable skill parameters",
-                    "Teacher / peer review + evidence validation",
-                    "Paired candidate verification + regression checks",
-                    "Their notebooks + rollback",
-                    "Frozen independent exams + JSON export",
-                    "Server-side model tool loop + SQLite storage",
-                    "Adaptive curriculum: per-skill checks + 80/20 scheduler",
-                    "Four-arm CLI study, sealed seeds, paired intervals",
-                    "Cost pilot + automated tests",
+                    "A 2048 game where every move can be replayed",
+                    "A move-planning tool the students can use",
+                    "Feedback from a teacher and classmates",
+                    "Every lesson is tested before it is kept",
+                    "Student notebooks you can roll back",
+                    "Exams taken alone, plus a full data export",
+                    "Your API key stays on the server",
+                    "Practice aimed at each student’s weakest skill",
+                    "Past study results, compared on the same games",
+                    "Automated tests",
                   ].map((t) => (
                     <span key={t}>
                       <CheckCircle2 size={16} />
@@ -1935,7 +1918,7 @@ function TraceDetail({ trace }: { trace: Trace }) {
         <h2>
           Move {trace.after.moves} · {trace.action}
         </h2>
-        <span className="version">workspace v{trace.workspaceVersion}</span>
+        <span className="version">notes version {trace.workspaceVersion}</span>
       </div>
       <div className="before-after">
         <div>
@@ -1954,16 +1937,12 @@ function TraceDetail({ trace }: { trace: Trace }) {
           Empty cells {trace.before.empty} → {trace.after.empty} · score +
           {trace.scoreDelta} · {trace.tokens} tokens ·{" "}
           {trace.durationMs.toFixed(0)} ms
-          {trace.exercise
-            ? ` · targeted exercise: ${focusName(trace.exercise)}`
-            : ""}
-          {trace.lessonId
-            ? ` · applied lesson ${trace.lessonId.slice(0, 8)}`
-            : ""}
-          {trace.invalid ? ` · ${trace.invalid} invalid tool requests` : ""}
+          {trace.exercise ? ` · practising: ${focusName(trace.exercise)}` : ""}
+          {trace.lessonId ? ` · used a saved lesson` : ""}
+          {trace.invalid ? ` · ${trace.invalid} rejected tool requests` : ""}
         </p>
       </div>
-      <h3 className="tool-heading">Tool activity</h3>
+      <h3 className="tool-heading">Tools the student used</h3>
       <div className="tool-list">
         {trace.tools.map((t, i) => (
           <details key={i}>
@@ -1981,9 +1960,8 @@ function TraceDetail({ trace }: { trace: Trace }) {
       </div>
       <p className="fine">
         {trace.mode === "simulation"
-          ? "Deterministic simulation controller"
-          : "Live model-selected tools"}{" "}
-        · trace {trace.id}
+          ? "Practice mode player"
+          : "Tools chosen by the live AI"}
       </p>
     </section>
   );

@@ -21,7 +21,7 @@ export const STUDY_RESULTS: StudyResult[] = [
     id: "study-2",
     title: "Study 2 · full-game exams",
     date: "Nov 3, 2026",
-    exam: "Live Muse full games (up to 1,500 moves), 2 sealed seeds × 3 students = 6 games per condition, with both ablations.",
+    exam: "Live Muse games played to the end (up to 1,500 moves): 2 games × 3 students = 6 games per group.",
     training: [
       {
         group: "Classroom",
@@ -46,17 +46,17 @@ export const STUDY_RESULTS: StudyResult[] = [
       },
     ],
     takeaways: [
-      "The classroom group kept 2 of 4 proposed lessons under the unchanged test.",
-      "Classroom students beat untrained students in live full games: +1,479 points per game (+13.6%), with the 95% range above zero.",
+      "The classroom kept 2 of its 4 proposed lessons. The test for keeping a lesson was not made easier.",
+      "Classroom students beat untrained students by 1,479 points per game (+13.6%), and the likely range stays above zero.",
     ],
     notes:
-      "One training repetition, exploratory. Teacher, adaptive and classroom were retrained after provider 504 errors cut their first training short; 7 broken exam games were replayed. About $10.70.",
+      "Trained once, so treat it as an early result. Some training was redone after the AI service had outages, and 7 games that errored were replayed. About $10.70.",
   },
   {
     id: "study-1",
     title: "Study 1 · 300-move exams",
     date: "Nov 2, 2026",
-    exam: "Live Muse games capped at 300 moves, 2 sealed seeds × 3 students = 6 games per condition. Every game reached the cap.",
+    exam: "Live Muse games stopped at 300 moves: 2 games × 3 students = 6 games per group. Every game reached 300 moves.",
     training: [
       {
         group: "Classroom",
@@ -79,9 +79,9 @@ export const STUDY_RESULTS: StudyResult[] = [
     ],
     takeaways: [
       "The classroom group kept none of its 6 proposed lessons, so its notes never changed.",
-      "Its 300-move exams matched untrained students: +85 points, within noise.",
+      "Its scores matched untrained students: +85 points, too small to mean anything.",
     ],
     notes:
-      "One training repetition, exploratory. Exams were cut from full games to 300 moves after training, for time. About $3.50.",
+      "Trained once, so treat it as an early result. Exams were shortened to 300 moves to save time. About $3.50.",
   },
 ];

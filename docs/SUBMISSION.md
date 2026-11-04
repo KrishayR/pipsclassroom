@@ -1,51 +1,40 @@
-# ConsequenceLab: submission draft
+# Pip’s Classroom: submission draft
 
 **Track / theme:** Indie · Push the Frontier (confirm against final rules)
 
 ## One line
 
-A classroom for AI agents: Muse students play 2048, a teacher coaches them, classmates share lessons, and fresh exams taken alone show whether any of it helped.
+A classroom for AI students: Muse students play 2048, a teacher and classmates suggest lessons, each lesson must prove it helps before it's kept, and an exam taken alone shows whether the teaching worked.
 
 ## What it does
 
-Three Muse student agents play 2048 on separate boards. Every move is a real model decision, validated and applied by a deterministic, seeded game engine. A curriculum tracks each student's measured skills (keeping room, keeping structure, planning past one merge) and picks the next exercise: the weakest skill 80% of the time, a random one 20% of the time. After a short targeted exercise, a Muse teacher diagnoses one weakness from the recorded moves and may flag its diagnosis as uncertain. In the full classroom, a classmate with relevant recorded evidence explains what worked for it. Their advice becomes a candidate lesson. It is saved only if it beats the current notes on fresh, reachable boards in paired tests. Students then take exams alone, with frozen memory, on sealed seeds.
+Three Muse students play 2048 on their own boards. Every move is a real AI decision, and the game checks that it's legal. The app tracks three skills for each student: keeping room on the board, keeping big tiles in place, and planning ahead. Most practice targets the student's weakest skill.
+
+After practice, a Muse teacher reviews the student's recorded mistakes, and a classmate shares a related example from its own games. They propose one lesson. The student then plays new boards with and without it, and the lesson is kept only if it helps. Finally, the students take an exam on their own, with only their saved lessons.
 
 ## Why it matters
 
-Agents can talk to each other, but it is rarely measured whether that helps them learn. ConsequenceLab is a small, inspectable testbed for that question. Every claim links to recorded moves, every lesson has provenance and a verification table, and the comparison is matched and pre-registered. 2048 is the first environment, not the market.
+AI agents can give each other advice, but people rarely check whether that advice helps. Pip’s Classroom is a small, open place to check. Every lesson links back to the moves it came from and the test it passed, and every score can be traced to recorded games. 2048 is the first test, not the end goal.
 
 ## How Muse is used
 
-- **Students:** one Chat Completions call per move with function calling (`apply_move`, citing a `lesson_id` when a saved lesson guided the move).
-- **Teacher and peer:** structured JSON output, validated against real evidence IDs, with one bounded correction attempt.
-- **Ablations** separate what Muse does from what its tools do: one removes the skill ranking, one removes the tuned skill parameters.
-- Runs on `muse-spark-1.3-contributor` through the Meta Model API, with a rate limiter, backoff retries, a per-process token ceiling and a multi-key spend pool.
-
-## Technical depth
-
-- Deterministic engine with tested mechanics and seeded replay.
-- Reachable, skill-tagged practice boards.
-- Versioned memory with a verification gate, replacement rules and rollback.
-- Four-arm study: solo, teacher with random practice, teacher with adaptive practice, full classroom. It adds an untrained baseline and runs under equal budget ceilings.
-- Sealed exam seeds with a published hash and a source-code hash as the freeze record.
-- Paired bootstrap intervals and a pre-registered decision rule.
-- Resumable, rate-limited parallel runner.
+- **Students:** Muse picks each move through a tool call, and says when a saved lesson guided it.
+- **Teacher and classmate:** Muse writes structured feedback that has to point to real recorded moves. If the feedback is badly formed, Muse gets one chance to fix it.
+- **Setup:** we run `muse-spark-1.3-contributor` through the Meta Model API, with request-rate limits, automatic retries, spending limits, and support for more than one API key.
 
 ## Results
 
-Full details: [Study results](STUDY_RESULTS.md) and [Lesson acceptance](LESSON_ACCEPTANCE.md). One training repetition per group, so all results are exploratory.
+Full numbers: [Study 2 results](STUDY_2_RESULTS.md) and [Study 1 results](STUDY_RESULTS.md).
 
-- **Lessons pass a test that was never loosened.** Before each review, teachers run free strategy experiments on separate boards. Before this, all 11 live lessons were rejected. Now the first live Classroom Session saved a lesson for every student, and in the study 4 of 20 candidates passed. Every lesson that passed adopted a tested experiment exactly.
-- **Accepted lessons improve whole games.** Over 40 full simulated games per student on fresh seeds, the teacher group's notes scored **+929 [243, 1,620]** points per game against untrained notes. Solo was +460 and adaptive +631, both with intervals that include zero.
-- **No classroom advantage was shown.** In the study, all 6 of the classroom group's candidates failed, several narrowly. Its notes never changed, so the primary contrast (classroom − adaptive) is −631 [−1,403, 120] over full games and +162 [−191, 579] in the live exams. The planning target was not met.
-- **Live 300-move exams show no difference.** Every game survives to the cap. They were shortened from full games after training, for time; the change is disclosed in the report. 30 games, 0 errors, 0 invalid moves.
-- **Cost:** about $3.50 for the study; $5.35 in total for the project's live work.
+- **Classroom students scored higher.** In Study 2 (games played to the end), classroom students averaged 12,341 points against 10,861 for untrained students on the same games: **+1,479 points per game (+13.6%)**. The likely range for the gain is +333 to +2,813, so it's clearly above zero.
+- **Lessons passed a test that was never made easier.** The classroom kept 2 of its 4 proposed lessons in Study 2. In Study 1 it kept none, so its scores matched untrained students.
+- **Cost:** about $10.70 for Study 2 and $3.50 for Study 1.
 
 ## Honest limits
 
-- Memory and skill parameters change; model weights do not.
-- Results hold under this fixed 2048 protocol only. They don't show transfer to other tasks.
-- Short verification rollouts are noisy, so the sealed exam is the real test.
+- The AI model never changes. Only the students' notebooks (lessons and strategy settings) do.
+- Each group was trained once and played 6 exam games, so these are early results.
+- The results are for 2048 only. We haven't shown that this works on other tasks.
 
 ## Links
 

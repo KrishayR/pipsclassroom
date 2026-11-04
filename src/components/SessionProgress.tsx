@@ -31,7 +31,7 @@ export default function SessionProgress({
       ? "Learning session complete"
       : batch.status === "running"
         ? batch.stage
-        : `Session ${batch.status} · partial results kept`;
+        : `Session ${batch.status === "error" ? "stopped by an error" : batch.status} · results so far are saved`;
   return (
     <section
       className="session-progress panel"
@@ -54,8 +54,8 @@ export default function SessionProgress({
       </div>
       {batch.status === "running" && !!diagnostics?.retrying && (
         <p className="fine" role="status">
-          Waiting to retry {diagnostics.retrying} temporary API failure(s).
-          Recovery is automatic; stop and spending limits still apply.
+          The AI service hiccuped. Retrying {diagnostics.retrying}{" "}
+          {diagnostics.retrying === 1 ? "request" : "requests"} automatically.
         </p>
       )}
       {batch.status !== "running" && batch.status !== "complete" && (
@@ -73,9 +73,8 @@ export default function SessionProgress({
               <Play size={15} /> {resuming ? "Starting…" : "Resume session"}
             </button>
             <p className="fine">
-              Continue from the last completed stage. Unfinished work may
-              repeat; previous spend counts toward the original $
-              {batch.budgetUsd.toFixed(2)} budget.
+              Pick up where it stopped. Money already spent counts toward the
+              same ${batch.budgetUsd.toFixed(2)} budget.
             </p>
           </div>
         )}

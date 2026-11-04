@@ -37,7 +37,7 @@ export default function GainChart({ rows }: { rows: GainRow[] }) {
         <svg
           viewBox={`0 0 ${W} ${H}`}
           role="img"
-          aria-label={`Mean live exam score: ${rows
+          aria-label={`Average live exam score: ${rows
             .map((r) => `${r.condition} ${r.mean.toLocaleString()}`)
             .join(", ")}`}
           onMouseLeave={() => setFocus(null)}
@@ -107,7 +107,7 @@ export default function GainChart({ rows }: { rows: GainRow[] }) {
           <>
             <b>{trained.condition}</b>: {fmt(trained.vsUntrained![0])} points
             per game ({pct(trained.vsUntrained![0], trained.mean)}) over
-            untrained students on the same games, 95% range{" "}
+            untrained students on the same games. Likely range:{" "}
             {fmt(trained.vsUntrained![1])} to {fmt(trained.vsUntrained![2])}
           </>
         ) : null}

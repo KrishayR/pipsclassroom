@@ -234,7 +234,7 @@ export function liveBatchRunner(
             plannerEnabled: policy.usesHelper !== false,
             kind,
             status: "running",
-            stage: "Starting baseline",
+            stage: "Starting the first exam",
             completed: 0,
             total: count,
             budgetUsd: sizes.budgetUsd,
@@ -286,9 +286,7 @@ export function liveBatchRunner(
           active.state.phase === "exam" &&
           exam?.rows.some((r) => r.terminal === "error")
         )
-          throw new Error(
-            "An exam decision failed; inspect saved partial results.",
-          );
+          throw new Error("An exam move failed. Results so far are saved.");
         if (stopping) return false;
         status!.timings ??= [];
         status!.timings.push({ stage: label, elapsedMs: Date.now() - started });
@@ -300,7 +298,7 @@ export function liveBatchRunner(
       try {
         if (
           !(await stage(
-            `Baseline: 3 students, ${sizes.examMoves} moves each`,
+            `First exam: 3 students, ${sizes.examMoves} moves each`,
             "baseline",
             () => active.exam(sizes.examSeeds, sizes.examMoves),
           ))
@@ -319,7 +317,7 @@ export function liveBatchRunner(
           const prefix = `cycle-${i + 1}`;
           if (
             !(await stage(
-              `Cycle ${i + 1}/${count}: focused practice`,
+              `Session ${i + 1}/${count}: practice`,
               `${prefix}-practice`,
               () => active.diagnose(),
             ))
@@ -328,7 +326,7 @@ export function liveBatchRunner(
           if (kind === "classroom") {
             if (
               !(await stage(
-                `Classroom Session ${i + 1}/${count}: teaching all students`,
+                `Session ${i + 1}/${count}: teaching and testing lessons`,
                 `${prefix}-teaching`,
                 () => active.teachClassroom(),
               ))
@@ -354,7 +352,7 @@ export function liveBatchRunner(
           }
           if (
             !(await stage(
-              `Cycle ${i + 1}/${count}: independent exam`,
+              `Session ${i + 1}/${count}: final exam`,
               `${prefix}-exam`,
               () => active.exam(sizes.examSeeds, sizes.examMoves),
             ))

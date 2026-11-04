@@ -2,7 +2,7 @@ import { useState } from "react";
 import { STUDY_RESULTS } from "../studyResults";
 import GainChart from "./GainChart";
 
-// [mean difference, 95% CI low, high]; bold when the interval excludes zero.
+// [average gain, likely low, likely high]; bold when the whole range is above or below zero.
 const fmt = (n: number) =>
   `${n >= 0 ? "+" : "−"}${Math.abs(n).toLocaleString()}`;
 function Diff({ value }: { value: number[] | null }) {
@@ -20,8 +20,8 @@ export default function StudyResults() {
     <section className="panel recordings study-results">
       <h2>Past study results</h2>
       <p>
-        Differences are paired by seed, with 95% intervals; bold ones exclude
-        zero.
+        Both groups played the same games. The range in brackets is where the
+        real gain most likely falls; bold means it is clearly above zero.
       </p>
       <div className="study-tabs" role="tablist">
         {STUDY_RESULTS.map((x) => (
@@ -74,9 +74,9 @@ export default function StudyResults() {
         <table>
           <thead>
             <tr>
-              <th>Condition</th>
-              <th>Mean score</th>
-              <th>vs untrained</th>
+              <th>Group</th>
+              <th>Average score</th>
+              <th>Gain over untrained</th>
             </tr>
           </thead>
           <tbody>

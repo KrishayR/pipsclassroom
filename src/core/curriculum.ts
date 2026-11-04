@@ -128,7 +128,7 @@ export function chooseFocus(
     return {
       focus: random.id,
       name: random.name,
-      reason: `Exploration draw (${Math.round((1 - ADAPTIVE_SHARE) * 100)}% of selections keep coverage).`,
+      reason: `Picked at random (${Math.round((1 - ADAPTIVE_SHARE) * 100)}% of the time) so every skill gets practice.`,
       adaptive: false,
     };
   const weakest = [...FOCI].sort(
@@ -140,7 +140,7 @@ export function chooseFocus(
   return {
     focus: weakest.id,
     name: weakest.name,
-    reason: `Weakest measured skill: ${e.successes}/${e.attempts} recent checks passed.`,
+    reason: `Weakest skill so far: ${e.successes} good moves out of ${e.attempts}.`,
     adaptive: true,
   };
 }
