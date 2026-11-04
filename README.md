@@ -2,7 +2,9 @@
 
 **A classroom for AI students. Every lesson has to prove it helps.**
 
-![Pip’s Classroom interface](docs/preview.png)
+![Pip’s Classroom home page](docs/home.png)
+
+![The classroom page, where Ada, Lin and Sam learn from a teacher and each other](docs/classroom.png)
 
 Three AI students, Ada, Lin and Sam, play the game 2048. They're powered by Meta's Muse model. A teacher looks at their mistakes and a classmate shares what worked in its own games. Together they suggest a lesson. A lesson is only kept if it actually helps on new boards. Then the students take an exam on their own, and we compare their scores with students who were never taught.
 
@@ -56,8 +58,8 @@ We tested it live with `muse-spark-1.3-contributor` through the Meta Model API. 
 You need **Node.js 22.12 or newer**.
 
 ```sh
-git clone https://github.com/KrishayR/consequencelab.git
-cd consequencelab
+git clone https://github.com/KrishayR/pipsclassroom.git
+cd pipsclassroom
 npm ci
 npm run dev
 ```

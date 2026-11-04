@@ -174,7 +174,7 @@ The plan's software is complete and runs end to end in simulation. The live Meta
 Requires Node.js 22.12+.
 
 ```sh
-git clone https://github.com/KrishayR/consequencelab.git && cd consequencelab
+git clone https://github.com/KrishayR/pipsclassroom.git && cd pipsclassroom
 npm ci
 npm test && npm run build          # 31 tests should pass
 cp .env.example .env               # then put a Meta Model API key after MODEL_API_KEY=

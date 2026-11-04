@@ -38,5 +38,5 @@ Full numbers: [Study 2 results](STUDY_2_RESULTS.md) and [Study 1 results](STUDY_
 
 ## Links
 
-- Source: https://github.com/KrishayR/consequencelab
+- Source: https://github.com/KrishayR/pipsclassroom
 - Demo video: _to add_
