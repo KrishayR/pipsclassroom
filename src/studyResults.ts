@@ -13,8 +13,6 @@ export interface StudyResult {
     lessons: string[];
   }[];
   live: { condition: string; mean: number; vsUntrained: number[] | null }[];
-  contrasts: { label: string; primary: boolean; value: number[] }[];
-  fullGame: { group: string; mean: number; vsUntrained: number[] | null }[];
   takeaways: string[];
   notes: string;
 }
@@ -81,60 +79,6 @@ export const STUDY_RESULTS: StudyResult[] = [
         condition: "Classroom",
         mean: 12341,
         vsUntrained: [1479, 333, 2813],
-      },
-      {
-        condition: "Classroom, lessons only",
-        mean: 11841,
-        vsUntrained: null,
-      },
-      {
-        condition: "Classroom, no skill tool",
-        mean: 6825,
-        vsUntrained: null,
-      },
-    ],
-    contrasts: [
-      {
-        label: "Classroom vs adaptive",
-        primary: true,
-        value: [2145, -2668, 7553],
-      },
-      {
-        label: "Adaptive vs teacher",
-        primary: false,
-        value: [1594, -2821, 6169],
-      },
-      {
-        label: "Classroom vs classroom, lessons only",
-        primary: false,
-        value: [500, -4923, 6619],
-      },
-      {
-        label: "Classroom vs classroom, no skill tool",
-        primary: false,
-        value: [5515, 857, 10611],
-      },
-    ],
-    fullGame: [
-      {
-        group: "Solo",
-        mean: 11182,
-        vsUntrained: [929, 243, 1620],
-      },
-      {
-        group: "Teacher",
-        mean: 10827,
-        vsUntrained: [575, -88, 1243],
-      },
-      {
-        group: "Classroom",
-        mean: 10916,
-        vsUntrained: [663, -199, 1602],
-      },
-      {
-        group: "Adaptive",
-        mean: 11322,
-        vsUntrained: [1069, 235, 1923],
       },
     ],
     takeaways: [
@@ -207,42 +151,7 @@ export const STUDY_RESULTS: StudyResult[] = [
         vsUntrained: [85, -189, 352],
       },
     ],
-    contrasts: [
-      {
-        label: "Classroom vs adaptive",
-        primary: true,
-        value: [162, -191, 579],
-      },
-      {
-        label: "Adaptive vs teacher",
-        primary: false,
-        value: [-93, -540, 403],
-      },
-    ],
-    fullGame: [
-      {
-        group: "Solo",
-        mean: 10713,
-        vsUntrained: [460, -211, 1147],
-      },
-      {
-        group: "Teacher",
-        mean: 11182,
-        vsUntrained: [929, 243, 1620],
-      },
-      {
-        group: "Adaptive",
-        mean: 10884,
-        vsUntrained: [631, -137, 1403],
-      },
-      {
-        group: "Classroom",
-        mean: 10253,
-        vsUntrained: [0, 0, 0],
-      },
-    ],
     takeaways: [
-      "Accepted lessons improved full-game play in simulation (teacher +929, interval above zero).",
       "The classroom group kept no lesson, so its notes never changed.",
       "300-move exams showed no difference: every game survived to the cap.",
     ],

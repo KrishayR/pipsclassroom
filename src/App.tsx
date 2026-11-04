@@ -1807,11 +1807,6 @@ export default function App() {
                       Restart <code>npm run dev</code>, then refresh the
                       connection below. Select Muse / model API when enabled.
                     </li>
-                    <li>
-                      Run one move per student first. Inspect the recorded tools
-                      and model calls before starting a longer practice or
-                      verification run.
-                    </li>
                   </ol>
                   <div className="connection-actions">
                     <button
@@ -1820,18 +1815,6 @@ export default function App() {
                       onClick={() => connect().then(setConnection)}
                     >
                       Refresh connection
-                    </button>
-                    <button
-                      className="primary"
-                      disabled={
-                        busy || mode !== "model" || !connection?.modelAvailable
-                      }
-                      onClick={() => run("practice", { steps: 1 })}
-                    >
-                      {actionLabel(
-                        "practice",
-                        "Test connection · one move per student",
-                      )}
                     </button>
                   </div>
                   <p className="connection-status">

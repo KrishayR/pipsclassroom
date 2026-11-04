@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { STUDY_RESULTS } from "../studyResults";
+import GainChart from "./GainChart";
 
 // [mean difference, 95% CI low, high]; bold when the interval excludes zero.
 const fmt = (n: number) =>
@@ -41,6 +42,8 @@ export default function StudyResults() {
           <li key={t}>{t}</li>
         ))}
       </ul>
+      <h3>Live exams: score change vs untrained students</h3>
+      <GainChart rows={s.live} />
       <h3>Lessons kept in training</h3>
       <div className="table-wrap">
         <table>
@@ -81,43 +84,6 @@ export default function StudyResults() {
               <tr key={r.condition}>
                 <td>
                   <b>{r.condition}</b>
-                </td>
-                <td>{r.mean.toLocaleString()}</td>
-                <td>
-                  <Diff value={r.vsUntrained} />
-                </td>
-              </tr>
-            ))}
-            {s.contrasts.map((c) => (
-              <tr key={c.label}>
-                <td>
-                  <b>{c.label}</b>
-                  {c.primary && <span className="table-sub">Primary</span>}
-                </td>
-                <td />
-                <td>
-                  <Diff value={c.value} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <h3>Full-game check (simulation, 120 paired games per group)</h3>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Group</th>
-              <th>Mean score</th>
-              <th>vs untrained notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {s.fullGame.map((r) => (
-              <tr key={r.group}>
-                <td>
-                  <b>{r.group}</b>
                 </td>
                 <td>{r.mean.toLocaleString()}</td>
                 <td>

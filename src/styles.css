@@ -3928,3 +3928,67 @@ td b {
     margin: 0 16px;
   }
 }
+.gain-chart {
+  margin: 4px 0 0;
+}
+.gain-chart-scroll {
+  overflow-x: auto;
+}
+.gain-chart svg {
+  display: block;
+  width: 100%;
+  min-width: 560px;
+  max-width: 860px;
+  height: auto;
+  font-size: 12px;
+}
+.gain-chart .grid {
+  stroke: var(--line);
+}
+.gain-chart .zero {
+  stroke: var(--muted);
+  stroke-dasharray: 4 4;
+}
+.gain-chart .tick {
+  fill: var(--muted);
+  font-size: 11px;
+}
+.gain-chart .label {
+  fill: var(--ink);
+  font-weight: 600;
+}
+.gain-chart .value {
+  fill: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.gain-chart .bar {
+  fill: var(--green);
+}
+.gain-chart .whisker line {
+  stroke: var(--ink);
+  stroke-width: 2;
+  opacity: 0.55;
+}
+.gain-chart .hit {
+  fill: transparent;
+}
+.gain-chart .row {
+  cursor: default;
+  outline: none;
+  transition: opacity 0.15s;
+}
+.gain-chart .row.dim {
+  opacity: 0.35;
+}
+.gain-chart .row:focus-visible .label {
+  text-decoration: underline;
+}
+.gain-chart figcaption {
+  min-height: 20px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.gain-chart figcaption b {
+  color: var(--ink);
+}
