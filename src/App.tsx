@@ -608,7 +608,11 @@ export default function App() {
         ? stopLock.current
         : state.busy || state.liveBatch?.status === "running")
     )
-      return;
+      return {
+        ok: false,
+        error:
+          "The classroom is busy, disconnected, or showing a read-only recording.",
+      };
     requestLock.current = true;
     if (name === "stop") {
       stopLock.current = true;
@@ -619,12 +623,15 @@ export default function App() {
     setPendingAction(name);
     try {
       await action(connection, mode, name, params);
+      return { ok: true };
     } catch (e) {
       if (name === "stop") {
         stopLock.current = false;
         setStopping(false);
       }
-      setError(e instanceof Error ? e.message : "Operation failed");
+      const message = e instanceof Error ? e.message : "Operation failed";
+      setError(message);
+      return { ok: false, error: message };
     } finally {
       requestLock.current = false;
       setPending(false);
@@ -1012,22 +1019,22 @@ export default function App() {
                   How this works
                 </button>
               </div>
-              {page === "classroom" && (
-                <>
-                  <LearningGuide
-                    selected={selected}
-                    navigate={navigate}
-                    state={state}
-                    busy={busy}
-                    ready={!!connection}
-                    run={run}
-                    starting={pending && pendingAction !== "stop"}
-                    recorded={!!recording}
-                  />
-                </>
-              )}
             </>
           )}
+          <LearningGuide
+            key={`${state.mode}:${state.id}`}
+            visible={["classroom", "results", "lessons", "traces"].includes(
+              page,
+            )}
+            selected={selected}
+            navigate={navigate}
+            state={state}
+            busy={busy}
+            ready={!!connection}
+            run={run}
+            stopping={stopPending}
+            recorded={!!recording}
+          />
           {(error || state.error) && (
             <div className="error" role="alert">
               {error || state.error}

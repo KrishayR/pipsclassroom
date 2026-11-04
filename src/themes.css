@@ -255,7 +255,7 @@
   :is(
     .sidebar-experiment,
     .guide-body,
-    .guide-steps > div,
+    .guide-steps button,
     .lesson-scope,
     .skill-code,
     .verification-pair > div,
@@ -280,8 +280,8 @@
 }
 :root[data-theme="dark"]
   :is(
-    .guide-steps > div.active,
-    .guide-steps > div.done,
+    .guide-steps button.active,
+    .guide-steps button.done,
     .trace-list button.active,
     .mode-options button.active
   ) {
@@ -299,11 +299,31 @@
     .exam-icon,
     .avatar,
     .skill-code > span,
-    .guide-steps > div span
+    .guide-steps button b
   ) {
   background: #2a4261;
   color: #d4e9ff;
   border-color: #4b6a8c;
+}
+:root[data-theme="dark"] .guide-status {
+  background: #20334e;
+  border-color: #4c6484;
+  color: #d5e4f6;
+}
+:root[data-theme="dark"] .guide-status.completed {
+  background: #183d3b;
+  border-color: #467e73;
+  color: #c2eee0;
+}
+:root[data-theme="dark"] .guide-status.running {
+  background: #294e73;
+  border-color: #6b9bc8;
+  color: #e7f3ff;
+}
+:root[data-theme="dark"] :is(.guide-status.failed, .guide-body .guide-error) {
+  background: #452c32;
+  border-color: #9c6370;
+  color: #ffdbdc;
 }
 :root[data-theme="dark"] :is(th, .session-progress, .replay-toolbar) {
   background: #1c2e47;
