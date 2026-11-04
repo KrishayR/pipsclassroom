@@ -610,10 +610,22 @@
 }
 :root[data-theme="dark"] .study-tabs button {
   border-color: #34465f;
+  background: #20334e;
 }
 :root[data-theme="dark"] .study-tabs button.active {
   border-color: #6f9bc8;
+  background: #294566;
+  color: #eff6ff;
+}
+:root[data-theme="dark"] .study-tabs button:hover:not(.active) {
+  border-color: #6f9bc8;
+  background: #263e5b;
+}
+:root[data-theme="dark"]
+  .study-results
+  :is(.study-takeaways li, .study-note:last-child) {
   background: #1c2e47;
+  border-color: #34465f;
 }
 :root[data-theme="dark"] :is(.study-tabs button span, .study-note) {
   color: #a9bdd6;

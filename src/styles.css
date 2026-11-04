@@ -3747,42 +3747,113 @@ td b {
 }
 .study-results {
   margin-top: 16px;
+  padding: clamp(18px, 3vw, 32px);
+  border-radius: 22px;
+  min-width: 0;
+}
+.study-results > h2 {
+  margin: 0 0 8px;
+}
+.study-results > p {
+  margin: 0;
+  line-height: 1.7;
 }
 .study-results h3 {
-  margin: 20px 0 8px;
-  font-size: 13px;
+  margin: 30px 0 12px;
+  font-size: 15px;
+  line-height: 1.5;
 }
 .study-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
+  gap: 10px;
+  margin-top: 22px;
 }
 .study-tabs button {
   display: grid;
-  gap: 2px;
-  padding: 8px 14px;
-  border: 1px solid #e0e7d6;
-  border-radius: 10px;
-  background: transparent;
+  gap: 5px;
+  padding: 13px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fbfcf7;
   color: inherit;
+  font-weight: 600;
+  line-height: 1.4;
   text-align: left;
   cursor: pointer;
 }
 .study-tabs button.active {
-  border-color: #7fae5c;
-  background: #f1f7e9;
+  border-color: #aabc94;
+  background: #ebf1e1;
+  color: #3d6651;
+}
+.study-tabs button:hover:not(.active) {
+  border-color: #aabc94;
+  background: #f1f5e9;
 }
 .study-tabs button span,
 .study-note {
-  color: #69815c;
+  color: var(--muted);
   font-size: 12px;
+  font-weight: 400;
 }
-.study-takeaways {
+.study-results .study-takeaways {
   display: grid;
-  gap: 6px;
-  margin: 14px 0 0;
-  padding-left: 18px;
+  gap: 10px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.study-results .study-takeaways li {
+  display: block;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f7f9f2;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.study-results .table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  margin-top: 12px;
+}
+.study-results table {
+  min-width: 560px;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.study-results :is(th, td) {
+  padding: 14px 18px;
+  vertical-align: top;
+}
+.study-results th {
+  font-size: 11px;
+  font-weight: 600;
+}
+.study-results td {
+  color: var(--ink);
+}
+.study-results th:first-child {
+  width: 26%;
+}
+.study-results .study-note {
+  line-height: 1.7;
+}
+.study-results > .study-note:last-child {
+  margin-top: 22px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f7f9f2;
+}
+@media (max-width: 600px) {
+  .study-tabs button {
+    flex: 1 1 160px;
+  }
+  .study-results :is(th, td) {
+    padding: 12px 14px;
+  }
 }
 @media (max-width: 700px) {
   .recording-bar {
