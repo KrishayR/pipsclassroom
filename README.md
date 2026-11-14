@@ -75,6 +75,12 @@ Open http://127.0.0.1:5173. The app starts in **practice mode**: a built-in play
 
 Your key stays on the local server and never reaches the browser. Don't put keys in variables that start with `VITE_`. Each learning session has a spending limit (`BATCH_BUDGET_USD`, $1 by default), but the costs shown are estimates, not your provider's bill. The example model is a Contributor model, which means Meta may use your prompts and responses for training. The other settings are explained in [.env.example](.env.example).
 
+## Publish a browser demo
+
+GitHub Pages can host the built app in practice mode. Visitors can try the 2048 tutorial, explore the classroom and past results, and run local exams. The site uses browser storage and needs no Meta API key.
+
+After merging the workflow, a repository admin can set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. Then run **Publish the browser demo** from `main` in the Actions tab. The deploy job links to the published site. Run the workflow again to publish updates.
+
 ## The app’s pages
 
 - **Classroom:** run a learning session and watch the students, the teacher and the conversation.
